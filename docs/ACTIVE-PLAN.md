@@ -18,7 +18,7 @@
 - [x] CTO has repo read/write access
 - [x] Phase 0 plan reviewed and approved by founder
 - [x] Project coordination system designed (CLAUDE.md, SESSION-LOG, ACTIVE-PLAN)
-- [ ] Supabase credentials shared with CTO ← NEXT (founder)
+- [x] Supabase credentials shared with CTO
 - [x] CTO Go Package delivered to CTO
 - [x] Coordination files committed to repo
 - [x] All docs moved from growth-swarm to monorepo
@@ -33,7 +33,7 @@
 
 ### CTO Track (Backend + Infra)
 - [ ] 0.6: LiteLLM deployed to Railway, health check passes ← CODEX SLICE 1 (no blockers)
-- [ ] 0.8: Supabase schema migrated (6 tables + indexes + RLS) ← CODEX SLICE 2 (needs credentials)
+- [ ] 0.8: Supabase schema migrated (6 tables + indexes + RLS) ← CODEX SLICE 2 (credentials received, ready)
 - [ ] 0.5: API bridge routes in `api/` directory ← CODEX SLICE 3 (needs schema)
 - [ ] 0.4: Provisioning script + Inngest workflow ← CODEX SLICE 4 (needs all above)
 
@@ -45,7 +45,7 @@
 ### Blockers
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|--------------|-----------------|
-| Supabase credentials not yet shared | CTO (Slices 2-4) | Founder |
+| ~~Supabase credentials~~ | ~~CTO (Slices 2-4)~~ | ✅ Resolved — credentials received 2026-03-02 |
 
 ### Notes
 - Founder and CTO tracks run in parallel — no dependency between them until integration
