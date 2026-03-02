@@ -32,7 +32,7 @@
 - [ ] 0.7: Dashboard shell — sidebar nav, empty states, greeting, placeholders
 
 ### CTO Track (Backend + Infra)
-- [ ] 0.6: LiteLLM deployed to Railway, health check passes ← CODEX SLICE 1 (no blockers)
+- [x] 0.6: LiteLLM deployed to Railway, health check passes ← CODEX SLICE 1 (no blockers)
 - [ ] 0.8: Supabase schema migrated (6 tables + indexes + RLS) ← CODEX SLICE 2 (credentials received, ready)
 - [ ] 0.5: API bridge routes in `api/` directory ← CODEX SLICE 3 (needs schema)
 - [ ] 0.4: Provisioning script + Inngest workflow ← CODEX SLICE 4 (needs all above)

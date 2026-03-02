@@ -6,7 +6,45 @@
 
 ## Last Session
 
-- **Date:** 2026-03-02 (evening)
+- **Date:** 2026-03-02 (night)
+- **Who worked:** Codex
+- **What was done:**
+  - Created LiteLLM deployment artifacts:
+    - `infra/litellm/config.yaml`
+    - `infra/litellm/Dockerfile`
+    - `infra/litellm/railway.toml`
+    - `infra/litellm/.env.example`
+  - Provisioned Railway project `pixelport-litellm` with services:
+    - `litellm`
+    - `Postgres`
+  - Set LiteLLM runtime variables in Railway (`LITELLM_MASTER_KEY`, `LITELLM_DATABASE_URL`, `LITELLM_UI_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY` placeholder)
+  - Deployed LiteLLM successfully at:
+    - `https://litellm-production-77cc.up.railway.app`
+  - Verified gateway behavior:
+    - Root endpoint returns `200`
+    - `/health` returns `401` without auth and `200` with master key (auth-protected health)
+  - Executed full Slice 1 functional checks:
+    - Team creation: pass
+    - Virtual key generation: pass
+    - Chat completion via virtual key (`gpt-4o-mini`): pass
+    - Spend metering observed non-zero (`0.000007200000000000001`) after completion
+    - Cleanup of test team/key: pass
+- **What's next:**
+  - Execute Slice 2: create and apply `supabase/migrations/001_initial_schema.sql`
+  - Verify 6-table schema, constraints, RLS, triggers, and indexes
+  - Update `ACTIVE-PLAN.md` for 0.8 and commit Slice 2
+- **Blockers:**
+  - None for Slice 2 (credentials available)
+- **Feedback & Observations:**
+  - Railway health checks initially failed because `/health` is auth-protected when master auth is enabled; using `/` as the platform health check path resolved startup validation while preserving API auth controls.
+  - A malformed DB URL env value (`\\postgresql://...`) caused one failed boot cycle; re-setting the variable fixed DB connectivity.
+  - The repository remote currently uses an embedded token URL; rotate after this execution window.
+
+---
+
+## Previous Sessions
+
+### 2026-03-02 (evening)
 - **Who worked:** CTO (Claude Code)
 - **What was done:**
   - Cloned the PixelPort Launchpad monorepo (`https://github.com/Analog-Labs/pixelport-launchpad`)
@@ -29,10 +67,6 @@
   - growth-swarm is now archive only — all active work happens in the monorepo
   - CLAUDE.md updated with: Codex as full project participant + "founder is non-technical" rule
   - All Codex slice docs include full project context, repo access instructions, and feedback expectations
-
----
-
-## Previous Sessions
 
 ### 2026-03-02 (morning)
 - **Who worked:** Founder + Claude (chat)
