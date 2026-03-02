@@ -1,0 +1,567 @@
+# PixelPort — Project Status and Execution Plan
+
+**Last Updated:** 2026-02-28
+**Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
+**Formerly:** Growth Swarm (now first tenant / dogfood instance of PixelPort)
+**Infrastructure:** OpenClaw on DigitalOcean droplet `openclaw-prod` (ID: `552336242`)
+**Primary Channel:** Slack (LUNA is sole human interface)
+
+---
+
+## 1. Strategic Context
+
+### Pivot (2026-02-26)
+
+Growth Swarm has been promoted from "internal marketing tool for Analog" to the **dogfood instance of PixelPort** — a productized SaaS that sells AI marketing employees to other companies. Growth Swarm's architecture, agents (LUNA/SCOUT/SPARK), and learnings become the template for every PixelPort customer.
+
+**PixelPort = Tensol (YC W26) model, but laser-focused on GTM/Marketing.**
+
+Two parallel workstreams now exist:
+1. **Growth Swarm (dogfood)** — Continue stabilizing and operating the existing agent team on the current DO droplet. Phases D-F of the original plan.
+2. **PixelPort (product)** — Build the SaaS web app, provisioning pipeline, and dashboard. Phases 0-6 of the new build plan.
+
+Full product spec: `docs/pixelport-master-plan-v2.md`
+
+---
+
+## 2. Growth Swarm — Live System Snapshot (Verified)
+
+### Infrastructure
+- Droplet host: `167.71.90.199`
+- Gateway container: `openclaw-gateway`
+- Gateway state at verification: `Up`
+- OpenClaw image/version: `2026.2.24` (explicit version tag, pinned)
+- Note: `:latest` was still pinned to `2026.2.17` at time of upgrade — version pinning is required.
+
+### Current config facts
+- `tools.web.search.provider` is set to `"gemini"` — working and validated by smoke tests.
+- Runtime supports Gemini web search provider (`brave`/`perplexity`/`grok`/`gemini`/`kimi` enum in deployed build).
+- `/opt/openclaw/.env` contains `GEMINI_API_KEY`; Brave/Perplexity keys are not required for the selected provider.
+- End-to-end smoke tests confirm Gemini-backed `web_search` succeeds from agent runtime.
+- LUNA primary model is `openai/gpt-5.2-codex` (updated from `gpt-5.1-codex`).
+- LUNA fallback model is `google/gemini-2.5-flash`.
+- `gpt-5.3-codex` exists in OpenAI account but is intentionally deferred on OpenClaw `2026.2.24` because this build routes it to `openai-codex` OAuth provider.
+
+### Agent/workspace facts
+- Deployed agents:
+  - LUNA (`main`) workspace: `/opt/openclaw/workspace-main`
+  - SPARK (`content`) workspace: `/opt/openclaw/workspace-content`
+  - SCOUT (`growth`) workspace: `/opt/openclaw/workspace-growth`
+- Workspace `AGENTS.md` + `TOOLS.md` have been rewritten with role-specific behavior for all three agents (Phase B complete).
+- A second copy of agent docs exists under `/opt/openclaw/agents/<id>/agent/*` and is currently divergent from workspace copies.
+- Auth profiles for OpenAI are present for `main`, `content`, and `growth` under `/opt/openclaw/agents/<id>/agent/auth-profiles.json`.
+- Inter-agent allowlist mesh is configured and verified:
+  - LUNA → SPARK + SCOUT
+  - SPARK → SCOUT + LUNA
+  - SCOUT → SPARK + LUNA
+- `agents.defaults.subagents` set to `maxSpawnDepth=2`, `maxChildrenPerAgent=5`.
+- Session visibility/messaging enabled: `tools.sessions.visibility = "all"`, `tools.agentToAgent.enabled = true`.
+- Native cross-agent spawn/readback QA passes (`NATIVE_OK`); operating mode is native-first with deterministic fallback on runtime failure.
+
+### Operational facts
+- Slack integration active and routed through LUNA.
+- Cron reporting jobs configured (Bangkok timezone):
+  - `ops-morning-report` at `09:00` Asia/Bangkok
+  - `ops-evening-report` at `18:00` Asia/Bangkok
+- Cron prompts hardened to enforce `ops_report_v1` sections and explicit missing-data alerts.
+- Ops intake artifacts in place under `/opt/openclaw/workspace-main/ops`:
+  - `sources.registry.json`, `intake/latest.snapshot.json`, `ops_report_v1.schema.json`
+  - `kpis.seed.json`, `contracts/email_mirror_event_v1.schema.json`, `slack-mirror-runbook.md`
+- Manual report smokes delivered successfully (morning + evening runs, medium confidence).
+- Policy smokes passed: domain trust classification, incident severity classification, Gemini search check.
+- AgentMail active (vidacious@agentmail.to) — LUNA checks inbox via exec+curl, all 4 smoke tests pass
+- LUNA has `group:runtime` in tools.allow (exec/curl for AgentMail API)
+- Email trust boundary locked to `@analog.one` and `@vidacious.ai` domains
+- Slack mirror stays active — email is secondary/additive channel
+- LUNA communication style: SOUL-first architecture (SOUL.md persona + AGENTS.md response mode router + TOOLS.md constraints). Three modes: human_chat (casual), ops_report (structured), delegation_internal (technical).
+- Unsupported allowlist entries removed (`group:memory`, `group:automation`).
+- Queue latency warnings (`lane wait exceeded`) appear intermittently — monitored, non-blocking.
+- Phase E vault is now live in all three workspaces (`workspace-main/content/growth`) with checksum-verified parity.
+- LUNA/SCOUT/SPARK `AGENTS.md` now include `## Knowledge Base` references to `vault/*.md`.
+- LUNA `TOOLS.md` now includes `## Vault Management (You Own This)` — LUNA self-manages vault updates.
+- LUNA autonomy upgrade: proactive knowledge collection via Slack, self-managed vault updates
+- `[FOUNDER TO FILL]` markers replaced with LUNA-actionable instructions
+- Cron prompts include knowledge-gap awareness
+- Legacy scaffold at `/opt/openclaw/.growth-swarm/vault/` (26 stale files) was removed after verification.
+- Smoke checks passed for direct vault-backed answer and native delegation via `sessions_spawn` to SPARK.
+- AgentMail Phase F complete: skill installed, `group:runtime` enabled, T1-T4 all pass, Gmail cleanup done
+- G5 content pipeline live: SPARK persona upgraded (content engine), SCOUT persona upgraded (intel analyst), LUNA→SPARK delegation tested
+- Content production pipeline: LUNA identifies opportunity → briefs SPARK → SPARK returns LinkedIn+X pack → LUNA presents to founder for approval
+- SPARK has channel-specific specs (LinkedIn format, X format, image prompt standards, cross-posting rules)
+- SCOUT IDENTITY.md stale handoff path fixed
+- Content presentation: ANNOUNCE_SKIP suppresses raw subagent dumps, file handoff via `workspace-content/output/latest-pack.md`, brief_id+freshness guard
+- Content approval: 3-option CTA (👍 approved / ✏️ edits / 🔄 new angle), founder replies in thread, LUNA confirms
+
+---
+
+## 3. Source-Of-Truth Policy (Locked)
+
+### Canonical docs
+- **Project plan/status:** local repo `docs/pixelport-project-status.md` (this file)
+- **Product spec (v2.0):** local repo `docs/pixelport-master-plan-v2.md`
+- **CTO transition briefing:** `docs/cto-instructions-master-plan-v2-transition.md`
+- **Lovable collaboration guide:** `docs/lovable-collaboration-guide.md`
+- **Infrastructure benchmark:** `docs/cto-founder-infra-benchmark-2026-02-27.md`
+- **OpenClaw reference:** `docs/openclaw-reference.md`
+- **Canonical behavior files (Growth Swarm droplet):**
+  - `/opt/openclaw/workspace-main/*.md`
+  - `/opt/openclaw/workspace-content/*.md`
+  - `/opt/openclaw/workspace-growth/*.md`
+- `/opt/openclaw/agents/*/agent/*.md` is operational storage, NOT planning source-of-truth.
+- **Archived:** `docs/archive/` — completed Growth Swarm instruction files and v1.0 plan
+
+---
+
+## 4. Growth Swarm Product Intent (Locked — Phase 1 Scope)
+
+### Core outcome
+Build an always-on AI agent team that collaborates with humans in Slack, starting with social execution workflows and expanding later.
+
+### Team topology
+- Human → LUNA (only)
+- LUNA → SPARK and SCOUT
+- SPARK ↔ SCOUT direct collaboration allowed
+
+### Phase-1 channels and output
+- Channels: LinkedIn + X
+- Output types: text + images + video
+- Publish mode: one-click assisted workflow that outputs a publish-ready package (manual final posting)
+
+### KPI and reporting
+- North-star KPI: engagement outcomes (impressions/reach daily)
+- Reporting cadence: 2x daily plus async on-demand in Slack
+- Operating style: proactive 24/7, Bangkok timezone
+
+### Research and compliance
+- Source scope: public web only, compliant competitive intel
+- Evidence tradeoff: speed prioritized over strict citation tracking
+- No strict media-rights policy in phase 1
+
+---
+
+## 5. Growth Swarm Execution Plan (Dogfood Instance)
+
+### Phase A — Platform and search stability
+**Status: ✅ Completed (2026-02-25)**
+
+- A1: Gateway stable on current schema (controlled container swap + rollback-safe backups)
+- A2: Gemini-compatible upgrade applied (explicit Docker image tag `ghcr.io/openclaw/openclaw:2026.2.24`)
+- A3: Web search validated end-to-end (Gemini responses with citation URLs)
+
+### Phase B — Rewrite agent operating docs
+**Status: ✅ Completed (2026-02-25)**
+
+- B1: LUNA docs rewritten (delegation contracts, QA gate, approval gate, Slack escalation/reporting)
+- B2: SPARK docs rewritten (content production contracts, collaboration with SCOUT, output formatting)
+- B3: SCOUT docs rewritten (research/intel response contract, confidence tagging, proactive insight routing)
+
+### Phase C — Inter-agent communication wiring
+**Status: ✅ C1/C2 Completed (2026-02-25); C3 validated (2026-02-26)**
+
+- C1: Allowlist mesh configured and verified (LUNA↔SPARK↔SCOUT full mesh)
+- C2: Mesh tests passing (delegation + follow-up + handoff sequences)
+- C3: Learning loop — native spawn/readback passes; MEMORY.md forced writes treated as non-blocking; deterministic feedback-loop test (V1→feedback→V2) passes quality gates
+
+### Phase D — Slack workflow and automation
+**Status: ✅ Completed (infrastructure locked 2026-02-26); ongoing operational refinement continues**
+
+Completed:
+- Cron jobs configured (morning + evening, Bangkok timezone)
+- LUNA workspace intake contracts created (registry, schema, seed KPIs, Slack mirror runbook)
+- Cron prompts hardened with schema-complete `ops_report_v1`
+- Manual runs confirmed delivery
+- Policy locks applied (daily-thread intake, trust boundary, communication style)
+- LUNA `slack_data_request_v1` intake contract created
+- Kickoff intake request posted to `#vidacious-bot`
+
+Ongoing operational refinement (not blocking Phase F):
+- Daily thread intake discipline (continuous improvement)
+- Google Cloud access unblocked by Founder (admin access confirmed)
+- Queue latency SLO definition (monitoring, non-blocking)
+
+### Phase E — Brand/knowledge ingestion
+**Status: ✅ Completed (2026-02-26)**
+
+Completed:
+- Created evidence-based 5-file vault in `/opt/openclaw/workspace-main/vault/`:
+  - `company-profile.md`
+  - `brand-voice.md`
+  - `icp.md`
+  - `competitors.md`
+  - `product-context.md`
+- Included `Last verified (UTC)`, `Sources`, `Known unknowns`, and confidence-tagged inferences in each file.
+- Clarified required Analog vs Vidacious relationship section in `company-profile.md`.
+- Distributed identical vault copies to:
+  - `/opt/openclaw/workspace-content/vault/`
+  - `/opt/openclaw/workspace-growth/vault/`
+- Verified checksum parity for all 5 files across main/content/growth.
+- Backed up each workspace `AGENTS.md` with timestamped `-phaseE` suffix before edits.
+- Added `## Knowledge Base` to all workspace `AGENTS.md` files.
+- Added `## Vault Maintenance` to LUNA `/opt/openclaw/workspace-main/TOOLS.md`.
+- Ran smoke tests:
+  - Direct vault-backed LUNA response (brand voice + competitors) passed.
+  - Inter-agent delegation (LUNA -> SPARK via `sessions_spawn`) passed.
+- Removed stale scaffold vault at `/opt/openclaw/.growth-swarm/vault/` after validation.
+
+Open follow-up from Phase E:
+- LUNA now owns knowledge gap resolution — proactively asks in Slack and researches via web search.
+- Former `[FOUNDER TO FILL]` markers converted to LUNA-actionable instructions.
+
+### Phase F — Email integration (AgentMail)
+**Status: ✅ Complete (2026-02-27)**
+
+Goal: Give LUNA a working email address so humans can email context/tasks directly to the agent.
+
+Decision (2026-02-27): **AgentMail** (agentmail.to) replaces Gmail/Apps Script approach.
+- AgentMail is a YC-backed, API-first email platform built for AI agents on OpenClaw
+- Official OpenClaw skill available (`openclaw/skills` → `agentmail`)
+- Inbox already created: `vidacious@agentmail.to`
+- API key in `.env` on droplet
+
+Why AgentMail over Gmail:
+- No custom Docker builds required (stock upstream image only)
+- No HTTPS ingress needed (no nginx/SSL/domain/Cloudflare Tunnel)
+- No OAuth token management or Google abuse detection risk
+- Scales for PixelPort multi-tenant (free tier: 3 inboxes, 3K emails/mo)
+- Official OpenClaw skill = config-only integration
+
+Completed (2026-02-27):
+- AgentMail skill installed at `workspace-main/skills/agentmail/` (fallback installer)
+- `AGENTMAIL_API_KEY` added to `/opt/openclaw/.env`
+- LUNA TOOLS.md updated with `## Email (AgentMail)` section + `### API Mechanism` (exec+curl)
+- LUNA AGENTS.md updated with `### Email Integration` in KB
+- All backups created (`.env`, `TOOLS.md`, `AGENTS.md` with `-phaseF` suffix, `openclaw.json` with `-phaseF-fix` suffix)
+- API key + inbox validated (direct API probe confirmed working)
+- `group:runtime` added to LUNA's tools.allow in `openclaw.json` (LUNA only — SPARK/SCOUT unchanged)
+- T1 (email identity) smoke test: ✅ PASS
+- T2 (receive email) smoke test: ✅ PASS — LUNA reads inbox via exec+curl
+- T3 (send email, approval-gated) smoke test: ✅ PASS — draft→APPROVED→sent, founder received
+- T4 (delegation + email) smoke test: ✅ PASS — LUNA→SCOUT research→compose→approve→send
+- Canonical send endpoint locked to `POST /v0/inboxes/.../messages/send`
+- Slack regression: ✅ PASS
+- Cron regression: ✅ PASS
+- All modified files ownership `1000:1000`: ✅ verified
+
+Gmail cleanup (2026-02-27):
+- Purged stale Gmail references from 5 files: `cron/jobs.json`, `ops/sources.registry.json`, `ops/slack-mirror-runbook.md`, `TOOLS.md`, `ops/intake/latest.snapshot.json`
+- Gateway restarted to reload updated cron prompts
+- Stale phrase scan: zero matches for Gmail blockers in active files
+- `policy.email_domain_allowlist` updated to `["analog.one", "vidacious.ai"]`
+- All backups created with `-gmailcleanup` suffix
+
+Implementation approach:
+- Skill installed, curl-based REST API calls (no Python SDK dependency)
+- LUNA sources `.env` file before curl calls for API key access
+- Polling mode first (LUNA checks email during cron reports or on request)
+- Webhook push mode deferred to future enhancement
+- Slack mirror stays active — email is additive, not replacement
+
+Eliminated components (not needed):
+- Gmail Pub/Sub pipeline, Google Apps Script bridge
+- HTTPS ingress (nginx, SSL, domain), Cloudflare Tunnel / relay worker
+- OAuth credential management, `gog` binary / `gcloud` CLI
+- Python SDK (curl is sufficient)
+
+Constraints (locked):
+- No custom Docker builds — stock upstream OpenClaw images only
+- Slack remains primary human-agent channel
+- Founder approval required for outbound emails
+- Trusted sender allowlist: `@analog.one`, `@vidacious.ai`
+
+### Acceptance Gates
+
+| Gate | Status | Criteria |
+|------|--------|----------|
+| G1 (A-C) | ✅ Passed | Gateway stable, search functional, docs rewritten, mesh verified |
+| G2 (D) | ✅ Passed | Cron/reporting validated; remaining items are ongoing refinement, not blockers |
+| G3 (E) | ✅ Passed | Brand vault live, checksum-verified, agent KB wired, smoke tests passed |
+| G4 (F) | ✅ Passed | AgentMail skill installed, T1-T4 smoke tests pass, Gmail cleanup done, CTO verified |
+| G5 (content) | ✅ Passed | LUNA→SPARK pipeline working, first LinkedIn+X content packs produced, founder approval flow live, CTO QA verified |
+
+---
+
+## 6. PixelPort Build Phases (Product SaaS — v2.0)
+
+### Phase 0: Foundation (Weeks 1-2)
+**Goal**: Web app shell + provisioning pipeline
+**Status: 🟡 Starting — Q&A decisions locked 2026-02-28**
+
+**Founder + Lovable:**
+- [ ] 0.1: Lovable project setup + Clerk auth + Supabase DB
+- [ ] 0.2: Landing page (pixelport.ai)
+- [ ] 0.3: Auth flow: signup → workspace creation → dashboard redirect
+- [ ] 0.7: Dashboard shell in Lovable (nav, empty states)
+
+**CTO + Codex:**
+- [ ] 0.4: Provisioning script — DO Droplet + OpenClaw container per user (Inngest workflow)
+- [ ] 0.5: API bridge — PixelPort API → OpenClaw gateway (Clerk JWT → tenant lookup → proxy)
+- [ ] 0.6: LiteLLM central deployment on Railway/Render + per-tenant routing
+- [ ] 0.8: Supabase schema (tenants, agents, sessions, metrics, content_items, approvals)
+- [ ] 0.9: Provisioning dry-run gate (test tenant on fresh droplet, verify all services)
+
+**Shared:**
+- [ ] Monorepo structure (Lovable frontend + api/ directory, Vercel deploys both)
+- [ ] Inngest Cloud setup (free tier, connected to API routes)
+
+### Phase 1: Chief of Staff Alive (Weeks 3-5)
+**Goal**: Onboarding + Chief of Staff working in dashboard + Slack + email
+**Status: ⬜ Not started**
+
+- [ ] 1.1-1.5: 3-step onboarding, website auto-scan, SOUL.md template, agent personalization
+- [ ] 1.6-1.7: Dashboard Home + chat widget + full-page chat
+- [ ] 1.8: Slack OAuth integration
+- [ ] 1.9: AgentMail per-tenant provisioning
+- [ ] 1.10-1.11: Mem0 tenant setup + PostHog basic instrumentation
+- [ ] 1.12-1.14: KPI negotiation, configurable reporting, Slack+dashboard sync
+
+### Phase 2: Content Pipeline + Images (Weeks 6-9)
+**Goal**: Full content production pipeline with image generation
+**Status: ⬜ Not started**
+
+- [ ] 2.1-2.3: Sub-agent provisioning + inter-agent comms
+- [ ] 2.4-2.5: Content pipeline UI + Inngest approval workflow
+- [ ] 2.6-2.7: Platform-native content + image gen integration
+- [ ] 2.8-2.10: Competitor intel dashboard + calendar + Knowledge Vault page
+
+### Phase 3: Social Publishing + Video (Weeks 10-12)
+**Goal**: Social integrations + video generation
+**Status: ⬜ Not started**
+
+- [ ] 3.1-3.2: X + LinkedIn integration (read + assisted publish)
+- [ ] 3.3: Video generation integration
+- [ ] 3.4-3.6: Scheduling engine + performance tracking + weekly reports
+
+### Phase 4: Dashboard Polish + Trust (Weeks 13-16)
+**Goal**: Production-quality dashboard, trust features
+**Status: ⬜ Not started**
+
+- [ ] 4.1-4.3: Performance page, agent detail page, connections page
+- [ ] 4.4-4.6: API keys management, budget controls, brand voice enforcement
+- [ ] 4.7-4.9: Audit log, team management + RBAC, OpenClaw direct access
+- [ ] 4.10-4.11: Workflow suggestions UI, Stripe billing
+
+### Phase 5: Growth (Weeks 17-20)
+**Status: ⬜ Not started**
+
+- [ ] 5.1-5.7: WhatsApp, CRM, Gmail/Outlook enterprise, Google Workspace, agent marketplace, multi-team, advanced analytics
+
+### Phase 6: Scale (Weeks 21+)
+**Status: ⬜ Not started**
+
+- [ ] 6.1-6.6: K8s migration, auto-provisioning, security hardening, token rotation, SOC2, centralized Slack
+
+---
+
+## 7. Combined Decisions Log
+
+### Growth Swarm Decisions (2026-02-24 to 2026-02-26)
+
+| Date | Decision | Choice |
+|------|----------|--------|
+| 2026-02-25 | Human entrypoint | LUNA only in Slack |
+| 2026-02-25 | Timeline | 2-week stabilization first |
+| 2026-02-25 | Approval policy | Explicit founder approval required |
+| 2026-02-25 | Approval fallback | Queue and wait |
+| 2026-02-25 | Phase-1 channels | LinkedIn + X |
+| 2026-02-25 | Phase-1 outputs | Text + image + video |
+| 2026-02-25 | Publish flow | One-click assisted package; manual final posting |
+| 2026-02-25 | Audience | Founders + GTM leaders |
+| 2026-02-25 | Ops schedule | 24/7 proactive |
+| 2026-02-25 | Incident surfacing | Dedicated Slack ops thread |
+| 2026-02-25 | Reporting cadence | 2x daily + async on demand |
+| 2026-02-25 | Ops timezone | Bangkok time |
+| 2026-02-25 | Memory retention | Keep + monthly prune |
+| 2026-02-25 | KPI primary | Engagement outcomes (impressions/reach daily) |
+| 2026-02-25 | Throughput style | Dynamic high (~40/week, adjustable via Slack) |
+| 2026-02-25 | Canonical behavior files | Workspace files only |
+| 2026-02-25 | Project doc source-of-truth | Local repo docs |
+| 2026-02-25 | Media stack target | OpenAI Images + Google Veo |
+| 2026-02-25 | Search strategy | Upgraded gateway, switched to Gemini |
+| 2026-02-25 | Model assignment | Single model for all agents in phase 1 |
+| 2026-02-25 | Agent docs status | Phase B complete |
+| 2026-02-25 | Mesh wiring | Phase C1/C2 complete |
+| 2026-02-25 | Auth profile rollout | OpenAI auth profiles for main/content/growth |
+| 2026-02-25 | OpenClaw runtime upgrade | 2026.2.17 → 2026.2.24 (explicit version tag) |
+| 2026-02-25 | Search validation | Gemini smoke tests passed |
+| 2026-02-26 | Doctor remediation | `openclaw doctor --fix` applied |
+| 2026-02-26 | Session diagnostics | `sessions.visibility=all`, `agentToAgent.enabled=true` |
+| 2026-02-26 | Phase D kickoff | Twice-daily Slack ops cron reports |
+| 2026-02-26 | Telemetry intake | Slack first, then email |
+| 2026-02-26 | Reporting destination | Channel root `C0AH74JNETT`; incidents in thread |
+| 2026-02-26 | Report schema | `ops_report_v1` with data-missing alerts |
+| 2026-02-26 | C3 memory policy | Don't force main MEMORY.md writes |
+| 2026-02-26 | C3 collaboration | Native-first, deterministic fallback |
+| 2026-02-26 | Email integration | Deferred; Slack mirror fallback |
+| 2026-02-26 | Intake trust | `@analog.one` only; no subject tags |
+| 2026-02-26 | Intake pattern | Daily thread in `#vidacious-bot` |
+| 2026-02-26 | P1 threshold | Hard outages only |
+| 2026-02-26 | Interim ownership | LUNA default for stale sources |
+| 2026-02-26 | Security | Secret pasting accepted; rotation mandatory |
+| 2026-02-26 | Slack style | Friendly, concise, light emoji, SLA nudges |
+| 2026-02-26 | Allowlist cleanup | Removed `group:memory`, `group:automation` |
+| 2026-02-26 | Slack security | `groupPolicy=open`, `allowFrom=["*"]` accepted |
+| 2026-02-26 | Vault founder decisions | 8 critical decisions confirmed by founder (year, tone, claims, differentiators, etc.) |
+| 2026-02-26 | Docker image policy | No divergence from upstream OpenClaw; must stay upgradeable |
+| 2026-02-26 | Phase D gate | Closed as complete; remaining items are ongoing operational refinement |
+| 2026-02-26 | Google Cloud access | Founder confirmed admin access available; blocker resolved |
+| 2026-02-26 | LUNA email | luna@analog.one — email bridge for humans to send context to LUNA |
+| 2026-02-26 | Phase F approach | Investigation-first; no custom Docker builds allowed |
+| 2026-02-26 | Workstream priority | Growth Swarm first, then PixelPort |
+| 2026-02-27 | Email integration platform | AgentMail (agentmail.to) — replaces Gmail/Apps Script |
+| 2026-02-27 | LUNA email inbox | vidacious@agentmail.to (already created) |
+| 2026-02-27 | Email mode | Polling first; webhook push deferred |
+| 2026-02-27 | Email channel priority | Secondary to Slack — additive, not replacement |
+| 2026-02-27 | Outbound email policy | Founder approval required before sending |
+| 2026-02-27 | LUNA runtime tools | Add `group:runtime` to LUNA only (exec/curl for AgentMail API) — CTO approved |
+| 2026-02-27 | AgentMail API mechanism | curl-based REST calls (no Python SDK needed) |
+| 2026-02-27 | AgentMail installer path | Fallback `clawhub` succeeded (primary `playbooks` failed on TTY) |
+| 2026-02-27 | Vault ownership | LUNA owns vault — proactive collection via Slack, self-managed updates |
+| 2026-02-27 | Knowledge collection | Conversational in Slack (1-2 Qs at a time), not manual form-filling |
+| 2026-02-27 | LUNA autonomy | Chief of staff model — LUNA decides what to learn, ask, and update |
+| 2026-02-27 | LUNA communication style | Casual startup colleague — emojis, short messages, never expose file names or technical internals |
+| 2026-02-27 | SPARK persona | Content engine — creative, bold, platform-native, fast, opinionated |
+| 2026-02-27 | SCOUT persona | Intel analyst — precise, efficient, pattern-spotter, honest, action-oriented |
+| 2026-02-27 | Content pipeline architecture | LUNA orchestrates: identify → brief SPARK → review pack → present to founder → SCOUT for evidence if needed |
+| 2026-02-27 | Content pack format | Channel-specific: LinkedIn (1200-1800 chars, variants, hashtags) + X (280 char singles, 3-5 tweet threads) + image prompts |
+| 2026-02-27 | Content delivery mechanism | SPARK writes to file + ANNOUNCE_SKIP; LUNA reads file + presents with CTA |
+| 2026-02-27 | Content approval flow | 3-option CTA in Slack: approved / edits / new angle — founder replies in thread |
+| 2026-02-27 | LUNA model runtime | Primary `openai/gpt-5.2-codex`, fallback `google/gemini-2.5-flash`; deferred `gpt-5.3-codex` due OAuth-provider mapping on OpenClaw `2026.2.24` |
+
+### PixelPort Product Decisions (2026-02-26)
+
+| Date | Decision | Choice |
+|------|----------|--------|
+| 2026-02-26 | Product name | PixelPort (was LunaAI) |
+| 2026-02-26 | GS↔PixelPort | GS = dogfood/first customer |
+| 2026-02-26 | Build team | Solo founder + AI agents |
+| 2026-02-26 | Deployment model | Isolated OpenClaw per customer |
+| 2026-02-26 | Timeline | No hard deadline — build it right |
+| 2026-02-26 | Onboarding start | Web dashboard chat → then Slack |
+| 2026-02-26 | GTM features | Agent behaviors + dedicated dashboard UI |
+| 2026-02-26 | Content approval | Slack-first, no auto-post default |
+| 2026-02-26 | Agent tone | User-configurable |
+| 2026-02-26 | Data retention | Keep until delete, compress over time |
+
+### PixelPort v2.0 Decisions — Architecture Q&A (2026-02-28)
+
+52 locked decisions in `docs/pixelport-master-plan-v2.md` Section 17. Key decisions affecting Phase 0:
+
+| Date | Decision | Choice |
+|------|----------|--------|
+| 2026-02-28 | Product model | "Your AI Chief of Staff" — one visible agent, sub-agents behind scenes |
+| 2026-02-28 | Frontend | Lovable Cloud (replaces Next.js + Tailwind) |
+| 2026-02-28 | LLM keys | PixelPort provides default keys (BYO optional) |
+| 2026-02-28 | LLM gateway | LiteLLM from day one — all calls route through it |
+| 2026-02-28 | Workflow engine | Inngest from day one (free: 50K exec/mo) |
+| 2026-02-28 | Memory | Mem0 managed cloud (vector + graph per tenant) |
+| 2026-02-28 | Analytics | PostHog from Phase 1 (free: 1M events) |
+| 2026-02-28 | Pricing | $299/$999/$3K+ per-agent tiers, 14-day free trial |
+| 2026-02-28 | Onboarding | 3-step (URL + goals + Slack) |
+| 2026-02-28 | Email | AgentMail default, Phase 1 |
+| 2026-02-28 | Image gen | Phase 2 |
+| 2026-02-28 | Video gen | Phase 3 |
+| 2026-02-28 | Slack routing | Socket Mode per-tenant VM for now |
+
+### CTO Q&A Decisions — Phase 0 Unblock (2026-02-28)
+
+| # | Question | Decision |
+|---|----------|----------|
+| Q1 | Inngest hosting | Inngest Cloud free tier (no self-hosting) |
+| Q2 | LiteLLM deployment | Railway or Render (cheapest always-on, ~$5-10/mo) |
+| Q3 | Supabase schema ownership | CTO proposes → founder reviews → CTO executes |
+| Q4 | API structure | Vercel API routes in monorepo (api/ directory) |
+| Q5 | OpenClaw version for new tenants | CTO picks latest stable at launch (not pinned to 2026.2.24) |
+| Q6 | Repo structure | Monorepo (Lovable frontend + api/ backend) |
+| Q7 | Mem0 pricing | Start with free tier, apply for startup program |
+| Q8 | Trial LLM budget | $20 per trial user via LiteLLM |
+| Q9 | Decision log count | Skip (not important) |
+
+---
+
+## 8. Fixes & Lessons Learned
+
+| Date | Issue | Fix | Notes |
+|------|-------|-----|-------|
+| 2026-02-24 | Bot doesn't respond | Actions > Messages OFF in Slack | Enable in OpenClaw UI |
+| 2026-02-24 | missing_recipient_team_id | Multiple Slack settings disabled | Turn on ALL toggles |
+| 2026-02-24 | teamId rejected | OpenClaw rejects unknown keys | Don't add unrecognized keys |
+| 2026-02-24 | CLI changes break gateway | Strict config validation | Prefer UI for changes |
+| 2026-02-24 | TOOLS.md = home auto defaults | Generic templates | Rewrite per agent |
+| 2026-02-25 | Web search failed on 2026.2.17 | `provider: "gemini"` not schema-valid | Required upgrade to 2026.2.24 |
+| 2026-02-25 | `:latest` tag outdated | Still pinned to 2026.2.17 | Always use explicit version tags |
+| 2026-02-25 | Container can't SSH | Network restricted | Use Chrome MCP for UI access |
+| 2026-02-26 | Unsupported allowlist entries | `group:memory`, `group:automation` | Removed; check logs for warnings |
+| 2026-02-27 | `playbooks add skill` fails non-interactive | TTY/raw-mode issue | Use `clawhub@latest install` fallback |
+| 2026-02-27 | AgentMail T2-T4 fail | LUNA missing `group:runtime` for exec/curl | Skills assume agent has exec; add to allowlist |
+| 2026-02-27 | `.env` not in container `printenv` | Container not started with `--env-file` | Source `.env` before exec commands |
+| 2026-02-27 | AgentMail send endpoint 404 | `POST /messages` → 404 | Correct endpoint: `POST /messages/send` |
+| 2026-02-27 | Stale Gmail refs in cron reports | 4 files still reference Gmail approach | cron/jobs.json, sources.registry, slack-mirror-runbook, TOOLS.md |
+| 2026-02-27 | Codex missed Step 7 | Fix instructions updated after Codex started | Supplementary instruction needed for Gmail cleanup |
+| 2026-02-27 | LUNA too robotic in Slack | Voice instructions too vague ("friendly, light emoji") | Rewrote with explicit anti-patterns, examples, and "startup colleague" framing |
+| 2026-02-27 | "Subagent finished" messages visible | OpenClaw system notification leaks internal ops to channel | System-generated, not controllable via workspace files — cosmetic, non-blocking |
+| 2026-02-27 | SPARK/SCOUT had generic SOUL.md | Boilerplate personas, not role-specific | Replaced with content engine (SPARK) and intel analyst (SCOUT) personas |
+| 2026-02-27 | Raw subagent dumps in Slack | OpenClaw auto-announces subagent completion | ANNOUNCE_SKIP + file handoff (SPARK writes to file, replies ANNOUNCE_SKIP, LUNA reads file) |
+| 2026-02-27 | No approval CTA on content drafts | Founder didn't know what to do with content | Added 3-option CTA: 👍 approved / ✏️ edits / 🔄 new angle |
+
+---
+
+## 9. Known Risks and Mitigations
+
+| Risk | Current choice | Mitigation |
+|------|----------------|------------|
+| Credential exposure | Rotation deferred | Keep explicit task in backlog |
+| Media licensing ambiguity | Strict rights policy deferred | Human approval gate for publishing |
+| Speed over evidence tracking | Allowed | LUNA blocks unverifiable claims |
+| Dual file trees on droplet | Workspace-only canonical policy | Ignore agentDir copies |
+| AgentMail vendor dependency | Free tier sufficient for now | Monitor pricing/availability; AgentMail is YC-backed; fallback to self-hosted SMTP if needed |
+| Email prompt injection | Trusted sender allowlist | Only process emails from `@analog.one` and `@vidacious.ai`; flag suspicious content |
+| Secrets pasted in chat | Explicitly accepted | Immediate key rotation if occurs |
+| Queue latency warnings | Monitored, non-blocking | Define alert threshold/SLO |
+
+---
+
+## 10. Immediate Next Actions
+
+### Growth Swarm (dogfood) — maintenance mode
+1. **Phases A-F: ✅ Complete** — all stabilization phases done, G1-G5 gates passed
+2. LUNA keeps operating autonomously on current droplet
+3. Continue daily thread intake in `#vidacious-bot`
+4. Get founder approval on content packs → first publishes
+5. No infrastructure changes until PixelPort Phase 1 migration
+6. Growth Swarm stays on current droplet through PixelPort Phase 1 validation
+
+### PixelPort (product) — Phase 0 active
+
+**CTO + Codex (in progress):**
+1. Research Railway vs Render for LiteLLM deployment → pick one
+2. Design Supabase schema → share with founder for review
+3. Document API contracts for Lovable pages
+4. Write Phase 0 Codex instruction doc (0.4 provisioning, 0.5 API bridge, 0.6 LiteLLM, 0.8 schema)
+5. Set up Inngest Cloud account (free tier)
+6. Prepare monorepo api/ directory structure
+
+**Founder + Lovable (in parallel):**
+1. Create Lovable Cloud project for PixelPort
+2. Connect to GitHub (Lovable auto-provisions)
+3. Share repo access with CTO
+4. Share Supabase project URL + credentials
+5. Start landing page (pixelport.ai)
+
+**Coordination needed:**
+- Founder creates Lovable project → shares GitHub repo → CTO adds api/ directory
+- CTO proposes Supabase schema → founder reviews → CTO runs migrations
+- CTO documents API contracts → founder builds Lovable pages against them
+
+---
+
+## 11. Key References
+
+| Document | Purpose |
+|----------|---------|
+| `docs/pixelport-master-plan-v2.md` | Full product spec v2.0 — 52 locked decisions, architecture, build plan |
+| `docs/pixelport-project-status.md` | This file — execution status |
+| `docs/cto-instructions-master-plan-v2-transition.md` | CTO briefing on v1→v2 changes and immediate actions |
+| `docs/lovable-collaboration-guide.md` | How founder + Claude work on Lovable frontend |
+| `docs/cto-founder-infra-benchmark-2026-02-27.md` | Infrastructure benchmark + competitor analysis |
+| `docs/openclaw-reference.md` | OpenClaw platform reference |
+| `docs/archive/` | Completed Growth Swarm CTO instruction files + v1.0 plan |
