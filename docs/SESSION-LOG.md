@@ -6,7 +6,30 @@
 
 ## Last Session
 
-- **Date:** 2026-03-03 (late)
+- **Date:** 2026-03-04 (night)
+- **Who worked:** CTO (Claude Code)
+- **What was done:**
+  - **CTO Review of Codex Slice 7 (Slack OAuth): ALL 5 FILES PASS ✅**
+    - `005_slack_connections.sql`: Schema correct, UNIQUE(tenant_id), service-role RLS, CASCADE, updated_at trigger ✅
+    - `install.ts`: Auth via authenticateRequest(), HMAC-signed state with 10-min TTL, 8 bot scopes, auto-derived redirect URI ✅
+    - `callback.ts`: State validation (HMAC + timestamp), Slack oauth.v2.access exchange, AES-256-CBC token encryption with random IV, tenant-scoped upsert, no secrets leaked ✅
+    - `events.ts`: Slack v0 signature verification with timingSafeEqual(), url_verification challenge, Phase 2 event routing placeholder ✅
+    - `index.ts`: Auth, tenant-scoped, safe response (no bot_token exposed), includes email status ✅
+  - **Security posture: STRONG** — No cross-tenant leakage possible, all secrets encrypted at rest, timing-safe signature verification, no hardcoded credentials.
+  - DO debugging: Changed default droplet from `s-2vcpu-4gb` ($24/mo) → `s-1vcpu-1gb` ($6/mo), added `/api/debug/do-status` diagnostic endpoint, improved error messages.
+  - Pulled Slice 7 (7 files, `72be4e0`), verified SESSION-LOG integrity (all entries preserved).
+- **What's next:**
+  - Founder: Hit `/api/debug/do-status` after deploy to diagnose DO quota issue.
+  - Founder: Configure Slack Event Subscriptions URL → `/api/connections/slack/events` in Slack App console.
+  - I2 integration: Wire chat widget → POST /api/chat SSE.
+  - I4 integration: Wire connections page → GET /api/connections/slack/install + GET /api/connections.
+- **Blockers:**
+  - DigitalOcean droplet quota — diagnostic endpoint deployed to investigate.
+  - Mem0 startup program — not yet applied.
+
+---
+
+### 2026-03-03 (late)
 - **Who worked:** Codex
 - **What was done:**
   - Added `supabase/migrations/005_slack_connections.sql`:
