@@ -6,7 +6,27 @@
 
 ## Last Session
 
-- **Date:** 2026-03-03 (night, latest)
+- **Date:** 2026-03-04 (night)
+- **Who worked:** CTO (Claude Code)
+- **What was done:**
+  - **CTO reviewed Codex Slice 6: PASS ✅**
+    - `api/chat.ts` (233 lines): Auth correct, tenant preflight checks (status/droplet_ip/gateway_token), session management (create/resume with tenant scoping), user message persistence before gateway call, SSE streaming with `writeSse()` helper, buffer management for partial chunks, multi-field token extraction (content/text/token/delta), JSON fallback for non-SSE gateways, assistant response persistence after streaming, proper error handling (pre-stream JSON, post-stream SSE error event).
+    - `api/chat/history.ts` (83 lines): Two-mode endpoint (sessions list / session messages), tenant-isolated, paginated with `parseBoundedInt()` safe defaults and max caps, exact counts via `{ count: 'exact' }`.
+    - Migration 004 (50 lines): Both tables correct, `chat_messages.session_id` FK to `chat_sessions` with CASCADE, 3 indexes for access patterns, service-role RLS policies match existing schema pattern.
+    - Docs: SESSION-LOG entry added with all previous entries preserved, ACTIVE-PLAN 1.C2 checked off.
+  - Noted Codex feedback: primary Supabase pooler `aws-0-us-west-1` failed, fallback `aws-1-eu-west-1` succeeded — update runbooks.
+  - Slack App "Pixel" created by founder, Vercel env vars set and redeployed. Slice 7 now unblocked.
+- **What's next:**
+  - Founder: Hand Codex Slice 7 message (Slack OAuth flow + webhook).
+  - CTO + Founder: Wire I2 (chat widget → POST /api/chat SSE) after Slice 7 is dispatched.
+  - Monitor Vercel SSE timeout in production — may need Edge Functions migration.
+- **Blockers:**
+  - Live gateway streaming untested (no active tenants with infrastructure — DO quota).
+  - Vercel timeout risk on SSE (10s hobby / 60s pro) — monitor after first real usage.
+
+---
+
+### 2026-03-03 (night, latest)
 - **Who worked:** Codex
 - **What was done:**
   - Added migration `supabase/migrations/004_chat_messages.sql` with:
