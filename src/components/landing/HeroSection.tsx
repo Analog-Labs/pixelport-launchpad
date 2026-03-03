@@ -3,8 +3,18 @@ import { Badge } from "@/components/ui/badge";
 import ProductPreview from "./ProductPreview";
 
 const HeroSection = () => (
-  <section className="relative min-h-screen flex items-center pt-20 pb-12">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+  <section className="relative min-h-[90vh] flex items-center pt-20 pb-8">
+    {/* Subtle gradient orbs */}
+    <div
+      className="absolute top-[-100px] left-[-100px] w-[500px] h-[500px] rounded-full bg-primary/5 pointer-events-none"
+      style={{ filter: "blur(100px)" }}
+    />
+    <div
+      className="absolute bottom-0 right-[-100px] w-[400px] h-[400px] rounded-full bg-primary/3 pointer-events-none"
+      style={{ filter: "blur(80px)" }}
+    />
+
+    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
       <div className="grid lg:grid-cols-[55%_45%] gap-12 lg:gap-8 items-center">
         {/* Left copy */}
         <div className="space-y-6">

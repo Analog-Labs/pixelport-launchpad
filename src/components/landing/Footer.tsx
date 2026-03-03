@@ -3,22 +3,42 @@ import PixelPortLogo from "@/components/PixelPortLogo";
 const columns = [
   {
     title: "Product",
-    links: ["Features", "Pricing", "Integrations", "FAQ"],
+    links: [
+      { label: "Features", href: "#features" },
+      { label: "Pricing", href: "#pricing" },
+      { label: "Integrations", href: "#integrations" },
+      { label: "FAQ", href: "#faq" },
+    ],
   },
   {
     title: "Company",
-    links: ["Blog", "Docs", "About", "Careers"],
+    links: [
+      { label: "Blog", href: "#" },
+      { label: "Docs", href: "#" },
+      { label: "About", href: "#" },
+      { label: "Careers", href: "#" },
+    ],
   },
   {
     title: "Legal",
-    links: ["Terms of Service", "Privacy Policy"],
+    links: [
+      { label: "Terms of Service", href: "#" },
+      { label: "Privacy Policy", href: "#" },
+    ],
+  },
+  {
+    title: "Social",
+    links: [
+      { label: "X (Twitter)", href: "#" },
+      { label: "LinkedIn", href: "#" },
+    ],
   },
 ];
 
 const Footer = () => (
   <footer className="border-t border-border bg-surface/30">
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-8">
         {/* Brand */}
         <div className="col-span-2">
           <div className="flex items-center gap-2 mb-3">
@@ -31,38 +51,20 @@ const Footer = () => (
           <p className="text-xs text-muted-foreground">© 2026 Analog</p>
         </div>
 
-        {/* Link columns */}
         {columns.map((col) => (
           <div key={col.title}>
             <p className="text-sm font-semibold text-foreground mb-3">{col.title}</p>
             <ul className="space-y-2">
               {col.links.map((link) => (
-                <li key={link}>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    {link}
+                <li key={link.label}>
+                  <a href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    {link.label}
                   </a>
                 </li>
               ))}
             </ul>
           </div>
         ))}
-
-        {/* Social */}
-        <div>
-          <p className="text-sm font-semibold text-foreground mb-3">Social</p>
-          <ul className="space-y-2">
-            <li>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                X (Twitter)
-              </a>
-            </li>
-            <li>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                LinkedIn
-              </a>
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
   </footer>
