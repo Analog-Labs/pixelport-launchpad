@@ -11,26 +11,10 @@ const columns = [
     ],
   },
   {
-    title: "Company",
-    links: [
-      { label: "Blog", href: "#" },
-      { label: "Docs", href: "#" },
-      { label: "About", href: "#" },
-      { label: "Careers", href: "#" },
-    ],
-  },
-  {
     title: "Legal",
     links: [
-      { label: "Terms of Service", href: "#" },
-      { label: "Privacy Policy", href: "#" },
-    ],
-  },
-  {
-    title: "Social",
-    links: [
-      { label: "X (Twitter)", href: "#" },
-      { label: "LinkedIn", href: "#" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
     ],
   },
 ];
@@ -38,7 +22,7 @@ const columns = [
 const Footer = () => (
   <footer className="border-t border-border bg-surface/30">
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
         {/* Brand */}
         <div className="col-span-2">
           <div className="flex items-center gap-2 mb-3">

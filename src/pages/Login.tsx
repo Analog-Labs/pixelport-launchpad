@@ -28,10 +28,15 @@ const Login = () => {
   };
 
   const handleGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/dashboard` },
-    });
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (oauthError) setError(oauthError.message);
+    } catch (err: any) {
+      setError(err?.message || "Google sign-in failed. Please try again.");
+    }
   };
 
   return (

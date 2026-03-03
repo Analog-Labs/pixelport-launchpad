@@ -6,14 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PixelPortLogo from "@/components/PixelPortLogo";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 
 const Signup = () => {
   const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
   if (authLoading) return null;
   if (user) return <Navigate to="/dashboard" replace />;
@@ -21,22 +24,67 @@ const Signup = () => {
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (!agreedToTerms) {
+      setError("You must agree to the Terms of Service and Privacy Policy.");
+      return;
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: window.location.origin },
     });
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+    } else {
+      setSignupSuccess(true);
+    }
     setLoading(false);
   };
 
   const handleGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/dashboard` },
-    });
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (oauthError) setError(oauthError.message);
+    } catch (err: any) {
+      setError(err?.message || "Google sign-in failed. Please try again.");
+    }
   };
+
+  // Success screen — email verification
+  if (signupSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden px-4">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full pointer-events-none" style={{ background: "radial-gradient(ellipse, hsla(38,60%,58%,0.08) 0%, transparent 70%)" }} />
+        <div className="w-full max-w-[420px] rounded-xl border bg-card p-8 relative z-10 text-center" style={{ borderColor: "rgba(212,168,83,0.1)" }}>
+          <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-foreground mb-2">Check your email</h1>
+          <p className="text-muted-foreground text-sm mb-6">
+            We sent a confirmation link to <span className="text-foreground font-medium">{email}</span>. Click the link to activate your account.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Didn't get it? Check your spam folder or{" "}
+            <button onClick={() => setSignupSuccess(false)} className="text-primary hover:underline">
+              try again
+            </button>.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden px-4">
@@ -70,7 +118,26 @@ const Signup = () => {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-[#0D0D14] border-border focus-visible:ring-primary" required />
+            <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-[#0D0D14] border-border focus-visible:ring-primary" required minLength={6} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input id="confirmPassword" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="bg-[#0D0D14] border-border focus-visible:ring-primary" required minLength={6} />
+          </div>
+          <div className="flex items-start gap-2.5">
+            <input
+              type="checkbox"
+              id="terms"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-border accent-[hsl(38,60%,58%)]"
+            />
+            <label htmlFor="terms" className="text-sm text-muted-foreground leading-snug cursor-pointer">
+              I agree to the{" "}
+              <a href="/terms" className="text-primary hover:underline">Terms of Service</a>{" "}
+              and{" "}
+              <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>
+            </label>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full shimmer-btn text-primary-foreground font-semibold" disabled={loading}>

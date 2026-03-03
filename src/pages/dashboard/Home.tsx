@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bot, FileText, Search, MessageSquare, ArrowRight } from "lucide-react";
@@ -23,13 +24,14 @@ const statCards = [
 ];
 
 const quickActions = [
-  { icon: FileText, title: "Create Content", sub: "Draft your first post" },
-  { icon: Search, title: "Add Competitors", sub: "Set up monitoring" },
-  { icon: MessageSquare, title: "Connect Slack", sub: "Bring Luna to Slack" },
+  { icon: FileText, title: "Create Content", sub: "Draft your first post", to: "/dashboard/content" },
+  { icon: Search, title: "Add Competitors", sub: "Set up monitoring", to: "/dashboard/competitors" },
+  { icon: MessageSquare, title: "Connect Slack", sub: "Bring Luna to Slack", to: "/dashboard/connections" },
 ];
 
 const Home = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -64,7 +66,7 @@ const Home = () => {
             <p className="text-muted-foreground text-sm mt-1">
               Luna is being set up. Complete onboarding to activate your Chief of Staff.
             </p>
-            <Button className="mt-4" size="sm">
+            <Button className="mt-4" size="sm" onClick={() => navigate("/dashboard/settings")}>
               Complete Onboarding <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
@@ -76,7 +78,7 @@ const Home = () => {
         <h2 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {quickActions.map((a) => (
-            <Card key={a.title} className="bg-[hsl(240_20%_7%)] border-primary/15 hover:border-primary/30 transition-colors cursor-pointer">
+            <Card key={a.title} className="bg-[hsl(240_20%_7%)] border-primary/15 hover:border-primary/30 transition-colors cursor-pointer" onClick={() => navigate(a.to)}>
               <CardContent className="p-5">
                 <a.icon className="h-8 w-8 text-primary mb-3" />
                 <h3 className="font-medium text-foreground">{a.title}</h3>

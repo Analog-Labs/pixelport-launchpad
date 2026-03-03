@@ -21,6 +21,7 @@ const navItems = [
   { title: "Competitor Intel", url: "/dashboard/competitors", icon: Search },
   { title: "Connections", url: "/dashboard/connections", icon: Link },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
+  { title: "Chat", url: "/dashboard/chat", icon: MessageCircle },
 ];
 
 function getInitials(name?: string | null, email?: string | null): string {

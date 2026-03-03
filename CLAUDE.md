@@ -14,8 +14,8 @@ Growth Swarm is the dogfood instance running Vidacious marketing on OpenClaw (3 
 ## Who Does What
 | Role | Scope | Does NOT |
 |------|-------|----------|
-| **Founder + Claude (chat)** | Frontend (Lovable), product decisions, instruction docs | Write backend code directly |
-| **CTO (Claude Code)** | Backend, infra, API routes, integrations | Touch Lovable frontend files |
+| **Founder + Claude (chat)** | Build new frontend features (Lovable), product decisions, instruction docs | Write backend code directly |
+| **CTO (Claude Code)** | Backend, infra, API routes, integrations. Also fixes bugs in `src/` found during QA (after founder approval). | Build new frontend features |
 | **Codex** | Execute CTO instructions. Has full project context. Updates SESSION-LOG + ACTIVE-PLAN after every session. Actively provides feedback and observations to CTO. | Make architectural decisions unilaterally |
 
 ## Where to Find Things
@@ -47,6 +47,8 @@ Memory: Mem0 managed cloud | Analytics: PostHog | Email: AgentMail | Payments: S
 - Docker images: always pin explicit version tags (never `:latest`).
 - Founder is non-technical. All questions and decisions must be presented in plain, everyday language with clear options. No jargon without explanation.
 - Ask founder before making decisions. Present options in plain language.
+- CTO QA covers the whole codebase (including `src/`). Bugs found → explain to founder → fix after approval.
+- Every QA session: CTO researches and proposes 4-5 strategic improvements (features, optimization, architecture, UX, competitive). Founder approves → added to project plan.
 - Vercel = website + API. Railway = LiteLLM gateway. Both are needed.
 
 ## Growth Swarm Quick Reference
