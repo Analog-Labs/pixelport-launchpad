@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import ProductPreview from "./ProductPreview";
 
 const HeroSection = () => (
-  <section className="relative min-h-[90vh] flex items-center pt-16 pb-0 overflow-hidden">
+  <section className="relative h-[90vh] flex items-center pt-[120px] pb-10 overflow-hidden">
     {/* Large ambient amber glow — stronger */}
     <div
       className="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[600px] rounded-full pointer-events-none"
