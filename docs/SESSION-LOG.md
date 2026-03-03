@@ -6,7 +6,25 @@
 
 ## Last Session
 
-- **Date:** 2026-03-03 (night)
+- **Date:** 2026-03-03 (night, late)
+- **Who worked:** CTO (Claude Code)
+- **What was done:**
+  - **CTO reviewed Codex Slice 5: PASS ✅**
+    - `api/tenants/index.ts` (182 lines): Auth correct (`supabase.auth.getUser(token)` with array-safe header parsing), idempotency robust (check existing + race-condition re-read on `23505`), payload validation matches founder's frontend contract exactly (company_name min 2 chars, tone enum, avatar enum, goals array), slug generation with empty-slug guard, defaults correct (Luna/professional/amber-l), Inngest event name matches `provision-tenant.ts`, `gateway_token` stripped from all response paths.
+    - Bonus: `goals` array validation (type-checks each element), `resolveTimezone()` with try/catch, `normalizedCompanyName` trims before slug generation.
+    - DB migration 003 correctly skipped — existing `tenants_clerk_org_id_key` constraint already enforces `UNIQUE (supabase_user_id)` (stale naming from Clerk→Supabase migration, low-priority rename).
+  - Restored founder's F1-F4 session entry that Codex's commit had dropped from SESSION-LOG.
+- **What's next:**
+  - CTO: Draft Codex Slice 6 message (chat SSE streaming + message history) — blocked on DO quota for real testing but can build the endpoint.
+  - CTO + Founder: Wire I1 (onboarding widget → POST /api/tenants) — CTO proposes changes, founder applies in Lovable.
+  - Founder: Create Slack App when ready (unblocks Slice 7).
+- **Blockers:**
+  - Slice 6 real testing blocked by DO quota (endpoint can still be built and verified with tsc).
+  - Slice 7 blocked on Slack App credentials from founder.
+
+---
+
+### 2026-03-03 (night)
 - **Who worked:** Codex
 - **What was done:**
   - Implemented `POST /api/tenants` in `api/tenants/index.ts`.
@@ -35,14 +53,33 @@
     - `tsc` compile for `api/tenants/index.ts`: pass.
     - Endpoint existence: pass.
     - Secret scan on new file: pass.
-- **What's next:**
-  - CTO: Dispatch Slice 6 (`/api/chat` streaming + history) now that C1 backend endpoint is live.
-  - Founder + CTO: Wire frontend onboarding submit to `POST /api/tenants` (I1).
-- **Blockers:**
-  - No new blockers for Slice 5.
 - **Feedback & Observations (CTO):**
   - The uniqueness guarantee exists, but naming is stale (`tenants_clerk_org_id_key` now guards `supabase_user_id`). Consider a cleanup migration to rename this constraint for clarity.
   - Idempotency is robust for user-race collisions; slug collisions are explicit and frontend-actionable (`409`).
+
+---
+
+### 2026-03-03 (evening)
+- **Who worked:** Founder + Claude (chat) via Lovable
+- **What was done:**
+  - **F1 + F4: Onboarding Wizard with Agent Personalization**
+    - 3-step flow: Company Info → Agent Setup → Connect Tools
+    - Agent name, avatar (6 options), tone (casual/professional/bold) selection
+    - Shared `AVATAR_MAP` extracted to `src/lib/avatars.ts`
+    - localStorage persistence for all onboarding data
+  - **F2: Dashboard Home (pre/post onboarding modes)**
+    - Pre-onboarding: welcome card + setup checklist
+    - Post-onboarding: agent status card, pending approvals, recent activity
+  - **F3: Chat Widget + Full-Page Chat**
+    - `ChatContext` provider with shared state
+    - Slide-up chat panel (bottom-right) on all dashboard pages
+    - Full-page chat view at `/dashboard/chat`
+  - 7 files created/modified, all merged to main via Lovable → GitHub
+- **What's next:**
+  - CTO: Review Codex Slice 5, wire I1 (onboarding → POST /api/tenants)
+  - Founder: Wait for CTO integration proposals before next Lovable work
+- **Blockers:**
+  - F5 (Connections page) deferred — blocked by C3 (Slack OAuth)
 
 ---
 
