@@ -309,7 +309,6 @@ export type Database = {
       tenants: {
         Row: {
           agentmail_inbox: string | null
-          clerk_org_id: string
           created_at: string | null
           droplet_id: string | null
           droplet_ip: string | null
@@ -322,12 +321,12 @@ export type Database = {
           settings: Json | null
           slug: string
           status: string
+          supabase_user_id: string
           trial_ends_at: string | null
           updated_at: string | null
         }
         Insert: {
           agentmail_inbox?: string | null
-          clerk_org_id: string
           created_at?: string | null
           droplet_id?: string | null
           droplet_ip?: string | null
@@ -340,12 +339,12 @@ export type Database = {
           settings?: Json | null
           slug: string
           status?: string
+          supabase_user_id: string
           trial_ends_at?: string | null
           updated_at?: string | null
         }
         Update: {
           agentmail_inbox?: string | null
-          clerk_org_id?: string
           created_at?: string | null
           droplet_id?: string | null
           droplet_ip?: string | null
@@ -358,6 +357,7 @@ export type Database = {
           settings?: Json | null
           slug?: string
           status?: string
+          supabase_user_id?: string
           trial_ends_at?: string | null
           updated_at?: string | null
         }
