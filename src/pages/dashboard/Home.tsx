@@ -29,9 +29,30 @@ const quickActions = [
   { icon: MessageSquare, title: "Connect Slack", sub: "Bring Luna to Slack", to: "/dashboard/connections" },
 ];
 
+const AVATAR_MAP: Record<string, { bg: string; display: string }> = {
+  "amber-l": { bg: "linear-gradient(135deg, hsl(38 60% 58%), hsl(38 60% 48%))", display: "L" },
+  "purple-zap": { bg: "linear-gradient(135deg, hsl(270 60% 50%), hsl(290 60% 40%))", display: "⚡" },
+  "blue-bot": { bg: "linear-gradient(135deg, hsl(210 80% 50%), hsl(220 70% 40%))", display: "🤖" },
+  "green-brain": { bg: "linear-gradient(135deg, hsl(150 60% 40%), hsl(160 50% 30%))", display: "🧠" },
+  "pink-sparkle": { bg: "linear-gradient(135deg, hsl(330 70% 55%), hsl(340 60% 45%))", display: "✨" },
+  "orange-fire": { bg: "linear-gradient(135deg, hsl(25 90% 55%), hsl(15 80% 45%))", display: "🔥" },
+};
+
 const Home = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const agentName = localStorage.getItem("pixelport_agent_name") || "Luna";
+  const avatarId = localStorage.getItem("pixelport_agent_avatar") || "amber-l";
+  const avatar = AVATAR_MAP[avatarId] || AVATAR_MAP["amber-l"];
+
+  const AgentAvatar = () => (
+    <div
+      className="h-12 w-12 shrink-0 rounded-full flex items-center justify-center text-lg font-bold"
+      style={{ background: avatar.bg }}
+    >
+      {avatar.display}
+    </div>
+  );
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -58,13 +79,11 @@ const Home = () => {
       {/* Chief of Staff */}
       <Card className="bg-[hsl(240_20%_7%)] border-primary/15 border-l-[3px] border-l-primary">
         <CardContent className="p-6 flex items-start gap-5">
-          <div className="h-12 w-12 shrink-0 rounded-full bg-primary/20 flex items-center justify-center">
-            <span className="text-primary font-bold text-lg">L</span>
-          </div>
+          <AgentAvatar />
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-foreground">Your Chief of Staff</h2>
+            <h2 className="text-lg font-semibold text-foreground">{agentName}</h2>
             <p className="text-muted-foreground text-sm mt-1">
-              Luna is being set up. Complete onboarding to activate your Chief of Staff.
+              {agentName} is being set up. Complete onboarding to activate your Chief of Staff.
             </p>
             <Button className="mt-4" size="sm" onClick={() => navigate("/dashboard/settings")}>
               Complete Onboarding <ArrowRight className="ml-1 h-4 w-4" />
