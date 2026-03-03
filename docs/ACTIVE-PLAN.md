@@ -13,7 +13,7 @@
 ### Setup (Shared)
 - [x] Lovable Cloud project created ("PixelPort Launchpad")
 - [x] GitHub repo created and connected
-- [x] Vercel visible (connecting during execution)
+- [x] Vercel connected and deployed ✅
 - [x] Supabase provisioned via Lovable Cloud
 - [x] CTO has repo read/write access
 - [x] Phase 0 plan reviewed and approved by founder

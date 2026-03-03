@@ -7,7 +7,7 @@
 ## Last Session
 
 - **Date:** 2026-03-03
-- **Who worked:** CTO (Claude Code)
+- **Who worked:** CTO (Claude Code) + Founder
 - **What was done:**
   - **CTO Review of Codex Slices 1-2: BOTH PASS** ✅
   - Slice 1 (LiteLLM): All 4 models correctly configured, Docker image pinned (v1.81.3-stable), no secrets committed, Railway deployment live and verified
@@ -16,6 +16,7 @@
   - Added `.env` patterns to `.gitignore` (security fix — was missing)
   - Updated `pixelport-project-status.md` with Phase 0 progress and LiteLLM deployment URL
   - Recorded operational notes from Codex feedback (IPv6 pooler issue, Railway health check path)
+  - **Founder connected Vercel to GitHub repo** — deployment live ✅
 - **What's next:**
   - CTO: Send Codex Slices 3-4 (API bridge + provisioning) — instruction docs already in repo
   - Founder: Start Lovable frontend work (landing page, Clerk auth, dashboard shell) — zero backend dependency
@@ -24,6 +25,7 @@
 - **Key infrastructure live:**
   - LiteLLM gateway: `https://litellm-production-77cc.up.railway.app`
   - Supabase: 6 tables migrated, pooler endpoint: `aws-1-eu-west-1.pooler.supabase.com:6543`
+  - Vercel: Connected to GitHub repo, auto-deploying from main
 
 ---
 
