@@ -6,23 +6,40 @@
 
 ## Last Session
 
-- **Date:** 2026-03-04 (night)
-- **Who worked:** CTO (Claude Code)
+- **Date:** 2026-03-03 (late)
+- **Who worked:** Codex
 - **What was done:**
-  - **CTO reviewed Codex Slice 6: PASS ✅**
-    - `api/chat.ts` (233 lines): Auth correct, tenant preflight checks (status/droplet_ip/gateway_token), session management (create/resume with tenant scoping), user message persistence before gateway call, SSE streaming with `writeSse()` helper, buffer management for partial chunks, multi-field token extraction (content/text/token/delta), JSON fallback for non-SSE gateways, assistant response persistence after streaming, proper error handling (pre-stream JSON, post-stream SSE error event).
-    - `api/chat/history.ts` (83 lines): Two-mode endpoint (sessions list / session messages), tenant-isolated, paginated with `parseBoundedInt()` safe defaults and max caps, exact counts via `{ count: 'exact' }`.
-    - Migration 004 (50 lines): Both tables correct, `chat_messages.session_id` FK to `chat_sessions` with CASCADE, 3 indexes for access patterns, service-role RLS policies match existing schema pattern.
-    - Docs: SESSION-LOG entry added with all previous entries preserved, ACTIVE-PLAN 1.C2 checked off.
-  - Noted Codex feedback: primary Supabase pooler `aws-0-us-west-1` failed, fallback `aws-1-eu-west-1` succeeded — update runbooks.
-  - Slack App "Pixel" created by founder, Vercel env vars set and redeployed. Slice 7 now unblocked.
+  - Added `supabase/migrations/005_slack_connections.sql`:
+    - created `slack_connections` table,
+    - added unique tenant index + team lookup index,
+    - enabled RLS with service-role full-access policy (schema-consistent pattern),
+    - added `updated_at` trigger via existing `update_updated_at()` function.
+  - Implemented Slack OAuth + status + webhook endpoints:
+    - `GET /api/connections/slack/install` in `api/connections/slack/install.ts` (auth + signed state + Slack redirect),
+    - `GET /api/connections/slack/callback` in `api/connections/slack/callback.ts` (state validation, OAuth token exchange, AES-256-CBC encryption, upsert, redirect),
+    - `POST /api/connections/slack/events` in `api/connections/slack/events.ts` (Slack signature verification, url_verification challenge, event_callback logging),
+    - `GET /api/connections` in `api/connections/index.ts` (tenant-scoped Slack/email integration status).
+  - Verification checks run:
+    - `npx tsc --noEmit api/connections/**/*.ts`: pass.
+    - secret scan (`xoxb-`, `sk-`, `eyJ`) in `api/connections`: pass.
+    - auth and tenant scoping audit on integration status endpoint: pass.
+  - Migration apply details:
+    - Supabase CLI pooler push was unreliable in this environment (`prepared statement already exists` on `aws-1`; `Tenant or user not found` on `aws-0`).
+    - Applied `005` directly using Python Postgres client with host fallback.
+    - Migration and schema checks passed on `aws-1-eu-west-1.pooler.supabase.com`.
+    - Verified: table exists, both indexes exist, RLS enabled, policy exists, trigger exists.
 - **What's next:**
-  - Founder: Hand Codex Slice 7 message (Slack OAuth flow + webhook).
-  - CTO + Founder: Wire I2 (chat widget → POST /api/chat SSE) after Slice 7 is dispatched.
-  - Monitor Vercel SSE timeout in production — may need Edge Functions migration.
+  - Founder/CTO: set Slack Event Subscriptions Request URL to `/api/connections/slack/events` in Slack App settings and complete live challenge verification.
+  - CTO/Founder: wire frontend connections page (`1.I4`) to install URL and status endpoint.
 - **Blockers:**
-  - Live gateway streaming untested (no active tenants with infrastructure — DO quota).
-  - Vercel timeout risk on SSE (10s hobby / 60s pro) — monitor after first real usage.
+  - No code blockers for Slice 7 implementation.
+  - Live OAuth/user-consent and live Slack event delivery still require manual dashboard-side validation in Slack/Vercel.
+- **Feedback & Observations (CTO):**
+  - **Migration host behavior:** `aws-1-eu-west-1` is usable and was used for final apply. `aws-0-us-west-1` still fails with tenant/user not found from this runtime.
+  - **OAuth flow implementation:** state token is HMAC-signed and 10-minute bounded, with callback failure paths redirected cleanly to dashboard error states.
+  - **url_verification handling:** endpoint implementation is complete and signature-gated; live Slack handshake remains to be executed in Slack App console.
+  - **Token encryption approach:** bot token is encrypted with AES-256-CBC using `API_KEY_ENCRYPTION_KEY` (expects 64-char hex, same contract as existing API-key storage). Consider key versioning/rotation metadata in Phase 2.
+  - **Socket Mode vs Events API:** current events endpoint is a compatibility bridge; per-tenant Socket Mode remains the primary runtime model as planned.
 
 ---
 

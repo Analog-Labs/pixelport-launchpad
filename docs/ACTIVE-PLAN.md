@@ -28,12 +28,12 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 - [x] 1.F2: Dashboard Home — agent status card, pending approvals, recent activity
 - [x] 1.F3: Chat widget (persistent sidebar) + full-page chat view (`/dashboard/chat`)
 - [x] 1.F4: Agent personalization UI — name, avatar, tone selection during onboarding
-- [ ] 1.F5: Connections page — show connected integrations (Slack, email) ← DEFERRED (blocked by C3)
+- [ ] 1.F5: Connections page — show connected integrations (Slack, email) ← DEFERRED (ready once I4 wiring lands)
 
 ### CTO Track (Backend + Infra)
 - [x] 1.C1: Tenant creation endpoint + Inngest trigger ← CODEX SLICE 5 complete (`POST /api/tenants`)
 - [x] 1.C2: Chat API streaming (SSE) + message history ← CODEX SLICE 6 complete (`POST /api/chat` SSE + `GET /api/chat/history`)
-- [ ] 1.C3: Slack OAuth flow + webhook ← CODEX SLICE 7 (Slack App "Pixel" created, credentials ready, event subscriptions deferred until endpoint exists)
+- [x] 1.C3: Slack OAuth flow + webhook ← CODEX SLICE 7 complete (`/api/connections/slack/{install,callback,events}` + `GET /api/connections`)
 - [ ] 1.C4: Mem0 managed cloud — apply for startup program, set up per-tenant scoping
 - [ ] 1.C5: PostHog basic instrumentation (user analytics + agent events)
 - [ ] 1.C6: AgentMail per-tenant inbox (already in provisioning workflow)
@@ -65,7 +65,6 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 |---------|--------------|-----------------|
 | DigitalOcean droplet quota (deferred from Phase 0) | CTO | Founder increases limit |
 | Mem0 startup program approval | CTO | Mem0 team (apply first) |
-| Slack App credentials (for Slice 7) | Codex | Founder creates Slack App |
 
 ### Notes
 - **Phase 0 → Phase 1 transition (2026-03-03):** CTO reviewed all Codex code (PASS), merged branch to main, created Phase 1 Codex slice docs.
@@ -73,7 +72,7 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 - **Frontend data contract locked:** Onboarding payload fields: `company_name`, `company_url`, `goals[]`, `agent_name`, `agent_tone` (casual|professional|bold), `agent_avatar_url` (6 avatar IDs). See `src/lib/avatars.ts` for avatar map.
 - Codex Slices 5-7 ready in `docs/phase1/` — Slice 5 sent to Codex (zero blockers).
 - Slice 6 requires OpenClaw gateway accessible (blocked until DO quota resolved for real testing).
-- Slice 7 requires Slack App credentials from founder.
+- Slice 7 backend is complete; founder now needs to configure Event Subscriptions URL in Slack App settings after deployment verification.
 - Strategic improvement ideas saved in `docs/strategic-ideas-backlog.md` for future review.
 - Auth decision change: Supabase Auth replaces Clerk (2026-03-03).
 - Codex is a full project participant: reads full project context, provides feedback to CTO, updates session docs after every work session.
