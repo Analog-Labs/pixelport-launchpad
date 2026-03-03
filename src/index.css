@@ -78,6 +78,18 @@ body::before {
   background-size: 256px 256px;
 }
 
+/* Dot grid overlay for atmospheric depth */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: radial-gradient(circle, hsl(0 0% 100%) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 @layer components {
   .section-container {
     @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28;

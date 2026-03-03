@@ -3,15 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import ProductPreview from "./ProductPreview";
 
 const HeroSection = () => (
-  <section className="relative min-h-[90vh] flex items-center pt-20 pb-8">
-    {/* Subtle gradient orbs */}
+  <section className="relative min-h-[90vh] flex items-center pt-20 pb-8 overflow-hidden">
+    {/* Large ambient amber glow */}
     <div
-      className="absolute top-[-100px] left-[-100px] w-[500px] h-[500px] rounded-full bg-primary/5 pointer-events-none"
-      style={{ filter: "blur(100px)" }}
-    />
-    <div
-      className="absolute bottom-0 right-[-100px] w-[400px] h-[400px] rounded-full bg-primary/3 pointer-events-none"
-      style={{ filter: "blur(80px)" }}
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full pointer-events-none"
+      style={{ background: "radial-gradient(circle, hsla(38, 60%, 58%, 0.07) 0%, transparent 70%)" }}
     />
 
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">

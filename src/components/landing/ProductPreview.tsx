@@ -11,10 +11,16 @@ const ProductPreview = () => {
   }, []);
 
   return (
-    <div className="relative w-full max-w-md mx-auto">
+    <div className="relative w-full max-w-[480px] mx-auto">
       {/* Amber glow behind */}
-      <div className="absolute -inset-4 bg-primary/5 rounded-2xl blur-2xl pointer-events-none" />
-      <div className="relative">
+      <div
+        className="absolute -inset-6 rounded-2xl pointer-events-none"
+        style={{ boxShadow: "0 0 60px rgba(212, 168, 83, 0.15)" }}
+      />
+      <div
+        className="relative"
+        style={{ transform: "perspective(1200px) rotateY(-5deg)" }}
+      >
         <div
           className="transition-opacity duration-700 ease-in-out"
           style={{ opacity: showDashboard ? 0 : 1, position: showDashboard ? "absolute" : "relative", inset: 0 }}
