@@ -532,25 +532,37 @@ Constraints (locked):
 
 ### PixelPort (product) — Phase 0 active
 
-**CTO + Codex (in progress):**
-1. Research Railway vs Render for LiteLLM deployment → pick one
-2. Design Supabase schema → share with founder for review
-3. Document API contracts for Lovable pages
-4. Write Phase 0 Codex instruction doc (0.4 provisioning, 0.5 API bridge, 0.6 LiteLLM, 0.8 schema)
-5. Set up Inngest Cloud account (free tier)
-6. Prepare monorepo api/ directory structure
+**Completed (CTO + Codex):**
+- ✅ Railway selected for LiteLLM deployment
+- ✅ LiteLLM deployed to Railway: `https://litellm-production-77cc.up.railway.app`
+  - 4 models: gpt-5.2-codex (primary), gemini-2.5-flash (fallback), gpt-4o-mini (budget), claude-sonnet (BYO)
+  - Docker image pinned: `ghcr.io/berriai/litellm:v1.81.3-stable`
+  - Team creation, key generation, completion routing, spend metering all verified
+- ✅ Supabase schema migrated: 6 tables + 17 indexes + RLS + triggers
+  - tenants, agents, content_items, approvals, api_keys, sessions_log
+  - Default trial_budget_usd: $20, configurable per-tenant in settings JSONB
+- ✅ Monorepo set up with coordination files, docs, backend directory structure
+- ✅ 4 Codex slice instruction docs written in docs/phase0/
+- ✅ Supabase credentials received and applied
 
-**Founder + Lovable (in parallel):**
-1. Create Lovable Cloud project for PixelPort
-2. Connect to GitHub (Lovable auto-provisions)
-3. Share repo access with CTO
-4. Share Supabase project URL + credentials
-5. Start landing page (pixelport.ai)
+**Completed (Founder):**
+- ✅ Lovable Cloud project created ("PixelPort Launchpad")
+- ✅ GitHub repo connected
+- ✅ Supabase provisioned and credentials shared
 
-**Coordination needed:**
-- Founder creates Lovable project → shares GitHub repo → CTO adds api/ directory
-- CTO proposes Supabase schema → founder reviews → CTO runs migrations
-- CTO documents API contracts → founder builds Lovable pages against them
+**In progress (CTO + Codex):**
+1. Slice 3: API bridge routes in `api/` directory (instruction doc ready)
+2. Slice 4: Provisioning script + Inngest workflow (instruction doc ready)
+3. Set up Inngest Cloud account (free tier)
+
+**Ready to start (Founder + Lovable):**
+1. Landing page — hero, features, pricing, CTA (zero backend dependency)
+2. Clerk auth — signup, login, redirect to dashboard
+3. Dashboard shell — sidebar nav, empty states, greeting, placeholders
+
+**Coordination:**
+- CTO documented full API contracts in Slice 3 instruction doc (20+ endpoints) → founder builds Lovable pages against them
+- Schema is live — Lovable can read/write Supabase tables directly via the Supabase integration
 
 ---
 

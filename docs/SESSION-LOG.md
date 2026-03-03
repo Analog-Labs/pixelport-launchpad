@@ -6,43 +6,40 @@
 
 ## Last Session
 
-- **Date:** 2026-03-02 (late night)
-- **Who worked:** Codex
+- **Date:** 2026-03-03
+- **Who worked:** CTO (Claude Code)
 - **What was done:**
-  - Created and committed Slice 1 LiteLLM artifacts and docs updates in prior commit.
-  - Created `supabase/migrations/001_initial_schema.sql` with:
-    - 6 tables (`tenants`, `agents`, `content_items`, `approvals`, `api_keys`, `sessions_log`)
-    - indexes
-    - `updated_at` trigger function + triggers
-    - RLS enablement + service-role policies
-    - schema comments and JSONB defaults
-  - Applied migration successfully to Supabase using shared pooler endpoint:
-    - host: `aws-1-eu-west-1.pooler.supabase.com`
-    - port: `6543`
-    - user: `postgres.ecgzlfqhdzzfikvbrwna`
-  - Ran full verification checklist:
-    - all 6 tables present
-    - FK constraint violation test failed as expected
-    - unique constraint violation test failed as expected
-    - default settings include `trial_budget_usd: 20`
-    - `onboarding_data` supports flexible JSONB
-    - RLS enabled on all 6 tables
-    - indexes present (`17` matching `idx_*`)
-    - `updated_at` trigger validated
-    - test tenant data cleaned up
+  - **CTO Review of Codex Slices 1-2: BOTH PASS** ✅
+  - Slice 1 (LiteLLM): All 4 models correctly configured, Docker image pinned (v1.81.3-stable), no secrets committed, Railway deployment live and verified
+  - Slice 2 (Supabase): All 6 tables present with correct columns, FK/unique constraints, RLS, triggers, indexes, and JSONB defaults
+  - Merged Codex branch `codex/phase0-slices-1-2` into main (fast-forward, 2 clean commits)
+  - Added `.env` patterns to `.gitignore` (security fix — was missing)
+  - Updated `pixelport-project-status.md` with Phase 0 progress and LiteLLM deployment URL
+  - Recorded operational notes from Codex feedback (IPv6 pooler issue, Railway health check path)
 - **What's next:**
-  - Slice 3 (`api/` bridge routes)
-  - Slice 4 (provisioning + Inngest workflow)
-- **Blockers:**
-  - None for Slice 3
-- **Feedback & Observations:**
-  - Direct Supabase DB host for this project resolves IPv6-only from this runtime, so direct `db.<ref>.supabase.co:5432` connectivity fails here.
-  - Shared pooler endpoint works from this runtime; use pooler DSN for automation on this machine.
-  - Keep recording both direct and pooler connection details in internal runbooks to avoid repeat delay.
+  - CTO: Send Codex Slices 3-4 (API bridge + provisioning) — instruction docs already in repo
+  - Founder: Start Lovable frontend work (landing page, Clerk auth, dashboard shell) — zero backend dependency
+  - CTO: Create Inngest Cloud account (free tier)
+- **Blockers:** None — founder and CTO tracks are fully independent
+- **Key infrastructure live:**
+  - LiteLLM gateway: `https://litellm-production-77cc.up.railway.app`
+  - Supabase: 6 tables migrated, pooler endpoint: `aws-1-eu-west-1.pooler.supabase.com:6543`
 
 ---
 
 ## Previous Sessions
+
+### 2026-03-02 (late night)
+- **Who worked:** Codex
+- **What was done:**
+  - Created and committed Slice 1 LiteLLM artifacts and docs updates
+  - Created `supabase/migrations/001_initial_schema.sql` with 6 tables, indexes, triggers, RLS, comments
+  - Applied migration to Supabase using shared pooler endpoint
+  - Ran full verification checklist — all checks passed
+- **Feedback & Observations:**
+  - Direct Supabase DB host resolves IPv6-only from Codex runtime; shared pooler endpoint works
+  - Railway `/health` is auth-protected with master key; using `/` as health check path resolved it
+  - Keep recording both direct and pooler connection details in internal runbooks
 
 ### 2026-03-02 (night)
 - **Who worked:** Codex
