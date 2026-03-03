@@ -284,7 +284,7 @@ Constraints (locked):
 
 ### Phase 0: Foundation (Weeks 1-2)
 **Goal**: Web app shell + provisioning pipeline
-**Status: 🟢 In Progress — Founder Track complete, CTO Track 2/4 slices done**
+**Status: ✅ Complete (0.9 dry-run deferred — DO quota, not blocking Phase 1)**
 
 **Founder + Lovable: ✅ COMPLETE**
 - [x] 0.1: Lovable project setup + Supabase Auth (CHANGED from Clerk — native Lovable integration)
@@ -293,20 +293,24 @@ Constraints (locked):
 - [x] 0.7: Dashboard shell — 9 protected routes, sidebar nav, empty states, greeting, stat cards
 - [x] Vercel connected and auto-deploying from main
 
-**CTO + Codex:**
+**CTO + Codex: ✅ COMPLETE**
 - [x] 0.6: LiteLLM central deployment on Railway — 4 models, Docker pinned v1.81.3-stable ✅
 - [x] 0.8: Supabase schema (6 tables + indexes + RLS + triggers) ✅
-- [ ] 0.5: API bridge — PixelPort API → OpenClaw gateway (Supabase Auth JWT → tenant lookup → proxy)
-- [ ] 0.4: Provisioning script — DO Droplet + OpenClaw container per user (Inngest workflow)
-- [ ] 0.9: Provisioning dry-run gate (test tenant on fresh droplet, verify all services)
+- [x] 0.5: API bridge — 16 route files + 3 shared libs (Supabase Auth + tenant isolation) ✅
+- [x] 0.4: Provisioning — 12-step Inngest workflow + templates (live trial Steps 1-3 passed) ✅
+- [ ] 0.9: Dry-run gate — deferred (DO droplet quota limit, will test when quota increased)
 
-**Shared:**
+**Shared: ✅ COMPLETE**
 - [x] Monorepo structure (Lovable frontend + api/ directory, Vercel deploys both)
-- [ ] Inngest Cloud setup (free tier, connected to API routes)
+- [x] Inngest Cloud setup (free tier, Event Key + Signing Key received)
+
+**CTO QA (2026-03-03):**
+- CTO reviewed all Codex Slices 3-4 code: BOTH PASS ✅
+- CTO QA'd all frontend: 9 issues found and fixed (signup validation, chat nav, footer, OAuth errors, etc.)
 
 ### Phase 1: Chief of Staff Alive (Weeks 3-5)
 **Goal**: Onboarding + Chief of Staff working in dashboard + Slack + email
-**Status: ⬜ Not started**
+**Status: 🟡 Active — Phase 1 Codex slices ready
 
 - [ ] 1.1-1.5: 3-step onboarding, website auto-scan, SOUL.md template, agent personalization
 - [ ] 1.6-1.7: Dashboard Home + chat widget + full-page chat

@@ -6,30 +6,42 @@
 
 ## Last Session
 
-- **Date:** 2026-03-03 (late night)
-- **Who worked:** CTO (Claude Code)
+- **Date:** 2026-03-03 (post-midnight)
+- **Who worked:** CTO (Claude Code) + Founder
 - **What was done:**
-  - **CTO scope expanded:** Updated CLAUDE.md — CTO now fixes bugs across entire codebase (including `src/`) after explaining to founder, and proactively researches strategic improvements every QA session.
-  - **Full codebase QA:** Ran 3 parallel QA agents covering landing page (10 components), auth flow, dashboard (9 routes), backend, infra, and docs. Backend/infra/docs: all clean. Frontend: 3 bugs + 6 concerns found and fixed.
-  - **9 frontend fixes applied:**
-    - 🔴 Signup: Added "Confirm Password" field with match validation
-    - 🔴 Signup: Added email verification success screen ("Check your email" with confirmation link message)
-    - 🔴 Sidebar: Added Chat nav item (MessageCircle icon → /dashboard/chat)
-    - 🟡 Footer: Removed placeholder Company/Social columns (dead links), kept working Product anchors + Legal links
-    - 🟡 Navbar: Changed logo from `<a href="#">` to `<Link to="/">`
-    - 🟡 Dashboard Home: Wired all buttons — Complete Onboarding → /settings, Quick Actions → /content, /competitors, /connections
-    - 🟡 Signup: Added Terms of Service + Privacy Policy checkbox (required before signup)
-    - 🟡 OAuth: Added try/catch error handling to Google OAuth on both Login and Signup pages
-    - 🟡 App.css: Removed all unused Vite starter template styles
-  - **CTO strategic research completed:** Analyzed 8+ competitors (Jasper, Copy.ai, Writesonic, Lindy, Relevance AI, AgentOps, Relay.app, emerging "AI Chief of Staff" products), onboarding best practices, AI agent trends 2026, trust/security features, and conversion optimization. 5 strategic improvement ideas presented to founder.
+  - **CTO reviewed Codex Slices 3-4: BOTH PASS ✅**
+    - Slice 3 (API Bridge): All 16 route files + 3 shared libs reviewed. Auth layer correct (`supabase.auth.getUser(token)`), tenant isolation consistent (every query scopes by `tenant_id`), no hardcoded secrets, input validation on all write endpoints, AES-256-CBC encryption for API keys, LiteLLM budget integration working.
+    - Slice 4 (Provisioning): 12-step Inngest workflow reviewed (476 lines). validate-tenant → LiteLLM team ($20 default) → LiteLLM key → create-droplet (cloud-init inline) → wait-for-droplet (5min poll) → agentmail inbox (graceful null) → store-infra-refs → wait-for-gateway (5min poll) → configure-agents → create-agent-records (main + spark + scout) → send-welcome (placeholder) → mark-active. Templates match Growth Swarm patterns.
+  - **Merged `codex/phase0-slices-3-4` → `main`** (fast-forward, 34 files, 10903 insertions)
+  - **Phase 0 → Phase 1 transition:**
+    - ACTIVE-PLAN.md rewritten: Phase 0 marked complete, Phase 1 detailed checklist added (Founder Track F1-F5, CTO Track C1-C7, Integration I1-I4)
+    - project-status.md updated: Phase 0 → ✅ Complete, Phase 1 → 🟡 Active
+    - 0.9 dry-run gate deferred (DO quota — founder confirmed not blocking Phase 1)
+  - **Strategic ideas saved** to `docs/strategic-ideas-backlog.md` (5 improvement ideas for future review)
+  - **Phase 1 Codex Slice docs created:**
+    - `docs/phase1/codex-slice-5-onboarding.md` — Tenant creation endpoint + Inngest trigger
+    - `docs/phase1/codex-slice-6-chat.md` — Chat API streaming (SSE) + message history
+    - `docs/phase1/codex-slice-7-slack.md` — Slack OAuth flow + webhook
+  - **Auth decision change:** Supabase Auth replaces Clerk (noted in docs, 2026-03-03)
 - **What's next:**
-  - Founder: review 5 strategic improvement ideas and approve/reject each
-  - Founder/CTO: increase DigitalOcean droplet limit, then rerun 0.9 dry-run gate
-  - CTO: review Codex Slices 3-4 output when ready
+  - Founder: review Phase 1 checklist in ACTIVE-PLAN.md, start Lovable work (F1-F5)
+  - CTO: send Codex Slice 5 (zero blockers — only needs Supabase + Inngest)
+  - Codex Slice 6 requires OpenClaw gateway accessible (blocked until DO quota resolved)
+  - Codex Slice 7 requires Slack App credentials from founder
+  - Founder: review 5 strategic improvement ideas in `docs/strategic-ideas-backlog.md` (non-urgent)
 - **Blockers:**
-  - DigitalOcean account droplet quota (from previous session — still needs resolution)
+  - DigitalOcean droplet quota (deferred — not blocking Phase 1 start)
+  - Mem0 startup program approval (CTO to apply)
+  - Slack App credentials needed for Slice 7 (founder creates Slack App)
 
 ---
+
+### 2026-03-03 (late night)
+- **Who worked:** CTO (Claude Code)
+- **What was done:**
+  - CTO scope expanded: Updated CLAUDE.md — CTO now fixes bugs across entire codebase (including `src/`), proactively researches strategic improvements every QA session.
+  - Full codebase QA: 3 parallel agents covering landing page, auth, dashboard, backend, infra, docs. 9 frontend fixes applied (confirm password, email verification screen, chat sidebar item, footer cleanup, logo link, dashboard buttons, terms checkbox, OAuth error handling, App.css cleanup).
+  - CTO strategic research completed: Analyzed 8+ competitors, produced 5 strategic improvement ideas for founder review.
 
 ### 2026-03-03 (night)
 - **Who worked:** Codex

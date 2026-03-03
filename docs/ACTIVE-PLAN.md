@@ -4,48 +4,48 @@
 
 ---
 
-## Current Phase: Phase 0 — Foundation
-**Target:** Weeks 1-2 (March 3-14, 2026)
-**Goal:** Web app shell + provisioning pipeline + database + LLM gateway
+## Previous Phase: Phase 0 — Foundation ✅
+
+**Status:** Complete (0.9 dry-run deferred — DO quota limit, not blocking Phase 1)
+
+All items done: landing page, auth, dashboard shell, LiteLLM, Supabase schema, API bridge (16 routes), provisioning workflow (12-step Inngest), Inngest Cloud setup, CTO QA (9 frontend fixes), Codex review (both slices pass).
+
+Branch `codex/phase0-slices-3-4` merged to `main`.
+
+**Deferred:** 0.9 dry-run gate — DO droplet quota exceeded. Will retest when founder increases quota. Steps 1-3 verified live (tenant insert, LiteLLM team, LiteLLM key). Step 4 (droplet creation) blocked by account limit.
 
 ---
 
-### Setup (Shared)
-- [x] Lovable Cloud project created ("PixelPort Launchpad")
-- [x] GitHub repo created and connected
-- [x] Vercel connected and deployed ✅
-- [x] Supabase provisioned via Lovable Cloud
-- [x] CTO has repo read/write access
-- [x] Phase 0 plan reviewed and approved by founder
-- [x] Project coordination system designed (CLAUDE.md, SESSION-LOG, ACTIVE-PLAN)
-- [x] Supabase credentials shared with CTO
-- [x] CTO Go Package delivered to CTO
-- [x] Coordination files committed to repo
-- [x] All docs moved from growth-swarm to monorepo
-- [x] 4 Codex slice instruction docs written in docs/phase0/
-- [x] Backend directory structure created (api/, infra/, supabase/)
-- [x] Inngest Cloud account created — Event Key + Signing Key received ✅
+## Current Phase: Phase 1 — Chief of Staff Alive
+
+**Target:** Weeks 3-5 (March 10-28, 2026)
+**Goal:** Customer onboards in 3 steps, Chief of Staff is alive in dashboard + Slack + email
+
+---
 
 ### Founder Track (Lovable Frontend)
-- [x] 0.2: Landing page — 8 sections (hero, features, how-it-works, pricing, security, integrations, FAQ, CTA) ✅
-- [x] 0.1/0.3: Supabase Auth — Google OAuth + email/password, /login + /signup, protected routes ✅ (DECISION CHANGE: was Clerk)
-- [x] 0.7: Dashboard shell — 9 routes, sidebar nav, empty states, greeting, quick actions ✅
+- [ ] 1.F1: Onboarding widget — 3-step flow (company URL → goals → connect Slack)
+- [ ] 1.F2: Dashboard Home — agent status card, pending approvals, recent activity
+- [ ] 1.F3: Chat widget (persistent sidebar) + full-page chat view (`/dashboard/chat`)
+- [ ] 1.F4: Agent personalization UI — name, avatar, tone selection during onboarding
+- [ ] 1.F5: Connections page — show connected integrations (Slack, email)
 
 ### CTO Track (Backend + Infra)
-- [x] 0.6: LiteLLM deployed to Railway, health check passes ← CODEX SLICE 1 (no blockers)
-- [x] 0.8: Supabase schema migrated (6 tables + indexes + RLS) ← CODEX SLICE 2 (credentials received, ready)
-- [x] 0.5: API bridge routes in `api/` directory ← CODEX SLICE 3 complete (Supabase Auth + tenant isolation verified)
-- [x] 0.4: Provisioning script + Inngest workflow ← CODEX SLICE 4 complete (12-step flow + templates + live trial/cleanup run)
+- [ ] 1.C1: Tenant creation endpoint + Inngest trigger ← CODEX SLICE 5
+- [ ] 1.C2: Chat API streaming (SSE) + message history ← CODEX SLICE 6
+- [ ] 1.C3: Slack OAuth flow + webhook ← CODEX SLICE 7
+- [ ] 1.C4: Mem0 managed cloud — apply for startup program, set up per-tenant scoping
+- [ ] 1.C5: PostHog basic instrumentation (user analytics + agent events)
+- [ ] 1.C6: AgentMail per-tenant inbox (already in provisioning workflow)
+- [ ] 1.C7: Website auto-scan during onboarding (agent scrapes URL, populates vault)
 
-### Verification
-- [ ] 0.9: Dry-run gate — test tenant provisioned end-to-end, all checks pass
+### Integration (CTO + Founder)
+- [ ] 1.I1: Wire onboarding widget → POST /api/tenants (create + provision)
+- [ ] 1.I2: Wire chat widget → POST /api/chat (streaming)
+- [ ] 1.I3: Wire dashboard home → GET /api/tenants/status + /api/content
+- [ ] 1.I4: Wire connections page → Slack OAuth install + status
 
 ---
-
-### Blockers
-| Blocker | Who's Waiting | Who Can Unblock |
-|---------|--------------|-----------------|
-| DigitalOcean droplet quota limit (`422 unprocessable_entity`) blocks full 0.9 provisioning dry-run | CTO/Founder | Founder to increase droplet limit or free one slot, then rerun 0.9 |
 
 ### Dashboard Route Structure (Locked)
 ```
@@ -60,21 +60,31 @@
 /dashboard/chat          → Full-page agent chat
 ```
 
+### Blockers
+| Blocker | Who's Waiting | Who Can Unblock |
+|---------|--------------|-----------------|
+| DigitalOcean droplet quota (deferred from Phase 0) | CTO | Founder increases limit |
+| Mem0 startup program approval | CTO | Mem0 team (apply first) |
+| Slack App credentials (for Slice 7) | Codex | Founder creates Slack App |
+
 ### Notes
-- **Founder Track Phase 0: COMPLETE** — all 3 items done and deployed via Vercel
-- **Auth decision change (2026-03-03):** Supabase Auth replaces Clerk. Rationale: native Lovable integration, zero new vendors. Migration path to Clerk available Phase 4.
-- CTO Track code slices complete (0.4/0.5 done). 0.9 dry-run remains pending due current DigitalOcean droplet quota.
-- Vercel = web app + API routes. Railway = LiteLLM gateway. Both needed, different jobs.
+- **Phase 0 → Phase 1 transition (2026-03-03):** CTO reviewed all Codex code (PASS), merged branch to main, created Phase 1 Codex slice docs.
+- Codex Slices 5-7 ready in `docs/phase1/` — can be sent to Codex immediately.
+- Slice 5 is zero-blocker (only needs Supabase + Inngest, both available).
+- Slice 6 requires OpenClaw gateway accessible (blocked until DO quota resolved for real testing).
+- Slice 7 requires Slack App credentials from founder.
+- Strategic improvement ideas saved in `docs/strategic-ideas-backlog.md` for future review.
+- Auth decision change: Supabase Auth replaces Clerk (2026-03-03).
 - Codex is a full project participant: reads full project context, provides feedback to CTO, updates session docs after every work session.
 
 ---
 
-## What Comes After Phase 0
+## What Comes After Phase 1
 
-**Phase 1: Chief of Staff Alive (Weeks 3-5)**
-- 3-step onboarding, website auto-scan, agent personalization
-- Dashboard home + chat widget
-- Slack OAuth, AgentMail per-tenant, Mem0, PostHog
-- KPI negotiation, configurable reporting
+**Phase 2: Content Pipeline + Images (Weeks 6-9)**
+- Sub-agent auto-provisioning, inter-agent comms
+- Content pipeline UI, approval workflow (Inngest)
+- Platform-native content + image generation
+- Competitor intel dashboard, calendar, Knowledge Vault page
 
 See `docs/pixelport-master-plan-v2.md` Section 15 for full phase details.
