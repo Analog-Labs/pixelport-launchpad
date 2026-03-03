@@ -6,76 +6,57 @@
 
 ## Last Session
 
-- **Date:** 2026-03-04
+- **Date:** 2026-03-03 (night, latest)
+- **Who worked:** Codex
+- **What was done:**
+  - Added migration `supabase/migrations/004_chat_messages.sql` with:
+    - new tables `chat_sessions` and `chat_messages`,
+    - indexes for tenant/session/recent reads,
+    - RLS enabled on both tables,
+    - service-role full-access policies matching existing schema pattern.
+  - Applied migration to Supabase with locked fallback behavior:
+    - primary host `aws-0-us-west-1.pooler.supabase.com` failed with `Tenant or user not found`,
+    - fallback host `aws-1-eu-west-1.pooler.supabase.com` succeeded.
+  - Replaced `api/chat.ts` (JSON proxy) with SSE streaming endpoint:
+    - authenticates via `authenticateRequest(req)`,
+    - creates/resumes `chat_sessions`,
+    - stores user message in `chat_messages`,
+    - forwards to OpenClaw via direct `fetch` (stream-capable),
+    - handles both upstream SSE and JSON/text fallback,
+    - stores assistant response and emits `done`.
+  - Added new endpoint `api/chat/history.ts`:
+    - `GET /api/chat/history` returns tenant-scoped sessions,
+    - `GET /api/chat/history?session_id=...` returns tenant-scoped messages.
+  - Verification checks run:
+    - `tsc --noEmit api/chat.ts api/chat/history.ts`: pass.
+    - table existence + RLS + policies for chat tables: pass.
+    - auth and tenant-scope scan in both endpoints: pass.
+    - secret scan (`sk-`, `eyJ`, `xoxb-`) in chat files: pass.
+  - Tenant readiness check:
+    - no active tenants with gateway connection data in DB (`active_with_gateway=0`), so live gateway SSE runtime test could not be executed.
+- **What's next:**
+  - CTO/Founder: wire frontend chat (I2) to `POST /api/chat` SSE and `GET /api/chat/history`.
+  - CTO: dispatch Slice 7 (Slack OAuth + webhook) after chat integration wiring starts.
+- **Blockers:**
+  - No code blockers for Slice 6.
+  - Live end-to-end gateway streaming remains untested pending active tenant infrastructure.
+- **Feedback & Observations (CTO):**
+  - **OpenClaw SSE support status:** untested pending infrastructure (no active tenant gateway available). Endpoint handles both SSE and JSON responses for compatibility.
+  - **Vercel timeout risk:** SSE on serverless may hit Hobby/short runtime limits on long responses. If this appears in prod, move chat streaming path to Edge/longer-running runtime.
+  - **Message storage observations:** schema/indexes are aligned with expected access patterns (sessions by recency, messages by session timeline). Add retention/archival strategy later if message volume grows.
+  - **Migration host mismatch note:** provided `aws-0-us-west-1` pooler was not usable in this runtime; fallback `aws-1-eu-west-1` succeeded and should be reflected in runbooks.
+
+---
+
+### 2026-03-04
 - **Who worked:** CTO (Claude Code) + Founder (Lovable)
 - **What was done:**
   - **I1 Integration: Onboarding → POST /api/tenants — COMPLETE ✅**
-    - CTO proposed 2 changes to `src/pages/Onboarding.tsx`, founder's team reviewed and caught 2 issues (dead import, sequential timing bug), CTO revised, founder applied via Lovable.
-    - `handleLaunch` now: writes localStorage first (resilience), fires API call + 4s animation in parallel via `Promise.all`, stores `tenant_id` + `tenant_status` on success, navigates only when both complete.
-    - API errors are non-fatal — user always reaches dashboard.
-  - CTO drafted Codex Slice 6 message (chat SSE streaming + message history) — ready for founder to hand off.
-  - CTO provided Slack App creation instructions and DO quota instructions to founder.
+    - `handleLaunch` in onboarding now writes localStorage first, runs API call + 4s animation in parallel, stores `tenant_id`/`tenant_status` on success, and always navigates user to dashboard.
+  - CTO drafted and handed off Codex Slice 6 execution instructions.
 - **What's next:**
-  - Founder: Hand Codex Slice 6 message to Codex (chat SSE streaming + message history).
-  - Founder: Create Slack App at api.slack.com/apps (unblocks Slice 7).
-  - Founder: Request DO droplet quota increase (unblocks full provisioning dry-run).
-  - CTO: Review Codex Slice 6 when complete.
-- **Blockers:**
-  - Slice 6 real gateway testing blocked by DO quota (Supabase ops and tsc can still be verified).
-  - Slice 7 blocked on Slack App credentials from founder.
-
----
-
-### 2026-03-03 (night, late)
-- **Who worked:** CTO (Claude Code)
-- **What was done:**
-  - **CTO reviewed Codex Slice 5: PASS ✅**
-    - `api/tenants/index.ts` (182 lines): Auth correct (`supabase.auth.getUser(token)` with array-safe header parsing), idempotency robust (check existing + race-condition re-read on `23505`), payload validation matches founder's frontend contract exactly (company_name min 2 chars, tone enum, avatar enum, goals array), slug generation with empty-slug guard, defaults correct (Luna/professional/amber-l), Inngest event name matches `provision-tenant.ts`, `gateway_token` stripped from all response paths.
-    - Bonus: `goals` array validation (type-checks each element), `resolveTimezone()` with try/catch, `normalizedCompanyName` trims before slug generation.
-    - DB migration 003 correctly skipped — existing `tenants_clerk_org_id_key` constraint already enforces `UNIQUE (supabase_user_id)` (stale naming from Clerk→Supabase migration, low-priority rename).
-  - Restored founder's F1-F4 session entry that Codex's commit had dropped from SESSION-LOG.
-- **What's next:**
-  - CTO: Draft Codex Slice 6 message (chat SSE streaming + message history).
-  - CTO + Founder: Wire I1 (onboarding widget → POST /api/tenants).
-  - Founder: Create Slack App when ready (unblocks Slice 7).
-- **Blockers:**
-  - Slice 6 real testing blocked by DO quota.
-  - Slice 7 blocked on Slack App credentials.
-
----
-
-### 2026-03-03 (night)
-- **Who worked:** Codex
-- **What was done:**
-  - Implemented `POST /api/tenants` in `api/tenants/index.ts`.
-  - Added Supabase Auth verification using `supabase.auth.getUser(token)` with Bearer-token parsing.
-  - Added idempotent tenant-creation logic:
-    - Existing tenant for `supabase_user_id` returns `200` with `created:false`.
-    - New tenant returns `201` with `created:true`.
-  - Added onboarding payload validation:
-    - `company_name` required, minimum 2 chars.
-    - `agent_tone` constrained to `casual|professional|bold`.
-    - `agent_avatar_url` constrained to 6 allowed avatar IDs.
-    - `goals` validated as string array when present.
-  - Added slug generation and default onboarding/settings values.
-  - Added unique-conflict handling:
-    - Race on `supabase_user_id` re-reads tenant and returns idempotent response.
-    - Slug conflict returns `409`.
-  - Added provisioning trigger:
-    - `inngest.send({ name: 'pixelport/tenant.created', data: { tenantId, trialMode: true } })`.
-  - Response sanitization confirmed (`gateway_token` stripped).
-  - Confirmed `api/inngest/index.ts` already exports `provisionTenant` (no change needed).
-  - Live DB verification for migration decision:
-    - `idx_tenants_supabase_user` is non-unique.
-    - Existing unique constraint `tenants_clerk_org_id_key` still enforces `UNIQUE (supabase_user_id)`.
-    - Result: migration `003_tenant_user_unique.sql` not needed.
-  - Verification checks run:
-    - `tsc` compile for `api/tenants/index.ts`: pass.
-    - Endpoint existence: pass.
-    - Secret scan on new file: pass.
-- **Feedback & Observations (CTO):**
-  - The uniqueness guarantee exists, but naming is stale (`tenants_clerk_org_id_key` now guards `supabase_user_id`). Consider a cleanup migration to rename this constraint for clarity.
-  - Idempotency is robust for user-race collisions; slug collisions are explicit and frontend-actionable (`409`).
+  - Founder: create Slack App credentials for Slice 7.
+  - Founder: request DO droplet quota increase for full live gateway/provisioning validation.
 
 ---
 

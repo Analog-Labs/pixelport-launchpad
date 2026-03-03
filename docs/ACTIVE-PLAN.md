@@ -32,7 +32,7 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 
 ### CTO Track (Backend + Infra)
 - [x] 1.C1: Tenant creation endpoint + Inngest trigger ← CODEX SLICE 5 complete (`POST /api/tenants`)
-- [ ] 1.C2: Chat API streaming (SSE) + message history ← CODEX SLICE 6
+- [x] 1.C2: Chat API streaming (SSE) + message history ← CODEX SLICE 6 complete (`POST /api/chat` SSE + `GET /api/chat/history`)
 - [ ] 1.C3: Slack OAuth flow + webhook ← CODEX SLICE 7 (Slack App "Pixel" created, credentials ready, event subscriptions deferred until endpoint exists)
 - [ ] 1.C4: Mem0 managed cloud — apply for startup program, set up per-tenant scoping
 - [ ] 1.C5: PostHog basic instrumentation (user analytics + agent events)
