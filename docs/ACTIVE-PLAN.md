@@ -63,7 +63,7 @@
 ### Notes
 - **Founder Track Phase 0: COMPLETE** — all 3 items done and deployed via Vercel
 - **Auth decision change (2026-03-03):** Supabase Auth replaces Clerk. Rationale: native Lovable integration, zero new vendors. Migration path to Clerk available Phase 4.
-- CTO Track: Slices 3-4 remaining. Slice 3 instruction doc updated for Supabase Auth.
+- CTO Track code slices complete (0.4/0.5 done). 0.9 dry-run remains pending due current DigitalOcean droplet quota.
 - Vercel = web app + API routes. Railway = LiteLLM gateway. Both needed, different jobs.
 - Codex is a full project participant: reads full project context, provides feedback to CTO, updates session docs after every work session.
 
