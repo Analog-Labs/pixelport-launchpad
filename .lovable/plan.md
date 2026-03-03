@@ -1,69 +1,56 @@
 
 
-## PixelPort Landing Page — Complete Rebuild Plan
+## Plan: Authentication + Protected Dashboard
 
-This is a full landing page rebuild: switching from the current light/glass theme to a dark, premium SaaS design with amber/gold accents. The page will have 8 content sections plus navbar and footer, all with scroll animations and interactive elements.
+This adds login/signup pages using Supabase Auth, a protected dashboard shell with sidebar navigation, and empty-state pages -- all matching the existing dark + amber design system.
 
-### Architecture
+### Database
+No new tables needed. The existing Supabase Auth handles user accounts. No profiles table required (user didn't ask for profile data storage). Google OAuth configuration is done in the Supabase dashboard -- you'll need to set that up separately.
 
-Single-page app with anchor navigation. No backend needed. All sections in `Index.tsx` using extracted components.
+### New Files
 
-### Files to Create/Modify
+**Auth infrastructure:**
+- `src/contexts/AuthContext.tsx` -- React context wrapping `onAuthStateChange` + `getSession`, exposes `user`, `session`, `loading`, `signOut`
+- `src/components/ProtectedRoute.tsx` -- Checks auth state, redirects to `/login` if not authenticated, shows loading spinner while checking
 
-**New files:**
-- `src/components/landing/Navbar.tsx` — sticky nav with scroll-aware opacity, hamburger on mobile
-- `src/components/landing/HeroSection.tsx` — two-column hero with animated product preview (Slack mock ↔ Dashboard mock crossfade)
-- `src/components/landing/TrustBar.tsx` — horizontal trust signals strip
-- `src/components/landing/FeaturesSection.tsx` — 3x3 grid of feature cards with hover glow
-- `src/components/landing/HowItWorksSection.tsx` — 3 numbered steps with connector line
-- `src/components/landing/PricingSection.tsx` — 3 pricing cards, Pro highlighted
-- `src/components/landing/SecuritySection.tsx` — 4 infrastructure cards
-- `src/components/landing/IntegrationsSection.tsx` — logo grid, grayscale→color on hover
-- `src/components/landing/FAQSection.tsx` — accordion with 8 Q&As
-- `src/components/landing/CTASection.tsx` — final call-to-action with amber glow
-- `src/components/landing/Footer.tsx` — 5-column footer
-- `src/components/landing/SlackMock.tsx` — animated Slack conversation UI
-- `src/components/landing/DashboardMock.tsx` — animated dashboard card UI
-- `src/components/landing/ProductPreview.tsx` — crossfade wrapper cycling between mocks
-- `src/hooks/useScrollAnimation.ts` — intersection observer hook for fade-in on scroll
+**Pages:**
+- `src/pages/Login.tsx` -- Full-screen centered card with Google OAuth button, email/password form, amber styling, redirects to `/dashboard` on success
+- `src/pages/Signup.tsx` -- Same layout, "Start your free trial" heading, "Create Account" button, links to `/login`
+- `src/pages/Dashboard.tsx` -- Protected layout with sidebar + main content area
+- `src/pages/dashboard/Overview.tsx` -- Empty state: "Welcome to PixelPort" with amber icon
+- `src/pages/dashboard/Content.tsx` -- Empty state: "Content Pipeline"
+- `src/pages/dashboard/Agents.tsx` -- Empty state: "Your Agents"
+- `src/pages/dashboard/Analytics.tsx` -- Empty state: "Analytics"
+- `src/pages/dashboard/Approvals.tsx` -- Empty state: "Approvals"
+- `src/pages/dashboard/Settings.tsx` -- Empty state: "Settings"
 
-**Modified files:**
-- `src/index.css` — complete theme overhaul: dark background (#0A0A0F), amber accents (#D4A853), new CSS variables, grain texture
-- `tailwind.config.ts` — add amber/gold colors, fade-in/slide-up animations, new keyframes
-- `src/pages/Index.tsx` — compose all landing sections
-- `src/components/PixelPortLogo.tsx` — update to dark theme with amber dot accent
-- `index.html` — update title to "PixelPort — Your AI Chief of Staff", meta tags
+**Dashboard shell:**
+- `src/components/dashboard/AppSidebar.tsx` -- Sidebar with PixelPort logo, nav items (Overview, Content, Agents, Analytics, Approvals, Settings), sign-out button at bottom
 
-### Design System Changes
+### Modified Files
 
-| Token | Current | New |
-|-------|---------|-----|
-| `--background` | `48 33% 97%` (warm white) | `240 33% 3%` (#0A0A0F) |
-| `--foreground` | `228 25% 15%` (dark) | `0 0% 96%` (#F5F5F5) |
-| `--card` | `0 0% 100%` | `240 14% 10%` (#14141A) |
-| `--primary` | `230 75% 50%` (blue) | `38 60% 58%` (warm amber #D4A853) |
-| `--border` | `228 20% 90%` | `240 14% 14%` (#1E1E28) |
-| `--muted-foreground` | `228 10% 45%` | `220 9% 64%` (#9CA3AF) |
+- `src/App.tsx` -- Wrap with `AuthProvider`, add routes: `/login`, `/signup`, `/dashboard` (protected, with nested child routes)
+- `src/components/landing/Navbar.tsx` -- "Start Free" and "Book a Demo" buttons become `<Link>` to `/signup` and `/login`
 
-Typography: Import Satoshi (or Cabinet Grotesk) via Google Fonts or CDN. Monospace for agent messages via `font-mono`.
+### Design Details
 
-### Interactive Features
+All auth pages use the same dark background (`#0A0A0F`), card background (`#111118`), amber accent (`#D4A853`), and subtle radial glow from the landing page. Input fields use `bg-[#0D0D14]` with amber focus rings. The dashboard sidebar uses the existing `--sidebar-*` CSS variables already defined in `index.css`.
 
-1. **Product preview crossfade**: `useState` + `useEffect` with 5s interval toggling between `SlackMock` and `DashboardMock`, CSS opacity transition
-2. **Scroll animations**: Custom hook using `IntersectionObserver`, applies `animate-fade-in` class when elements enter viewport
-3. **Feature card hover**: Tailwind `hover:border-amber-500/40 hover:shadow-[0_0_15px_rgba(212,168,83,0.1)]`
-4. **Integration logos**: `grayscale filter-grayscale hover:filter-none` transition
-5. **FAQ accordion**: Using existing shadcn `Accordion` component with amber styling
-6. **Navbar scroll**: `useEffect` tracking `scrollY` to toggle backdrop opacity class
-7. **Background grain**: CSS `::before` pseudo-element with noise SVG data URI
+### Route Structure
 
-### Section Details
+```text
+/              → Landing page (public)
+/login         → Login page (public)
+/signup        → Signup page (public)
+/dashboard     → Protected layout with sidebar
+  /dashboard          → Overview (default)
+  /dashboard/content  → Content Pipeline
+  /dashboard/agents   → Agents
+  /dashboard/analytics → Analytics
+  /dashboard/approvals → Approvals
+  /dashboard/settings  → Settings
+```
 
-Each section uses the content exactly as specified in the prompt (feature cards, pricing tiers $299/$999/$3000+, FAQ answers, security items, etc.). All CTA buttons link to `"#"` for now. "Book a Demo" also links to `"#"`.
-
-### Responsive Strategy
-
-- **Desktop**: Full layouts as described (3-column grids, two-column hero)
-- **Tablet** (`md`): 2-column grids, hero stacks vertically
-- **Mobile** (`sm`): Single column, hamburger nav via sheet/drawer component, stacked pricing cards
+### Google OAuth Note
+After implementation, you'll need to configure the Google OAuth provider in your Supabase dashboard (Authentication > Providers > Google) with your Google Cloud credentials. The code will include the `signInWithOAuth({ provider: 'google' })` call ready to go.
 
