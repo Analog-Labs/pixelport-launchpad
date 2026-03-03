@@ -31,7 +31,7 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 - [ ] 1.F5: Connections page — show connected integrations (Slack, email) ← DEFERRED (blocked by C3)
 
 ### CTO Track (Backend + Infra)
-- [ ] 1.C1: Tenant creation endpoint + Inngest trigger ← CODEX SLICE 5
+- [x] 1.C1: Tenant creation endpoint + Inngest trigger ← CODEX SLICE 5 complete (`POST /api/tenants`)
 - [ ] 1.C2: Chat API streaming (SSE) + message history ← CODEX SLICE 6
 - [ ] 1.C3: Slack OAuth flow + webhook ← CODEX SLICE 7
 - [ ] 1.C4: Mem0 managed cloud — apply for startup program, set up per-tenant scoping

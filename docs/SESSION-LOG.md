@@ -6,33 +6,43 @@
 
 ## Last Session
 
-- **Date:** 2026-03-03 (evening)
-- **Who worked:** Founder + Claude (chat) via Lovable
+- **Date:** 2026-03-03 (night)
+- **Who worked:** Codex
 - **What was done:**
-  - **F1+F4 built and verified:** 3-step onboarding wizard with agent personalization (name, tone, 6 avatars, live preview). Routing guards working (unauth → login, onboarded → dashboard). localStorage persistence for all onboarding data.
-  - **F2 built and verified:** Dashboard Home rewritten with pre/post onboarding modes. Post-onboarding: provisioning→active animation (10s timer), updated CoS card with chat/activity buttons, updated quick actions, new Recent Activity timeline with 4 simulated items and "Live" badge.
-  - **F3 built and verified:** ChatContext provider with shared state. Chat widget upgraded to slide-up panel (380×500px, desktop) with header/messages/input/typing indicator/simulated replies. Full-page chat at /dashboard/chat with minimize-to-widget. Mobile falls back to navigate-only bubble.
-  - **Shared AVATAR_MAP extracted** to `src/lib/avatars.ts` — used by Home, ChatWidget, and Chat.
-  - **Onboarding localStorage fix:** Added `pixelport_company_name` and `pixelport_company_url` to handleLaunch.
-  - **All code merged to main via Lovable → GitHub sync.**
-- **New/modified files (7 total):**
-  - `src/pages/Onboarding.tsx` — 2 localStorage lines added
-  - `src/lib/avatars.ts` — NEW (shared avatar helpers)
-  - `src/contexts/ChatContext.tsx` — NEW (chat state provider)
-  - `src/pages/dashboard/Home.tsx` — REWRITTEN (pre/post onboarding modes)
-  - `src/components/dashboard/ChatWidget.tsx` — REWRITTEN (slide-up panel)
-  - `src/pages/dashboard/Chat.tsx` — REWRITTEN (full chat UI)
-  - `src/pages/Dashboard.tsx` — Wrapped with ChatProvider
+  - Implemented `POST /api/tenants` in `api/tenants/index.ts`.
+  - Added Supabase Auth verification using `supabase.auth.getUser(token)` with Bearer-token parsing.
+  - Added idempotent tenant-creation logic:
+    - Existing tenant for `supabase_user_id` returns `200` with `created:false`.
+    - New tenant returns `201` with `created:true`.
+  - Added onboarding payload validation:
+    - `company_name` required, minimum 2 chars.
+    - `agent_tone` constrained to `casual|professional|bold`.
+    - `agent_avatar_url` constrained to 6 allowed avatar IDs.
+    - `goals` validated as string array when present.
+  - Added slug generation and default onboarding/settings values.
+  - Added unique-conflict handling:
+    - Race on `supabase_user_id` re-reads tenant and returns idempotent response.
+    - Slug conflict returns `409`.
+  - Added provisioning trigger:
+    - `inngest.send({ name: 'pixelport/tenant.created', data: { tenantId, trialMode: true } })`.
+  - Response sanitization confirmed (`gateway_token` stripped).
+  - Confirmed `api/inngest/index.ts` already exports `provisionTenant` (no change needed).
+  - Live DB verification for migration decision:
+    - `idx_tenants_supabase_user` is non-unique.
+    - Existing unique constraint `tenants_clerk_org_id_key` still enforces `UNIQUE (supabase_user_id)`.
+    - Result: migration `003_tenant_user_unique.sql` not needed.
+  - Verification checks run:
+    - `tsc` compile for `api/tenants/index.ts`: pass.
+    - Endpoint existence: pass.
+    - Secret scan on new file: pass.
 - **What's next:**
-  - CTO: Send Codex Slice 5 immediately (zero blockers)
-  - CTO: Send Codex Slice 6 after Slice 5 (needs a test tenant to exist)
-  - CTO: Prepare Slack App credentials for Slice 7 (or ask founder to create)
-  - After C1+C2 are done: wire I1 (onboarding → tenant creation) and I2 (chat → streaming)
-  - Founder will build F5 (Connections page) once C3 is in progress
-- **Blockers (unchanged):**
-  - DigitalOcean droplet quota (deferred — not blocking Phase 1 backend work)
-  - Mem0 startup program approval (CTO to apply)
-  - Slack App credentials needed for Slice 7 (founder to create Slack App)
+  - CTO: Dispatch Slice 6 (`/api/chat` streaming + history) now that C1 backend endpoint is live.
+  - Founder + CTO: Wire frontend onboarding submit to `POST /api/tenants` (I1).
+- **Blockers:**
+  - No new blockers for Slice 5.
+- **Feedback & Observations (CTO):**
+  - The uniqueness guarantee exists, but naming is stale (`tenants_clerk_org_id_key` now guards `supabase_user_id`). Consider a cleanup migration to rename this constraint for clarity.
+  - Idempotency is robust for user-race collisions; slug collisions are explicit and frontend-actionable (`409`).
 
 ---
 
