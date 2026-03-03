@@ -24,11 +24,11 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 ---
 
 ### Founder Track (Lovable Frontend)
-- [ ] 1.F1: Onboarding widget — 3-step flow (company URL → goals → connect Slack)
-- [ ] 1.F2: Dashboard Home — agent status card, pending approvals, recent activity
-- [ ] 1.F3: Chat widget (persistent sidebar) + full-page chat view (`/dashboard/chat`)
-- [ ] 1.F4: Agent personalization UI — name, avatar, tone selection during onboarding
-- [ ] 1.F5: Connections page — show connected integrations (Slack, email)
+- [x] 1.F1: Onboarding widget — 3-step flow (company URL → goals → connect Slack)
+- [x] 1.F2: Dashboard Home — agent status card, pending approvals, recent activity
+- [x] 1.F3: Chat widget (persistent sidebar) + full-page chat view (`/dashboard/chat`)
+- [x] 1.F4: Agent personalization UI — name, avatar, tone selection during onboarding
+- [ ] 1.F5: Connections page — show connected integrations (Slack, email) ← DEFERRED (blocked by C3)
 
 ### CTO Track (Backend + Infra)
 - [ ] 1.C1: Tenant creation endpoint + Inngest trigger ← CODEX SLICE 5
@@ -69,13 +69,15 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 
 ### Notes
 - **Phase 0 → Phase 1 transition (2026-03-03):** CTO reviewed all Codex code (PASS), merged branch to main, created Phase 1 Codex slice docs.
-- Codex Slices 5-7 ready in `docs/phase1/` — can be sent to Codex immediately.
-- Slice 5 is zero-blocker (only needs Supabase + Inngest, both available).
+- **F1-F4 complete (2026-03-03 evening):** Founder built onboarding wizard, dashboard home (pre/post modes), chat widget (slide-up + full-page), agent personalization. All merged to main. Frontend runs on localStorage + simulated data — needs backend wiring.
+- **Frontend data contract locked:** Onboarding payload fields: `company_name`, `company_url`, `goals[]`, `agent_name`, `agent_tone` (casual|professional|bold), `agent_avatar_url` (6 avatar IDs). See `src/lib/avatars.ts` for avatar map.
+- Codex Slices 5-7 ready in `docs/phase1/` — Slice 5 sent to Codex (zero blockers).
 - Slice 6 requires OpenClaw gateway accessible (blocked until DO quota resolved for real testing).
 - Slice 7 requires Slack App credentials from founder.
 - Strategic improvement ideas saved in `docs/strategic-ideas-backlog.md` for future review.
 - Auth decision change: Supabase Auth replaces Clerk (2026-03-03).
 - Codex is a full project participant: reads full project context, provides feedback to CTO, updates session docs after every work session.
+- **Integration wiring (I1-I4):** CTO proposes changes to Lovable-managed frontend files, founder reviews and applies. Do NOT modify `src/` files directly without founder approval.
 
 ---
 

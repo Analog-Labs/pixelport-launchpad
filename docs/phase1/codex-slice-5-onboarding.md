@@ -135,8 +135,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       agent_avatar_url,
     } = req.body || {};
 
-    if (!company_name || typeof company_name !== 'string') {
-      return res.status(400).json({ error: 'company_name is required' });
+    if (!company_name || typeof company_name !== 'string' || company_name.trim().length < 2) {
+      return res.status(400).json({ error: 'company_name is required and must be at least 2 characters' });
+    }
+
+    // Validate enums (must match frontend: src/lib/avatars.ts + StepAgentSetup.tsx)
+    const validTones = ['casual', 'professional', 'bold'];
+    if (agent_tone && !validTones.includes(agent_tone)) {
+      return res.status(400).json({ error: 'agent_tone must be: casual, professional, or bold' });
+    }
+
+    const validAvatars = ['amber-l', 'purple-zap', 'blue-bot', 'green-brain', 'pink-sparkle', 'orange-fire'];
+    if (agent_avatar_url && !validAvatars.includes(agent_avatar_url)) {
+      return res.status(400).json({ error: 'Invalid avatar selection' });
     }
 
     // 4. Create tenant row
@@ -147,7 +158,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       goals: goals || [],
       agent_name: agent_name || 'Luna',
       agent_tone: agent_tone || 'professional',
-      agent_avatar_url: agent_avatar_url || null,
+      agent_avatar_url: agent_avatar_url || 'amber-l',
       completed_at: new Date().toISOString(),
     };
 
@@ -274,7 +285,7 @@ Content-Type: application/json
   "goals": ["increase social media presence", "generate blog content"],
   "agent_name": "Luna",
   "agent_tone": "professional",
-  "agent_avatar_url": null
+  "agent_avatar_url": "amber-l"
 }
 ```
 

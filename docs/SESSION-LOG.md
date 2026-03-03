@@ -6,7 +6,37 @@
 
 ## Last Session
 
-- **Date:** 2026-03-03 (post-midnight)
+- **Date:** 2026-03-03 (evening)
+- **Who worked:** Founder + Claude (chat) via Lovable
+- **What was done:**
+  - **F1+F4 built and verified:** 3-step onboarding wizard with agent personalization (name, tone, 6 avatars, live preview). Routing guards working (unauth → login, onboarded → dashboard). localStorage persistence for all onboarding data.
+  - **F2 built and verified:** Dashboard Home rewritten with pre/post onboarding modes. Post-onboarding: provisioning→active animation (10s timer), updated CoS card with chat/activity buttons, updated quick actions, new Recent Activity timeline with 4 simulated items and "Live" badge.
+  - **F3 built and verified:** ChatContext provider with shared state. Chat widget upgraded to slide-up panel (380×500px, desktop) with header/messages/input/typing indicator/simulated replies. Full-page chat at /dashboard/chat with minimize-to-widget. Mobile falls back to navigate-only bubble.
+  - **Shared AVATAR_MAP extracted** to `src/lib/avatars.ts` — used by Home, ChatWidget, and Chat.
+  - **Onboarding localStorage fix:** Added `pixelport_company_name` and `pixelport_company_url` to handleLaunch.
+  - **All code merged to main via Lovable → GitHub sync.**
+- **New/modified files (7 total):**
+  - `src/pages/Onboarding.tsx` — 2 localStorage lines added
+  - `src/lib/avatars.ts` — NEW (shared avatar helpers)
+  - `src/contexts/ChatContext.tsx` — NEW (chat state provider)
+  - `src/pages/dashboard/Home.tsx` — REWRITTEN (pre/post onboarding modes)
+  - `src/components/dashboard/ChatWidget.tsx` — REWRITTEN (slide-up panel)
+  - `src/pages/dashboard/Chat.tsx` — REWRITTEN (full chat UI)
+  - `src/pages/Dashboard.tsx` — Wrapped with ChatProvider
+- **What's next:**
+  - CTO: Send Codex Slice 5 immediately (zero blockers)
+  - CTO: Send Codex Slice 6 after Slice 5 (needs a test tenant to exist)
+  - CTO: Prepare Slack App credentials for Slice 7 (or ask founder to create)
+  - After C1+C2 are done: wire I1 (onboarding → tenant creation) and I2 (chat → streaming)
+  - Founder will build F5 (Connections page) once C3 is in progress
+- **Blockers (unchanged):**
+  - DigitalOcean droplet quota (deferred — not blocking Phase 1 backend work)
+  - Mem0 startup program approval (CTO to apply)
+  - Slack App credentials needed for Slice 7 (founder to create Slack App)
+
+---
+
+### 2026-03-03 (post-midnight)
 - **Who worked:** CTO (Claude Code) + Founder
 - **What was done:**
   - **CTO reviewed Codex Slices 3-4: BOTH PASS ✅**
