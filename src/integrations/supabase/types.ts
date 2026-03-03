@@ -14,7 +14,355 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agents: {
+        Row: {
+          agent_id: string
+          avatar_url: string | null
+          created_at: string | null
+          display_name: string
+          fallback_model: string | null
+          id: string
+          is_visible: boolean | null
+          model: string | null
+          role: string
+          settings: Json | null
+          soul_template_version: string | null
+          status: string
+          tenant_id: string
+          tone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string
+          fallback_model?: string | null
+          id?: string
+          is_visible?: boolean | null
+          model?: string | null
+          role?: string
+          settings?: Json | null
+          soul_template_version?: string | null
+          status?: string
+          tenant_id: string
+          tone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string
+          fallback_model?: string | null
+          id?: string
+          is_visible?: boolean | null
+          model?: string | null
+          role?: string
+          settings?: Json | null
+          soul_template_version?: string | null
+          status?: string
+          tenant_id?: string
+          tone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_keys: {
+        Row: {
+          created_at: string | null
+          encrypted_key: string
+          id: string
+          is_active: boolean | null
+          key_alias: string
+          key_hint: string | null
+          provider: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          encrypted_key: string
+          id?: string
+          is_active?: boolean | null
+          key_alias: string
+          key_hint?: string | null
+          provider: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          encrypted_key?: string
+          id?: string
+          is_active?: boolean | null
+          key_alias?: string
+          key_hint?: string | null
+          provider?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approvals: {
+        Row: {
+          content_item_id: string
+          created_at: string | null
+          decided_at: string | null
+          decided_by: string | null
+          feedback: string | null
+          id: string
+          inngest_event_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content_item_id: string
+          created_at?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          feedback?: string | null
+          id?: string
+          inngest_event_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          content_item_id?: string
+          created_at?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          feedback?: string | null
+          id?: string
+          inngest_event_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approvals_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approvals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_items: {
+        Row: {
+          agent_id: string | null
+          body: string | null
+          brief_id: string | null
+          content_type: string
+          created_at: string | null
+          feedback: string | null
+          id: string
+          media_urls: string[] | null
+          metadata: Json | null
+          platform: string | null
+          published_at: string | null
+          published_url: string | null
+          revision_count: number | null
+          scheduled_for: string | null
+          status: string
+          tenant_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          body?: string | null
+          brief_id?: string | null
+          content_type?: string
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          media_urls?: string[] | null
+          metadata?: Json | null
+          platform?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          revision_count?: number | null
+          scheduled_for?: string | null
+          status?: string
+          tenant_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          body?: string | null
+          brief_id?: string | null
+          content_type?: string
+          created_at?: string | null
+          feedback?: string | null
+          id?: string
+          media_urls?: string[] | null
+          metadata?: Json | null
+          platform?: string | null
+          published_at?: string | null
+          published_url?: string | null
+          revision_count?: number | null
+          scheduled_for?: string | null
+          status?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_items_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions_log: {
+        Row: {
+          agent_id: string | null
+          cost_usd: number | null
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          model_used: string | null
+          summary: string | null
+          tenant_id: string
+          tokens_used: number | null
+        }
+        Insert: {
+          agent_id?: string | null
+          cost_usd?: number | null
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          model_used?: string | null
+          summary?: string | null
+          tenant_id: string
+          tokens_used?: number | null
+        }
+        Update: {
+          agent_id?: string | null
+          cost_usd?: number | null
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          model_used?: string | null
+          summary?: string | null
+          tenant_id?: string
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          agentmail_inbox: string | null
+          clerk_org_id: string
+          created_at: string | null
+          droplet_id: string | null
+          droplet_ip: string | null
+          gateway_token: string | null
+          id: string
+          litellm_team_id: string | null
+          name: string
+          onboarding_data: Json | null
+          plan: string
+          settings: Json | null
+          slug: string
+          status: string
+          trial_ends_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agentmail_inbox?: string | null
+          clerk_org_id: string
+          created_at?: string | null
+          droplet_id?: string | null
+          droplet_ip?: string | null
+          gateway_token?: string | null
+          id?: string
+          litellm_team_id?: string | null
+          name: string
+          onboarding_data?: Json | null
+          plan?: string
+          settings?: Json | null
+          slug: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agentmail_inbox?: string | null
+          clerk_org_id?: string
+          created_at?: string | null
+          droplet_id?: string | null
+          droplet_ip?: string | null
+          gateway_token?: string | null
+          id?: string
+          litellm_team_id?: string | null
+          name?: string
+          onboarding_data?: Json | null
+          plan?: string
+          settings?: Json | null
+          slug?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
