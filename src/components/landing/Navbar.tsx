@@ -50,10 +50,13 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
-            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a
+              href="#"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-px after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
+            >
               Book a Demo
             </a>
-            <Button className="shimmer-btn text-primary-foreground font-semibold">
+            <Button className="shimmer-btn text-primary-foreground font-semibold hover:shadow-[0_0_20px_rgba(212,168,83,0.25)] transition-shadow">
               Start Free
             </Button>
           </div>

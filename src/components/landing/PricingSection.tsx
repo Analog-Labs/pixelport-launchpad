@@ -2,6 +2,7 @@ import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 const plans = [
   {
@@ -63,25 +64,42 @@ const plans = [
 ];
 
 const PricingSection = () => {
-  const { ref, isVisible } = useScrollAnimation();
+  const { ref, isVisible } = useScrollAnimation(0.1);
+  const cardsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isVisible || !cardsRef.current) return;
+    const cards = cardsRef.current.querySelectorAll<HTMLElement>("[data-pricing-card]");
+    cards.forEach((card, i) => {
+      card.style.transitionDelay = `${i * 150}ms`;
+      card.classList.add("visible");
+    });
+  }, [isVisible]);
 
   return (
-    <section id="pricing" className="relative section-container">
+    <section id="pricing" className="relative section-container-tight">
       {/* Ambient glow behind Pro card */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[500px] h-[400px] bg-primary/6 rounded-full blur-[120px]" />
+        <div
+          className="w-[800px] h-[500px] rounded-full blur-[120px]"
+          style={{ background: "radial-gradient(circle, hsla(38, 60%, 58%, 0.06) 0%, transparent 60%)" }}
+        />
       </div>
 
-      <div ref={ref} className={`relative scroll-fade-in ${isVisible ? "visible" : ""}`}>
-        <div className="text-center mb-16">
+      {/* Subtle amber divider at top */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 max-w-md w-full h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+
+      <div ref={ref} className="relative">
+        <div className={`text-center mb-12 scroll-fade-in ${isVisible ? "visible" : ""}`}>
           <h2 className="section-title mb-4">Simple pricing. No surprises.</h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 items-start">
+        <div ref={cardsRef} className="grid md:grid-cols-3 gap-8 items-start">
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative rounded-xl p-6 transition-all isolate ${
+              data-pricing-card
+              className={`scroll-fade-in relative rounded-xl p-6 transition-all isolate ${
                 plan.highlighted
                   ? "border-2 border-primary/50 bg-card shadow-[0_0_40px_rgba(212,168,83,0.12)] md:-mt-4 md:mb-0"
                   : "border border-border bg-card"

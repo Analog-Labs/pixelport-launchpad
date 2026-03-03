@@ -1,5 +1,6 @@
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { Search, Pencil, BarChart3, MessageSquare, Brain, Zap, Mail, CheckSquare, ClipboardList } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 const features = [
   { icon: Search, title: "Competitor Intelligence", desc: "Monitors competitors 24/7. Flags moves, suggests counter-content — before you hear about it." },
@@ -14,12 +15,22 @@ const features = [
 ];
 
 const FeaturesSection = () => {
-  const { ref, isVisible } = useScrollAnimation();
+  const { ref, isVisible } = useScrollAnimation(0.1);
+  const cardsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isVisible || !cardsRef.current) return;
+    const cards = cardsRef.current.querySelectorAll<HTMLElement>("[data-feature-card]");
+    cards.forEach((card, i) => {
+      card.style.transitionDelay = `${i * 100}ms`;
+      card.classList.add("visible");
+    });
+  }, [isVisible]);
 
   return (
-    <section id="features" className="section-container">
-      <div ref={ref} className={`scroll-fade-in ${isVisible ? "visible" : ""}`}>
-        <div className="text-center mb-16">
+    <section id="features" className="section-container-tight">
+      <div ref={ref}>
+        <div className={`text-center mb-12 scroll-fade-in ${isVisible ? "visible" : ""}`}>
           <h2 className="section-title mb-4">
             Everything a Chief of Staff does — at a fraction of the cost
           </h2>
@@ -28,11 +39,12 @@ const FeaturesSection = () => {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div ref={cardsRef} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {features.map((f) => (
             <div
               key={f.title}
-              className="group rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(212,168,83,0.08)]"
+              data-feature-card
+              className="scroll-fade-in group rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(212,168,83,0.08)]"
             >
               <f.icon className="text-primary mb-3" size={32} />
               <h3 className="text-base font-semibold text-foreground mb-1.5">{f.title}</h3>
@@ -41,6 +53,9 @@ const FeaturesSection = () => {
           ))}
         </div>
       </div>
+
+      {/* Subtle amber divider line */}
+      <div className="mt-16 mx-auto max-w-md h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
     </section>
   );
 };
