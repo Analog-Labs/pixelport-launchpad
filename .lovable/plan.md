@@ -1,55 +1,76 @@
 
 
-## Plan: Rearrange Hero Layout + Add Agent Dashboard Panel
+## Plan: Full 3-Step Onboarding Flow
 
-Restructure the landing page hero area to match the SecondShift screenshot layout: centered headline/copy/CTAs on top, a large interactive "agent team room" dashboard panel below, proof chips underneath, then an integrations strip -- all keeping PixelPort's dark/amber color scheme and existing text.
+Build a `/onboarding` route with a 3-step wizard (Company Info → Agent Personalization → Connect Tools), plus routing guards and dashboard integration.
 
-### Layout Change (HeroSection.tsx)
+### New Files
 
-Current: side-by-side grid (55% text left, 45% product preview right).
-New: fully centered, stacked vertically:
-1. Badge ("Built on OpenClaw...")
-2. Centered h1 ("Your AI Chief of Staff")
-3. Centered subtitle paragraph
-4. Two CTA buttons centered (amber "Start Free 14 Day Trial" + outlined "Book a Demo")
-5. "No credit card required" text centered
-6. Large `AgentTeamRoom` component below (replaces the small SlackMock/DashboardMock toggler)
-7. Proof chips row (4 items with icons: "24/7 execution", "Multi-agent collaboration", "Approval gates", "Full audit trail")
-8. Integrations strip with a separator line, "Connects to the tools you already use" text, and inline SVG brand logos (Slack, LinkedIn, X/Twitter, OpenAI, Gemini, Notion, HubSpot, PostHog)
+**`src/pages/Onboarding.tsx`** — Main onboarding page component
+- Full-page layout matching login/signup style (dark bg, centered card, PixelPort logo top-left)
+- Manages all state: `step` (1-3), form data object matching `OnboardingPayload` interface
+- Card: `max-w-[640px]`, `bg-[#111118]`, amber border, `rounded-2xl`, `p-10`
+- Step transitions: CSS opacity/transform transition on content swap
+- Final "Launch My Agent" triggers loading screen (cycling text + progress dots), console.logs payload, sets localStorage keys (`pixelport_onboarded`, `pixelport_agent_name`, `pixelport_agent_avatar`, `pixelport_agent_tone`), waits 4s, navigates to `/dashboard`
 
-### New File: `src/components/landing/AgentTeamRoom.tsx`
+**`src/components/onboarding/StepIndicator.tsx`** — Reusable progress indicator
+- Three numbered circles connected by lines
+- States: completed (amber + checkmark), current (amber + number), future (outline #333 + gray number)
+- Step labels below: "Company Info" / "Your Agent" / "Connect Tools"
 
-A PixelPort-themed version of the SecondShift TeamRoom, adapted to dark/amber styling. Static data (no external data file needed). Structure:
+**`src/components/onboarding/StepCompanyInfo.tsx`** — Step 1
+- Company Name input (required, min 2 chars)
+- Website URL input (optional, with helper text and conditional amber tag)
+- Marketing Goals as toggle pills in 2-col grid (8 options with emojis + "Other" with conditional text input)
+- "Next →" button disabled until name filled + 1 goal selected
 
-- **Window chrome header**: three dots (red/amber/green), "Marketing Team" title, green "Live" indicator -- styled with `bg-card border-border` (dark theme)
-- **Two-column body** (stacks on mobile):
-  - **Left: Agent Roster** -- Manager Agent (Luna, with amber crown icon) + 5 sub-agents (Research, Copywriter, Designer, Publisher, Analyst) each with icon, description, and colored status badge. Status badges use dark-theme-compatible colors (e.g., `bg-emerald-500/15 text-emerald-400`)
-  - **Right: Live Work Feed** -- 4 feed items with green dot, description text, timestamp, and agent tag pill
-- **Footer**: workflow step pills (Plan, Create, Review, Publish, Measure, Improve) + "Run a cycle" button. The "Run a cycle" button animates through the steps, briefly highlighting each pill in sequence -- same behavior as SecondShift's TeamRoom
+**`src/components/onboarding/StepAgentSetup.tsx`** — Step 2
+- Agent Name input (default "Luna")
+- Tone selector: 3 radio-style cards (Casual/Professional/Bold), default Professional
+- Avatar picker: 6 circular options with colored gradients/emojis, amber ring on selected
+- Live preview card showing selected avatar + name + tone-appropriate sample message
+- Back + Next buttons
 
-### Files to Modify
+**`src/components/onboarding/StepConnectTools.tsx`** — Step 3
+- Slack connection card with logo, description, "Connect Slack" button → toast "coming soon" then disabled state
+- "What happens next" info box with dashed amber border and 4 checklist items
+- Back + "Launch My Agent" button (rocket emoji)
 
-- **`src/components/landing/HeroSection.tsx`** -- Replace grid layout with centered stacked layout. Remove `ProductPreview` import, add `AgentTeamRoom` import. Add proof chips and integrations strip below the dashboard panel.
-- **`src/pages/Index.tsx`** -- Remove `TrustBar` from the page (its content is now absorbed into the hero section's proof chips and integrations strip).
+### Modified Files
 
-### Files to Delete
+**`src/App.tsx`**
+- Add `/onboarding` route (outside dashboard layout, inside AuthProvider)
+- Import new `Onboarding` page
 
-- **`src/components/landing/ProductPreview.tsx`** -- No longer used (replaced by AgentTeamRoom)
-- **`src/components/landing/SlackMock.tsx`** -- No longer used
-- **`src/components/landing/DashboardMock.tsx`** -- No longer used
-- **`src/components/landing/TrustBar.tsx`** -- Content moved into HeroSection
+**`src/pages/Signup.tsx`**
+- After successful signup, the existing flow shows a "check your email" screen — no change needed there. But after email verification and login, user hits ProtectedRoute which will redirect to onboarding.
 
-### Design Adaptation
+**`src/components/ProtectedRoute.tsx`**
+- After confirming user is authenticated, check `localStorage.getItem('pixelport_onboarded')`. If not set, redirect to `/onboarding` instead of rendering dashboard children.
 
-All SecondShift styles (light bg, colored text badges) will be converted to PixelPort's dark theme:
-- Card: `bg-card border-border` (the existing dark card style)
-- Status badges: dark-tinted backgrounds with lighter text (e.g., `bg-emerald-500/10 text-emerald-400` instead of `bg-emerald-50 text-emerald-600`)
-- Feed items: `bg-surface` background
-- Window dots and "Live" indicator stay the same
-- Workflow pills: default `bg-secondary text-muted-foreground`, active `bg-primary text-primary-foreground`
-- Integration logos: use Lucide icons matching the existing IntegrationsSection (MessageSquare for Slack, Linkedin, Twitter, Brain for OpenAI, Sparkles for Gemini, etc.) styled as small 28px icons in a horizontal row
+**`src/pages/dashboard/Home.tsx`**
+- Read `pixelport_agent_name` and `pixelport_agent_avatar` from localStorage
+- Update Chief of Staff card to show the chosen agent name and matching avatar instead of hardcoded "L" and "Luna"
 
-### Section Height
+### Routing Logic Summary
 
-The hero section changes from fixed `h-[90vh]` to `min-h-screen` with auto height, since the centered layout + large dashboard panel will naturally be taller than the viewport.
+```text
+Signup complete → email verification → login → ProtectedRoute
+  → if no pixelport_onboarded → redirect /onboarding
+  → if onboarded → render dashboard
+
+/onboarding page:
+  → if not authenticated → redirect /login
+  → if pixelport_onboarded exists → redirect /dashboard
+  → otherwise → show wizard
+```
+
+### Design Details
+
+- All colors: `#0A0A0F` bg, `#111118` card, amber `#D4A853` accents, `rgba(212,168,83,0.15)` borders
+- Goal pills: selected = `bg-[#D4A853]/20 border-[#D4A853] text-white`, unselected = `bg-[#1A1A24] border-[#333] text-gray-400`
+- Tone cards: selected = `bg-[#111118] border-[#D4A853] border-2 shadow-[0_0_12px_rgba(212,168,83,0.1)]`, unselected = `bg-[#1A1A24] border-[#333]`
+- Avatar circles: 48px, selected gets 3px amber ring + `scale-110` transform
+- Loading screen: PixelPort logo centered, amber pulsing animation, text cycles every 2s with fade, 4 progress dots filling sequentially
+- Mobile: tone cards stack vertically, goal pills single column, card padding reduces
 
