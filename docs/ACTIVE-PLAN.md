@@ -40,7 +40,7 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 - [ ] 1.C7: Website auto-scan during onboarding (agent scrapes URL, populates vault)
 
 ### Integration (CTO + Founder)
-- [ ] 1.I1: Wire onboarding widget → POST /api/tenants (create + provision)
+- [x] 1.I1: Wire onboarding widget → POST /api/tenants (create + provision) ← COMPLETE (Lovable + CTO review)
 - [ ] 1.I2: Wire chat widget → POST /api/chat (streaming)
 - [ ] 1.I3: Wire dashboard home → GET /api/tenants/status + /api/content
 - [ ] 1.I4: Wire connections page → Slack OAuth install + status

@@ -6,7 +6,27 @@
 
 ## Last Session
 
-- **Date:** 2026-03-03 (night, late)
+- **Date:** 2026-03-04
+- **Who worked:** CTO (Claude Code) + Founder (Lovable)
+- **What was done:**
+  - **I1 Integration: Onboarding → POST /api/tenants — COMPLETE ✅**
+    - CTO proposed 2 changes to `src/pages/Onboarding.tsx`, founder's team reviewed and caught 2 issues (dead import, sequential timing bug), CTO revised, founder applied via Lovable.
+    - `handleLaunch` now: writes localStorage first (resilience), fires API call + 4s animation in parallel via `Promise.all`, stores `tenant_id` + `tenant_status` on success, navigates only when both complete.
+    - API errors are non-fatal — user always reaches dashboard.
+  - CTO drafted Codex Slice 6 message (chat SSE streaming + message history) — ready for founder to hand off.
+  - CTO provided Slack App creation instructions and DO quota instructions to founder.
+- **What's next:**
+  - Founder: Hand Codex Slice 6 message to Codex (chat SSE streaming + message history).
+  - Founder: Create Slack App at api.slack.com/apps (unblocks Slice 7).
+  - Founder: Request DO droplet quota increase (unblocks full provisioning dry-run).
+  - CTO: Review Codex Slice 6 when complete.
+- **Blockers:**
+  - Slice 6 real gateway testing blocked by DO quota (Supabase ops and tsc can still be verified).
+  - Slice 7 blocked on Slack App credentials from founder.
+
+---
+
+### 2026-03-03 (night, late)
 - **Who worked:** CTO (Claude Code)
 - **What was done:**
   - **CTO reviewed Codex Slice 5: PASS ✅**
@@ -15,12 +35,12 @@
     - DB migration 003 correctly skipped — existing `tenants_clerk_org_id_key` constraint already enforces `UNIQUE (supabase_user_id)` (stale naming from Clerk→Supabase migration, low-priority rename).
   - Restored founder's F1-F4 session entry that Codex's commit had dropped from SESSION-LOG.
 - **What's next:**
-  - CTO: Draft Codex Slice 6 message (chat SSE streaming + message history) — blocked on DO quota for real testing but can build the endpoint.
-  - CTO + Founder: Wire I1 (onboarding widget → POST /api/tenants) — CTO proposes changes, founder applies in Lovable.
+  - CTO: Draft Codex Slice 6 message (chat SSE streaming + message history).
+  - CTO + Founder: Wire I1 (onboarding widget → POST /api/tenants).
   - Founder: Create Slack App when ready (unblocks Slice 7).
 - **Blockers:**
-  - Slice 6 real testing blocked by DO quota (endpoint can still be built and verified with tsc).
-  - Slice 7 blocked on Slack App credentials from founder.
+  - Slice 6 real testing blocked by DO quota.
+  - Slice 7 blocked on Slack App credentials.
 
 ---
 
