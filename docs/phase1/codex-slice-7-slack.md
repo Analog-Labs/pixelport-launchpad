@@ -1,8 +1,9 @@
 # Codex Slice 7 — Slack OAuth Flow + Webhook
 
-**Priority:** 🔴 Blocked — requires Slack App credentials from founder
+**Priority:** 🟡 Partially blocked (event subscriptions deferred until endpoint exists)
 **Assigned to:** Codex
-**Depends on:** Slice 5 (tenant must exist), Slack App credentials
+**Depends on:** Slice 5 (tenant must exist)
+**Slack App:** "Pixel" — credentials available as Vercel env vars
 **Estimated time:** 3-4 hours
 
 ---
@@ -39,23 +40,15 @@
 
 ---
 
-## Prerequisites (Founder Must Do First)
+## Slack App Details
 
-Before Codex can execute this slice, the founder needs to:
-
-1. **Create a Slack App** at https://api.slack.com/apps
-   - App name: "PixelPort" (or "PixelPort AI")
-   - Enable OAuth & Permissions
-   - Add redirect URL: `https://pixelport-launchpad.vercel.app/api/connections/slack/callback`
-   - Add bot scopes: `channels:history`, `channels:read`, `chat:write`, `im:history`, `im:read`, `im:write`, `users:read`, `app_mentions:read`
-   - Enable Event Subscriptions (URL: `https://pixelport-launchpad.vercel.app/api/connections/slack/events`)
-   - Subscribe to bot events: `app_mention`, `message.im`
-   - Enable Socket Mode (for per-tenant droplet connections)
-
-2. **Share credentials with CTO:**
-   - `SLACK_CLIENT_ID`
-   - `SLACK_CLIENT_SECRET`
-   - `SLACK_SIGNING_SECRET`
+- **App name:** Pixel
+- **Created by:** Founder (2026-03-04)
+- **Credentials:** Available as Vercel env vars (`SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_SIGNING_SECRET`)
+- **OAuth Redirect URL:** `https://pixelport-launchpad.vercel.app/api/connections/slack/callback` (configured in Slack App)
+- **Bot scopes configured:** `chat:write`, `channels:read`, `channels:history`, `users:read`
+- **Event Subscriptions:** NOT YET CONFIGURED — Slack requires the events endpoint to respond before saving. Configure after Codex builds `/api/connections/slack/events`.
+  - After endpoint is deployed, go to api.slack.com → Pixel app → Event Subscriptions → enable → set URL to `https://pixelport-launchpad.vercel.app/api/connections/slack/events` → subscribe to `app_mention` and `message.im`
 
 ---
 
@@ -481,24 +474,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 ---
 
-## Environment Variables Needed
+## Environment Variables
 
-Add these to Vercel:
+All Slack env vars are already set in Vercel (added 2026-03-04):
+- `SLACK_CLIENT_ID` ✅
+- `SLACK_CLIENT_SECRET` ✅
+- `SLACK_SIGNING_SECRET` ✅
 
-```bash
-# Slack App credentials (from founder)
-SLACK_CLIENT_ID=your-slack-client-id
-SLACK_CLIENT_SECRET=your-slack-client-secret
-SLACK_SIGNING_SECRET=your-slack-signing-secret
+Already set from Phase 0:
+- `API_KEY_ENCRYPTION_KEY` — reused for bot token encryption
+- `SUPABASE_PROJECT_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-# Optional — override redirect URI if needed
-# SLACK_REDIRECT_URI=https://pixelport-launchpad.vercel.app/api/connections/slack/callback
-
-# Already set (from Phase 0):
-API_KEY_ENCRYPTION_KEY=...  # Reused for token encryption
-SUPABASE_PROJECT_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-```
+Optional (not set, auto-derived from request headers):
+- `SLACK_REDIRECT_URI` — defaults to `https://{host}/api/connections/slack/callback`
 
 ---
 
@@ -611,13 +600,9 @@ grep -r "xoxb-\|sk-\|eyJ" api/connections/
 ## Important Reminders
 
 - **Do NOT touch Lovable frontend files** in `src/`
-- **This slice is BLOCKED** until the founder creates a Slack App and shares credentials
+- **Slack App credentials are live** in Vercel env vars — no placeholders needed
 - **Bot tokens must be encrypted** — never store `xoxb-*` tokens in plaintext
 - **Slack signature verification** is mandatory for the events webhook
 - **Socket Mode** is the primary integration method for per-tenant Slack (configured on the OpenClaw droplet). The centralized events webhook is a backup/future enhancement.
 - **Redirect URI** must exactly match what's configured in the Slack App settings
-- If Slack credentials aren't available yet, you can still:
-  - Create the migration
-  - Write all the endpoint code
-  - Add placeholder env vars
-  - Note in SESSION-LOG that testing requires credentials
+- **Event Subscriptions** are deferred — the events endpoint (`/api/connections/slack/events`) must be deployed first so Slack can verify the URL. After deployment, founder will configure events in Slack App settings.
