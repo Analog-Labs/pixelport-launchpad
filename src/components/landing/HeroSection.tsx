@@ -37,7 +37,7 @@ const HeroSection = () => (
             style={{ animationDelay: "0.3s" }}
           >
             <Button className="shimmer-btn text-primary-foreground px-6 py-3 text-base font-semibold h-auto">
-              Start Free — 14 Day Trial
+              Start Free 14 Day Trial
             </Button>
             <Button variant="outline" className="px-6 py-3 text-base h-auto border-border hover:border-primary/40">
               Book a Demo
