@@ -25,7 +25,7 @@ const LOADING_MESSAGES = [
 ];
 
 const Onboarding = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [launching, setLaunching] = useState(false);
@@ -60,7 +60,7 @@ const Onboarding = () => {
     return () => clearInterval(interval);
   }, [launching]);
 
-  const handleLaunch = () => {
+  const handleLaunch = async () => {
     const payload = {
       company_name: data.company_name.trim(),
       company_url: data.company_url.trim() || null,
@@ -69,7 +69,6 @@ const Onboarding = () => {
       agent_tone: data.agent_tone,
       agent_avatar_url: data.agent_avatar,
     };
-    console.log("Onboarding payload:", payload);
 
     localStorage.setItem("pixelport_onboarded", "true");
     localStorage.setItem("pixelport_agent_name", payload.agent_name);
@@ -79,7 +78,39 @@ const Onboarding = () => {
     localStorage.setItem("pixelport_agent_tone", payload.agent_tone);
 
     setLaunching(true);
-    setTimeout(() => navigate("/dashboard", { replace: true }), 4000);
+
+    const apiCall = (async () => {
+      try {
+        const token = session?.access_token;
+        if (token) {
+          const res = await fetch("/api/tenants", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+          const result = await res.json();
+          if (result.tenant?.id) {
+            localStorage.setItem("pixelport_tenant_id", result.tenant.id);
+            localStorage.setItem("pixelport_tenant_status", result.tenant.status);
+          }
+          if (!res.ok) {
+            console.error("Tenant creation failed:", result);
+          }
+        }
+      } catch (err) {
+        console.error("Tenant creation error:", err);
+      }
+    })();
+
+    await Promise.all([
+      apiCall,
+      new Promise(resolve => setTimeout(resolve, 4000)),
+    ]);
+
+    navigate("/dashboard", { replace: true });
   };
 
   const patch = (p: Partial<OnboardingData>) => setData((d) => ({ ...d, ...p }));
