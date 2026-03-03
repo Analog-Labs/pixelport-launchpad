@@ -6,32 +6,53 @@
 
 ## Last Session
 
-- **Date:** 2026-03-03 (evening)
-- **Who worked:** Founder + Claude (chat) + CTO (Claude Code)
+- **Date:** 2026-03-03 (night)
+- **Who worked:** Codex
 - **What was done:**
-  - **Founder Track Phase 0: COMPLETE** ✅ (28 Lovable commits merged to main)
-  - Landing page live: 8 sections (hero w/ animated agent mock, features 3×3, how-it-works, pricing $299/$999/$3K+, security, integrations 16 tools, FAQ 8 items, CTA)
-  - **DECISION CHANGE: Supabase Auth replaces Clerk** — Google OAuth + email/password configured, /login and /signup pages, all /dashboard/* routes protected
-  - Dashboard shell live: 9 routes with sidebar nav, empty states, greeting with user name, stat cards, Chief of Staff card, quick actions
-  - CTO: Pulled 28 Lovable commits, QA'd all frontend work (all checks pass)
-  - CTO: Updated all docs for auth change (Clerk → Supabase Auth) across 10+ files
-  - CTO: Rewrote Slice 3 instruction doc auth layer for Supabase Auth
-  - CTO: Created migration 002 (clerk_org_id → supabase_user_id)
-  - CTO: Added decision override to master plan v2.0
-  - Founder: Created Inngest Cloud account, provided Event Key + Signing Key
-  - CTO: Wrote Codex briefing for Slices 3-4 (all credentials and context included)
+  - Completed Slice 3 API bridge implementation for Supabase Auth (no Clerk): 3 shared libs + 14 route files under `api/`.
+  - Completed Slice 4 provisioning artifacts: Inngest workflow, serve endpoint, cloud-init template, OpenClaw template, SOUL template.
+  - Verified migration 002 state in live DB:
+    - `tenants.supabase_user_id` exists with type `uuid`
+    - `clerk_org_id` is absent
+    - `idx_tenants_supabase_user` present
+  - Ran static checks:
+    - TypeScript compile for all `api/**/*.ts`: pass
+    - Auth pattern + tenant isolation scan: pass
+    - Secret scan of active code paths: pass (no hardcoded live secrets in `api/` / `infra/`)
+  - Ran live provisioning trial with auto-cleanup:
+    - Step 1 pass: test tenant inserted (`status=provisioning`)
+    - Step 2 pass: LiteLLM team created
+    - Step 3 pass: LiteLLM virtual key generated
+    - Step 4 blocked: DigitalOcean API returned `422 unprocessable_entity` (`droplet limit exceeded`)
+    - Auto-cleanup pass: LiteLLM key deleted (200), LiteLLM team deleted (200), DB rows deleted (tenant/agent count returned 0)
+    - Team deletion verified by follow-up `team/info` returning 404 (not found)
 - **What's next:**
-  - Codex: Execute Slices 3-4 (apply migration 002, build API bridge, build provisioning workflow)
-  - After Slices 3-4: Run 0.9 dry-run gate (signup → provision → API returns data to dashboard)
-- **Blockers:** None
-- **Key infrastructure live:**
-  - LiteLLM gateway: `https://litellm-production-77cc.up.railway.app`
-  - Supabase: 6 tables migrated, pooler endpoint: `aws-1-eu-west-1.pooler.supabase.com:6543`
-  - Vercel: Connected to GitHub repo, auto-deploying from main
-  - Frontend: Landing page + auth + dashboard shell all live
-- **Decision log:**
-  - Auth changed from Clerk to Supabase Auth. Rationale: native Lovable integration, zero new vendors, already wired to existing Supabase instance. Migration path to Clerk available Phase 4 if needed for team management.
-  - Dashboard route structure locked (9 routes — see ACTIVE-PLAN.md)
+  - Founder/CTO: increase DigitalOcean droplet limit (or free one slot), then rerun 0.9 dry-run gate with a real tenant provisioning event.
+  - CTO: review provisioning hardening notes below before production launch.
+- **Blockers:**
+  - DigitalOcean account droplet quota prevented Step 4 in the live trial (`422` limit exceeded).
+- **Feedback & Observations (CTO Package):**
+  - **What worked cleanly**
+    - Migration 002-compatible auth model (`supabase_user_id`) is wired end-to-end in API routes.
+    - Route scaffolding and tenant scoping patterns are consistent and compile cleanly.
+    - LiteLLM admin flow (`team/new` -> `key/generate` -> cleanup via `key/delete` + `team/delete`) is reliable.
+  - **What needed adjustment**
+    - Inngest adapter import needed runtime-compatible path (`inngest/express`) for installed version `3.52.5` instead of `inngest/vercel`.
+    - Dynamic route import in `api/approvals/[id]/decide.ts` needed relative-path correction (`../../lib/*`).
+    - Live trial required a quota-aware fallback because account-level droplet limits blocked creation.
+  - **Risk notes**
+    - Provisioning can fail at infrastructure creation due to account quotas; current workflow retries but cannot self-resolve hard quota limits.
+    - AgentMail inbox deletion API behavior may vary by endpoint availability; residual mailbox cleanup may need explicit admin tooling.
+    - Secrets were exchanged in chat during setup; treat as temporary risk and rotate after this execution slice.
+  - **Recommended hardening for Phase 0.9**
+    - **P1:** Add explicit preflight quota check against DigitalOcean limits before Step 4 and fail fast with actionable status.
+    - **P1:** Add idempotency keys per tenant event to prevent duplicate infra creation on retries/manual replays.
+    - **P2:** Persist step-level provisioning audit records (`provision_runs` table or structured logs) for replay/debug.
+    - **P2:** Add deterministic cleanup function callable by tenant ID to remove partial resources safely.
+    - **P3:** Add automated integration smoke for `api/` handlers with mocked Supabase/LiteLLM/DO responses in CI.
+  - **Open questions**
+    - Should provisioning pause entirely when droplet quota is unavailable, or queue tenants in a pending state with automatic retry window?
+    - Do we want a temporary fallback target (existing Growth Swarm droplet) for non-production validation when account quota is constrained?
 
 ---
 

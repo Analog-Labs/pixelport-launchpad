@@ -1,0 +1,27 @@
+{
+  "_comment": "OpenClaw configuration template for PixelPort tenants. Variables are replaced during provisioning.",
+  "gateway": {
+    "port": 18789,
+    "token": "{{GATEWAY_TOKEN}}"
+  },
+  "agents": [
+    {
+      "id": "main",
+      "name": "Chief of Staff",
+      "workspace": "workspace-main",
+      "model": "gpt-5.2-codex"
+    },
+    {
+      "id": "content",
+      "name": "Content Agent",
+      "workspace": "workspace-content",
+      "model": "gpt-4o-mini"
+    },
+    {
+      "id": "growth",
+      "name": "Research Agent",
+      "workspace": "workspace-growth",
+      "model": "gpt-4o-mini"
+    }
+  ]
+}

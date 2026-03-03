@@ -1,0 +1,38 @@
+#cloud-config
+# PixelPort Tenant Provisioning — cloud-init Template
+# This template documents the expected shape.
+# Runtime variables are rendered by the Inngest provisioning function.
+#
+# Variables:
+#   {{TENANT_SLUG}}
+#   {{OPENCLAW_IMAGE}}
+#   {{GATEWAY_TOKEN}}
+#   {{LITELLM_KEY}}
+#   {{LITELLM_URL}}
+#   {{AGENTMAIL_API_KEY}}
+
+runcmd:
+  - |
+    set -euo pipefail
+
+    while ! docker info > /dev/null 2>&1; do sleep 2; done
+
+    mkdir -p /opt/openclaw/workspace-{main,content,growth}
+
+    docker pull {{OPENCLAW_IMAGE}}
+
+    # Expected generated files:
+    # - /opt/openclaw/openclaw.json
+    # - /opt/openclaw/workspace-main/SOUL.md
+    # - /opt/openclaw/.env
+
+    docker run -d \
+      --name openclaw-gateway \
+      --restart unless-stopped \
+      -p 18789:18789 \
+      -v /opt/openclaw/openclaw.json:/home/node/.openclaw/openclaw.json \
+      -v /opt/openclaw/workspace-main:/home/node/.openclaw/workspace-main \
+      -v /opt/openclaw/workspace-content:/home/node/.openclaw/workspace-content \
+      -v /opt/openclaw/workspace-growth:/home/node/.openclaw/workspace-growth \
+      --env-file /opt/openclaw/.env \
+      {{OPENCLAW_IMAGE}}

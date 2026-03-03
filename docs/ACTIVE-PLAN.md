@@ -34,8 +34,8 @@
 ### CTO Track (Backend + Infra)
 - [x] 0.6: LiteLLM deployed to Railway, health check passes ← CODEX SLICE 1 (no blockers)
 - [x] 0.8: Supabase schema migrated (6 tables + indexes + RLS) ← CODEX SLICE 2 (credentials received, ready)
-- [ ] 0.5: API bridge routes in `api/` directory ← CODEX SLICE 3 (updated for Supabase Auth)
-- [ ] 0.4: Provisioning script + Inngest workflow ← CODEX SLICE 4 (needs all above)
+- [x] 0.5: API bridge routes in `api/` directory ← CODEX SLICE 3 complete (Supabase Auth + tenant isolation verified)
+- [x] 0.4: Provisioning script + Inngest workflow ← CODEX SLICE 4 complete (12-step flow + templates + live trial/cleanup run)
 
 ### Verification
 - [ ] 0.9: Dry-run gate — test tenant provisioned end-to-end, all checks pass
@@ -45,7 +45,7 @@
 ### Blockers
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|--------------|-----------------|
-| ~~Supabase credentials~~ | ~~CTO (Slices 2-4)~~ | ✅ Resolved — credentials received 2026-03-02 |
+| DigitalOcean droplet quota limit (`422 unprocessable_entity`) blocks full 0.9 provisioning dry-run | CTO/Founder | Founder to increase droplet limit or free one slot, then rerun 0.9 |
 
 ### Dashboard Route Structure (Locked)
 ```
