@@ -66,20 +66,25 @@ const PricingSection = () => {
   const { ref, isVisible } = useScrollAnimation();
 
   return (
-    <section id="pricing" className="section-container">
-      <div ref={ref} className={`scroll-fade-in ${isVisible ? "visible" : ""}`}>
+    <section id="pricing" className="relative section-container">
+      {/* Ambient glow behind Pro card */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-[500px] h-[400px] bg-primary/6 rounded-full blur-[120px]" />
+      </div>
+
+      <div ref={ref} className={`relative scroll-fade-in ${isVisible ? "visible" : ""}`}>
         <div className="text-center mb-16">
           <h2 className="section-title mb-4">Simple pricing. No surprises.</h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 items-start">
+        <div className="grid md:grid-cols-3 gap-8 items-start">
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative rounded-xl border p-6 transition-all ${
+              className={`relative rounded-xl p-6 transition-all isolate ${
                 plan.highlighted
-                  ? "border-primary/50 bg-card shadow-[0_0_30px_rgba(212,168,83,0.1)] md:-mt-4 md:mb-0"
-                  : "border-border bg-card"
+                  ? "border-2 border-primary/50 bg-card shadow-[0_0_40px_rgba(212,168,83,0.12)] md:-mt-4 md:mb-0"
+                  : "border border-border bg-card"
               }`}
             >
               {plan.badge && (

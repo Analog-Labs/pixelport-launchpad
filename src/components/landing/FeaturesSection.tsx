@@ -34,7 +34,7 @@ const FeaturesSection = () => {
               key={f.title}
               className="group rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(212,168,83,0.08)]"
             >
-              <f.icon className="text-primary mb-3" size={22} />
+              <f.icon className="text-primary mb-3" size={32} />
               <h3 className="text-base font-semibold text-foreground mb-1.5">{f.title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
             </div>

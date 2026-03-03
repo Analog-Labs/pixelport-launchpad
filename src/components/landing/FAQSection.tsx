@@ -21,14 +21,14 @@ const FAQSection = () => {
   const { ref, isVisible } = useScrollAnimation();
 
   return (
-    <section id="faq" className="section-container">
+    <section id="faq" className="section-container pb-32">
       <div ref={ref} className={`scroll-fade-in ${isVisible ? "visible" : ""}`}>
         <div className="text-center mb-16">
           <h2 className="section-title">Frequently asked questions</h2>
         </div>
 
         <div className="max-w-2xl mx-auto">
-          <Accordion type="single" collapsible className="space-y-2">
+          <Accordion type="single" collapsible className="space-y-3">
             {faqs.map((faq, i) => (
               <AccordionItem
                 key={i}

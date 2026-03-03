@@ -18,12 +18,12 @@ const SecuritySection = () => {
           <h2 className="section-title">Enterprise-grade from day one</h2>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {items.map((item) => (
-            <div key={item.title} className="rounded-xl border border-border bg-card p-5 text-center">
-              <item.icon className="text-primary mx-auto mb-3" size={24} />
-              <h3 className="text-sm font-semibold text-foreground mb-1.5">{item.title}</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+            <div key={item.title} className="rounded-xl border border-border bg-card p-6 text-center min-w-0">
+              <item.icon className="text-primary mx-auto mb-4" size={40} />
+              <h3 className="text-lg font-bold text-foreground mb-2">{item.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
             </div>
           ))}
         </div>
