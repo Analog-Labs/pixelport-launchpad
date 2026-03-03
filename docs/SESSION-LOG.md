@@ -6,7 +6,45 @@
 
 ## Last Session
 
-- **Date:** 2026-03-02 (night)
+- **Date:** 2026-03-02 (late night)
+- **Who worked:** Codex
+- **What was done:**
+  - Created and committed Slice 1 LiteLLM artifacts and docs updates in prior commit.
+  - Created `supabase/migrations/001_initial_schema.sql` with:
+    - 6 tables (`tenants`, `agents`, `content_items`, `approvals`, `api_keys`, `sessions_log`)
+    - indexes
+    - `updated_at` trigger function + triggers
+    - RLS enablement + service-role policies
+    - schema comments and JSONB defaults
+  - Applied migration successfully to Supabase using shared pooler endpoint:
+    - host: `aws-1-eu-west-1.pooler.supabase.com`
+    - port: `6543`
+    - user: `postgres.ecgzlfqhdzzfikvbrwna`
+  - Ran full verification checklist:
+    - all 6 tables present
+    - FK constraint violation test failed as expected
+    - unique constraint violation test failed as expected
+    - default settings include `trial_budget_usd: 20`
+    - `onboarding_data` supports flexible JSONB
+    - RLS enabled on all 6 tables
+    - indexes present (`17` matching `idx_*`)
+    - `updated_at` trigger validated
+    - test tenant data cleaned up
+- **What's next:**
+  - Slice 3 (`api/` bridge routes)
+  - Slice 4 (provisioning + Inngest workflow)
+- **Blockers:**
+  - None for Slice 3
+- **Feedback & Observations:**
+  - Direct Supabase DB host for this project resolves IPv6-only from this runtime, so direct `db.<ref>.supabase.co:5432` connectivity fails here.
+  - Shared pooler endpoint works from this runtime; use pooler DSN for automation on this machine.
+  - Keep recording both direct and pooler connection details in internal runbooks to avoid repeat delay.
+
+---
+
+## Previous Sessions
+
+### 2026-03-02 (night)
 - **Who worked:** Codex
 - **What was done:**
   - Created LiteLLM deployment artifacts:
@@ -39,10 +77,6 @@
   - Railway health checks initially failed because `/health` is auth-protected when master auth is enabled; using `/` as the platform health check path resolved startup validation while preserving API auth controls.
   - A malformed DB URL env value (`\\postgresql://...`) caused one failed boot cycle; re-setting the variable fixed DB connectivity.
   - The repository remote currently uses an embedded token URL; rotate after this execution window.
-
----
-
-## Previous Sessions
 
 ### 2026-03-02 (evening)
 - **Who worked:** CTO (Claude Code)
