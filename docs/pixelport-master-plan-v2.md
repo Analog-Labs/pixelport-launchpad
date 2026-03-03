@@ -7,6 +7,16 @@
 
 ---
 
+## Decision Overrides (Post-Lock)
+
+| Date | Decision | Old | New | Rationale |
+|------|----------|-----|-----|-----------|
+| 2026-03-03 | Auth provider | Clerk (OAuth + Magic Link) | Supabase Auth (Google OAuth + email/password) | Native Lovable integration, zero new vendors, already wired to existing Supabase instance. Migration path to Clerk available Phase 4 if needed for team management. |
+
+> All Clerk references below reflect the original v2.0 spec. The override above takes precedence.
+
+---
+
 ## What Changed (v1.0 → v2.0)
 
 This revision incorporates 52 locked architectural decisions from founder Q&A sessions and external advisory review. Key shifts:

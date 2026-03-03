@@ -185,7 +185,7 @@ FINAL:
 
 While CTO/Codex build backend:
 - Landing page (no backend dependency)
-- Clerk auth flow (signup → login → dashboard redirect)
+- Supabase Auth flow (signup → login → dashboard redirect) — CHANGED from Clerk
 - Dashboard shell (sidebar nav, empty states, placeholder cards)
 
 ### How We Stay in Sync
@@ -196,7 +196,7 @@ While CTO/Codex build backend:
 
 3. **Repo**: CTO pushes all backend code to `api/` directory in the shared repo. Don't touch Lovable-generated frontend files outside `api/`.
 
-4. **Environment variables**: CTO documents which env vars Vercel needs (Clerk keys, Supabase keys, LiteLLM URL, etc.). Founder configures in Vercel dashboard.
+4. **Environment variables**: CTO documents which env vars Vercel needs (Supabase keys, LiteLLM URL, etc.). Founder configures in Vercel dashboard.
 
 5. **Status updates**: After each Codex slice completes, update `docs/pixelport-project-status.md` with completion status.
 
@@ -227,7 +227,7 @@ For the record, confirming all 9 CTO Q&A decisions are locked:
 ```
 api/
   lib/
-    auth.ts              ← Clerk JWT verification + tenant resolution
+    auth.ts              ← Supabase Auth JWT verification + tenant resolution
     supabase.ts          ← Supabase client (service role)
     gateway.ts           ← OpenClaw gateway proxy helper
   tenants/
@@ -287,7 +287,7 @@ Phase 0 is complete when ALL of these pass:
 |-------|----------|
 | LiteLLM | `GET /health` returns 200; create team, generate key, route test completion, verify metering |
 | Supabase | All 6 tables exist, constraints work, can insert/query test data |
-| API Bridge | Each endpoint responds with valid data, Clerk auth works |
+| API Bridge | Each endpoint responds with valid data, Supabase Auth works |
 | Provisioning | Inngest workflow: droplet boots → OpenClaw starts → gateway responds → agent sends test message → LiteLLM routes call → budget deducts → AgentMail inbox works → marked active |
 | Cleanup | Test droplet destroyed, test data removed |
 

@@ -39,7 +39,7 @@ Create a Google Doc or Notion page called **"PixelPort Frontend Status"** that y
 
 ### Completed Pages
 - [x] Landing page — live at pixelport.ai
-- [x] Auth flow — Clerk integrated, redirects to dashboard
+- [x] Auth flow — Supabase Auth integrated (Google OAuth + email/password), redirects to dashboard
 
 ### In Progress
 - [ ] Dashboard Home — layout done, agent status card WIP

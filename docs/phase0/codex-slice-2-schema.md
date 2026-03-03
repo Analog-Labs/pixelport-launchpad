@@ -1,9 +1,9 @@
 # Codex Slice 2 — Supabase Schema
 
-**Priority:** 🟡 Blocked on Supabase credentials from founder
+**Status:** ✅ COMPLETED (2026-03-02)
 **Assigned to:** Codex
-**Depends on:** Supabase credentials (founder will share via secure DM)
-**Estimated time:** 1-2 hours
+
+> **POST-DEPLOYMENT UPDATE (2026-03-03):** Auth provider changed from Clerk to Supabase Auth. Migration 002 (`supabase/migrations/002_clerk_to_supabase_auth.sql`) renames `clerk_org_id` to `supabase_user_id` (UUID type). All `clerk_org_id` references in this doc reflect the original schema — see migration 002 for the current column name.
 
 ---
 

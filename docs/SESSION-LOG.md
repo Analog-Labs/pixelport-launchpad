@@ -6,30 +6,44 @@
 
 ## Last Session
 
-- **Date:** 2026-03-03
-- **Who worked:** CTO (Claude Code) + Founder
+- **Date:** 2026-03-03 (evening)
+- **Who worked:** Founder + Claude (chat) + CTO (Claude Code)
 - **What was done:**
-  - **CTO Review of Codex Slices 1-2: BOTH PASS** ✅
-  - Slice 1 (LiteLLM): All 4 models correctly configured, Docker image pinned (v1.81.3-stable), no secrets committed, Railway deployment live and verified
-  - Slice 2 (Supabase): All 6 tables present with correct columns, FK/unique constraints, RLS, triggers, indexes, and JSONB defaults
-  - Merged Codex branch `codex/phase0-slices-1-2` into main (fast-forward, 2 clean commits)
-  - Added `.env` patterns to `.gitignore` (security fix — was missing)
-  - Updated `pixelport-project-status.md` with Phase 0 progress and LiteLLM deployment URL
-  - Recorded operational notes from Codex feedback (IPv6 pooler issue, Railway health check path)
-  - **Founder connected Vercel to GitHub repo** — deployment live ✅
+  - **Founder Track Phase 0: COMPLETE** ✅ (28 Lovable commits merged to main)
+  - Landing page live: 8 sections (hero w/ animated agent mock, features 3×3, how-it-works, pricing $299/$999/$3K+, security, integrations 16 tools, FAQ 8 items, CTA)
+  - **DECISION CHANGE: Supabase Auth replaces Clerk** — Google OAuth + email/password configured, /login and /signup pages, all /dashboard/* routes protected
+  - Dashboard shell live: 9 routes with sidebar nav, empty states, greeting with user name, stat cards, Chief of Staff card, quick actions
+  - CTO: Pulled 28 Lovable commits, QA'd all frontend work (all checks pass)
+  - CTO: Updated all docs for auth change (Clerk → Supabase Auth) across 10+ files
+  - CTO: Rewrote Slice 3 instruction doc auth layer for Supabase Auth
+  - CTO: Created migration 002 (clerk_org_id → supabase_user_id)
+  - CTO: Added decision override to master plan v2.0
 - **What's next:**
-  - CTO: Send Codex Slices 3-4 (API bridge + provisioning) — instruction docs already in repo
-  - Founder: Start Lovable frontend work (landing page, Clerk auth, dashboard shell) — zero backend dependency
-  - CTO: Create Inngest Cloud account (free tier)
-- **Blockers:** None — founder and CTO tracks are fully independent
+  - CTO: Write Codex briefing for Slices 3-4 (instruction docs updated and ready)
+  - CTO: Create Inngest Cloud account (free tier) — needed for Slice 4
+  - After Slices 3-4: Run 0.9 dry-run gate (signup → provision → API returns data to dashboard)
+- **Blockers:** None
 - **Key infrastructure live:**
   - LiteLLM gateway: `https://litellm-production-77cc.up.railway.app`
   - Supabase: 6 tables migrated, pooler endpoint: `aws-1-eu-west-1.pooler.supabase.com:6543`
   - Vercel: Connected to GitHub repo, auto-deploying from main
+  - Frontend: Landing page + auth + dashboard shell all live
+- **Decision log:**
+  - Auth changed from Clerk to Supabase Auth. Rationale: native Lovable integration, zero new vendors, already wired to existing Supabase instance. Migration path to Clerk available Phase 4 if needed for team management.
+  - Dashboard route structure locked (9 routes — see ACTIVE-PLAN.md)
 
 ---
 
 ## Previous Sessions
+
+### 2026-03-03 (earlier)
+- **Who worked:** CTO (Claude Code) + Founder
+- **What was done:**
+  - CTO Review of Codex Slices 1-2: BOTH PASS ✅
+  - Merged Codex branch to main, added .env patterns to .gitignore (security fix)
+  - Updated project-status with Phase 0 progress and LiteLLM URL
+  - Founder connected Vercel to GitHub repo — deployment live
+- **What's next:** CTO sends Codex Slices 3-4, founder starts Lovable work
 
 ### 2026-03-02 (late night)
 - **Who worked:** Codex

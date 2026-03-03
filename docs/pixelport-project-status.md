@@ -284,23 +284,24 @@ Constraints (locked):
 
 ### Phase 0: Foundation (Weeks 1-2)
 **Goal**: Web app shell + provisioning pipeline
-**Status: 🟡 Starting — Q&A decisions locked 2026-02-28**
+**Status: 🟢 In Progress — Founder Track complete, CTO Track 2/4 slices done**
 
-**Founder + Lovable:**
-- [ ] 0.1: Lovable project setup + Clerk auth + Supabase DB
-- [ ] 0.2: Landing page (pixelport.ai)
-- [ ] 0.3: Auth flow: signup → workspace creation → dashboard redirect
-- [ ] 0.7: Dashboard shell in Lovable (nav, empty states)
+**Founder + Lovable: ✅ COMPLETE**
+- [x] 0.1: Lovable project setup + Supabase Auth (CHANGED from Clerk — native Lovable integration)
+- [x] 0.2: Landing page — 8 sections (hero, features, how-it-works, pricing, security, integrations, FAQ, CTA)
+- [x] 0.3: Auth flow: signup/login with Google OAuth + email/password → dashboard redirect
+- [x] 0.7: Dashboard shell — 9 protected routes, sidebar nav, empty states, greeting, stat cards
+- [x] Vercel connected and auto-deploying from main
 
 **CTO + Codex:**
+- [x] 0.6: LiteLLM central deployment on Railway — 4 models, Docker pinned v1.81.3-stable ✅
+- [x] 0.8: Supabase schema (6 tables + indexes + RLS + triggers) ✅
+- [ ] 0.5: API bridge — PixelPort API → OpenClaw gateway (Supabase Auth JWT → tenant lookup → proxy)
 - [ ] 0.4: Provisioning script — DO Droplet + OpenClaw container per user (Inngest workflow)
-- [ ] 0.5: API bridge — PixelPort API → OpenClaw gateway (Clerk JWT → tenant lookup → proxy)
-- [ ] 0.6: LiteLLM central deployment on Railway/Render + per-tenant routing
-- [ ] 0.8: Supabase schema (tenants, agents, sessions, metrics, content_items, approvals)
 - [ ] 0.9: Provisioning dry-run gate (test tenant on fresh droplet, verify all services)
 
 **Shared:**
-- [ ] Monorepo structure (Lovable frontend + api/ directory, Vercel deploys both)
+- [x] Monorepo structure (Lovable frontend + api/ directory, Vercel deploys both)
 - [ ] Inngest Cloud setup (free tier, connected to API routes)
 
 ### Phase 1: Chief of Staff Alive (Weeks 3-5)
@@ -545,24 +546,25 @@ Constraints (locked):
 - ✅ 4 Codex slice instruction docs written in docs/phase0/
 - ✅ Supabase credentials received and applied
 
-**Completed (Founder):**
+**Completed (Founder): ✅ ALL PHASE 0 ITEMS DONE**
 - ✅ Lovable Cloud project created ("PixelPort Launchpad")
 - ✅ GitHub repo connected
 - ✅ Supabase provisioned and credentials shared
+- ✅ Vercel connected and auto-deploying from main
+- ✅ Landing page — 8 sections (hero w/ animated agent mock, features, how-it-works, pricing, security, integrations, FAQ, CTA)
+- ✅ Supabase Auth — Google OAuth + email/password (**CHANGED from Clerk** — native Lovable integration, zero new vendors)
+- ✅ Dashboard shell — 9 protected routes, sidebar nav, empty states, greeting, stat cards, Chief of Staff card
 
 **In progress (CTO + Codex):**
-1. Slice 3: API bridge routes in `api/` directory (instruction doc ready)
+1. Slice 3: API bridge routes in `api/` directory (instruction doc updated for Supabase Auth)
 2. Slice 4: Provisioning script + Inngest workflow (instruction doc ready)
 3. Set up Inngest Cloud account (free tier)
-
-**Ready to start (Founder + Lovable):**
-1. Landing page — hero, features, pricing, CTA (zero backend dependency)
-2. Clerk auth — signup, login, redirect to dashboard
-3. Dashboard shell — sidebar nav, empty states, greeting, placeholders
+4. Migration 002: clerk_org_id → supabase_user_id (included in Slice 3 for Codex)
 
 **Coordination:**
 - CTO documented full API contracts in Slice 3 instruction doc (20+ endpoints) → founder builds Lovable pages against them
 - Schema is live — Lovable can read/write Supabase tables directly via the Supabase integration
+- Auth decision change documented: Supabase Auth replaces Clerk (decision override in master plan v2.0)
 
 ---
 

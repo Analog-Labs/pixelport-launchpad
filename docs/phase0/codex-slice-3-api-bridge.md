@@ -13,7 +13,9 @@
 
 **Where does the API bridge fit?** The API bridge is the middleware layer between the frontend (Lovable-built React app on Vercel) and the backend services (Supabase, LiteLLM, OpenClaw). Every user action in the dashboard — viewing agents, approving content, checking budget — goes through these API routes.
 
-**Auth flow:** Clerk JWT → API route verifies JWT → extracts org ID → looks up tenant → executes operation with tenant isolation.
+**Auth flow:** Supabase Auth JWT → API route verifies via `supabase.auth.getUser()` → extracts user ID → looks up tenant by `supabase_user_id` → executes operation with tenant isolation.
+
+> **NOTE (2026-03-03):** Auth changed from Clerk to Supabase Auth. This doc has been updated accordingly. Migration 002 renames `clerk_org_id` to `supabase_user_id` — Codex should apply this migration before building the API routes.
 
 **How this connects to other slices:**
 - Slice 1 (LiteLLM) provides the LLM gateway URL that some endpoints proxy to
@@ -40,8 +42,8 @@
 ## What You're Building
 
 A complete set of Vercel serverless API routes in the `api/` directory that:
-1. Authenticate requests via Clerk JWT
-2. Resolve the tenant from the Clerk org membership
+1. Authenticate requests via Supabase Auth JWT (using `supabase.auth.getUser()`)
+2. Resolve the tenant from the Supabase user ID
 3. CRUD operations on Supabase tables
 4. Proxy chat requests to the OpenClaw gateway
 5. Manage LiteLLM teams, keys, and budgets
@@ -55,15 +57,18 @@ A complete set of Vercel serverless API routes in the `api/` directory that:
 #### File: `api/lib/auth.ts`
 ```typescript
 /**
- * Clerk JWT verification + tenant resolution.
+ * Supabase Auth JWT verification + tenant resolution.
  * Every API route imports this to authenticate requests.
  *
  * Flow:
  * 1. Extract Bearer token from Authorization header
- * 2. Verify JWT with Clerk
- * 3. Extract org_id from JWT claims
- * 4. Look up tenant in Supabase by clerk_org_id
- * 5. Return tenant object (or throw 401/403)
+ * 2. Verify JWT via supabase.auth.getUser(token)
+ * 3. Extract user.id from the verified user
+ * 4. Look up tenant in Supabase by supabase_user_id
+ * 5. Return tenant object (or throw 401/404)
+ *
+ * NOTE: Uses a service-role Supabase client to call auth.getUser()
+ * and to query the tenants table (bypasses RLS).
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -71,13 +76,12 @@ import type { VercelRequest } from '@vercel/node';
 
 const supabaseUrl = process.env.SUPABASE_PROJECT_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const clerkSecretKey = process.env.CLERK_SECRET_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export interface Tenant {
   id: string;
-  clerk_org_id: string;
+  supabase_user_id: string;
   name: string;
   slug: string;
   plan: string;
@@ -97,11 +101,10 @@ export interface Tenant {
 export interface AuthResult {
   tenant: Tenant;
   userId: string;
-  orgId: string;
 }
 
 /**
- * Verify Clerk JWT and resolve tenant.
+ * Verify Supabase Auth JWT and resolve tenant.
  * Throws on auth failure — callers should catch and return appropriate HTTP status.
  */
 export async function authenticateRequest(req: VercelRequest): Promise<AuthResult> {
@@ -112,39 +115,28 @@ export async function authenticateRequest(req: VercelRequest): Promise<AuthResul
 
   const token = authHeader.slice(7);
 
-  // Verify JWT with Clerk
-  // Using Clerk's Backend SDK for JWT verification
-  const { verifyToken } = await import('@clerk/backend');
+  // Verify JWT with Supabase Auth
+  // getUser() validates the token server-side and returns the user object
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-  let claims;
-  try {
-    claims = await verifyToken(token, {
-      secretKey: clerkSecretKey,
-    });
-  } catch (err) {
+  if (authError || !user) {
     throw new AuthError('Invalid or expired token', 401);
   }
 
-  const orgId = claims.org_id;
-  if (!orgId) {
-    throw new AuthError('No organization membership found in token', 403);
-  }
-
-  // Look up tenant by Clerk org ID
+  // Look up tenant by Supabase user ID
   const { data: tenant, error } = await supabase
     .from('tenants')
     .select('*')
-    .eq('clerk_org_id', orgId)
+    .eq('supabase_user_id', user.id)
     .single();
 
   if (error || !tenant) {
-    throw new AuthError('Tenant not found for this organization', 404);
+    throw new AuthError('Tenant not found for this user', 404);
   }
 
   return {
     tenant: tenant as Tenant,
-    userId: claims.sub,
-    orgId,
+    userId: user.id,
   };
 }
 
@@ -1023,12 +1015,9 @@ export const inngest = new Inngest({
 Add these to Vercel (or `.env.local` for local dev):
 
 ```bash
-# Supabase
+# Supabase (also used for auth verification — no separate auth vendor needed)
 SUPABASE_PROJECT_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Clerk
-CLERK_SECRET_KEY=sk_test_your-clerk-secret-key
 
 # LiteLLM (from Slice 1 deployment)
 LITELLM_URL=https://your-litellm.railway.app
@@ -1113,7 +1102,7 @@ grep -r "sk-\|sk_test\|supabase\.\w*\.co" api/
    - Any architectural concerns
    - Suggestions for improvement (e.g., shared validation, middleware patterns)
    - Edge cases you noticed
-   - Questions about Clerk integration, Supabase patterns, or gateway proxy
+   - Questions about Supabase Auth integration, query patterns, or gateway proxy
 
 4. **Commit and push** all changes to the monorepo.
 
@@ -1124,6 +1113,7 @@ grep -r "sk-\|sk_test\|supabase\.\w*\.co" api/
 - **Do NOT touch Lovable frontend files** in `src/` — those are managed by the founder
 - **Every Supabase query must filter by tenant_id** — this is how we maintain data isolation
 - **The Inngest client setup** (`api/inngest/client.ts`) is minimal here — Slice 4 adds the actual workflow functions
-- **Clerk JWT verification** is the primary auth mechanism — RLS is defense-in-depth backup
+- **Supabase Auth JWT verification** is the primary auth mechanism — RLS is defense-in-depth backup
 - **The chat proxy** (`api/chat.ts`) forwards to OpenClaw on the tenant's droplet — this only works after provisioning (Slice 4)
-- Install required packages: `@clerk/backend`, `@supabase/supabase-js`, `inngest`, `@vercel/node`
+- Install required packages: `@supabase/supabase-js`, `inngest`, `@vercel/node` (no Clerk — auth uses Supabase)
+- **Pre-requisite:** Apply migration 002 (`supabase/migrations/002_clerk_to_supabase_auth.sql`) before building routes — this renames `clerk_org_id` to `supabase_user_id`

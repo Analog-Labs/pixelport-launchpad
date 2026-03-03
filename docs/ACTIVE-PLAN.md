@@ -27,14 +27,14 @@
 - [ ] Inngest Cloud account created (CTO, free tier)
 
 ### Founder Track (Lovable Frontend)
-- [ ] 0.2: Landing page — hero, features, pricing, CTA ← READY TO START
-- [ ] 0.1/0.3: Clerk auth — signup, login, redirect to dashboard
-- [ ] 0.7: Dashboard shell — sidebar nav, empty states, greeting, placeholders
+- [x] 0.2: Landing page — 8 sections (hero, features, how-it-works, pricing, security, integrations, FAQ, CTA) ✅
+- [x] 0.1/0.3: Supabase Auth — Google OAuth + email/password, /login + /signup, protected routes ✅ (DECISION CHANGE: was Clerk)
+- [x] 0.7: Dashboard shell — 9 routes, sidebar nav, empty states, greeting, quick actions ✅
 
 ### CTO Track (Backend + Infra)
 - [x] 0.6: LiteLLM deployed to Railway, health check passes ← CODEX SLICE 1 (no blockers)
 - [x] 0.8: Supabase schema migrated (6 tables + indexes + RLS) ← CODEX SLICE 2 (credentials received, ready)
-- [ ] 0.5: API bridge routes in `api/` directory ← CODEX SLICE 3 (needs schema)
+- [ ] 0.5: API bridge routes in `api/` directory ← CODEX SLICE 3 (updated for Supabase Auth)
 - [ ] 0.4: Provisioning script + Inngest workflow ← CODEX SLICE 4 (needs all above)
 
 ### Verification
@@ -47,10 +47,23 @@
 |---------|--------------|-----------------|
 | ~~Supabase credentials~~ | ~~CTO (Slices 2-4)~~ | ✅ Resolved — credentials received 2026-03-02 |
 
+### Dashboard Route Structure (Locked)
+```
+/dashboard               → Home (stat cards, agent status, quick actions)
+/dashboard/content       → Content Pipeline
+/dashboard/calendar      → Content Calendar
+/dashboard/performance   → Performance + KPI tracking
+/dashboard/vault         → Knowledge Vault
+/dashboard/competitors   → Competitor Intelligence
+/dashboard/connections   → Integration management
+/dashboard/settings      → Agent config, API keys, budget, team
+/dashboard/chat          → Full-page agent chat
+```
+
 ### Notes
-- Founder and CTO tracks run in parallel — no dependency between them until integration
-- Codex Slice 1 (LiteLLM) has zero blockers — CTO can send to Codex immediately
-- Landing page has zero backend dependency — founder can start immediately
+- **Founder Track Phase 0: COMPLETE** — all 3 items done and deployed via Vercel
+- **Auth decision change (2026-03-03):** Supabase Auth replaces Clerk. Rationale: native Lovable integration, zero new vendors. Migration path to Clerk available Phase 4.
+- CTO Track: Slices 3-4 remaining. Slice 3 instruction doc updated for Supabase Auth.
 - Vercel = web app + API routes. Railway = LiteLLM gateway. Both needed, different jobs.
 - Codex is a full project participant: reads full project context, provides feedback to CTO, updates session docs after every work session.
 

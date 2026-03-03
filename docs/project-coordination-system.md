@@ -61,7 +61,7 @@ This is the current sprint/phase checklist. Right now it's Phase 0. When Phase 0
 - [x] GitHub repo connected
 - [x] Vercel connected
 - [ ] Landing page ← ACTIVE
-- [ ] Clerk auth setup
+- [x] Supabase Auth setup (Google OAuth + email/password)
 - [ ] Dashboard shell
 
 ### CTO Track (Backend)

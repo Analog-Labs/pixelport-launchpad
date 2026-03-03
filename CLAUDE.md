@@ -34,7 +34,7 @@ Growth Swarm is the dogfood instance running Vidacious marketing on OpenClaw (3 
 Frontend: Lovable Cloud → GitHub → Vercel (web app + API routes)
 Backend: Vercel serverless API routes (in `api/` directory)
 LLM Gateway: LiteLLM on Railway (always-on Docker, ~$5-7/mo)
-Auth: Clerk (Google OAuth + magic link)
+Auth: Supabase Auth (Google OAuth + email/password) — changed from Clerk 2026-03-03
 Database: Supabase (PostgreSQL, provisioned by Lovable)
 Agent Runtime: OpenClaw on DO Droplets (1 per customer)
 Workflows: Inngest Cloud (free tier)
