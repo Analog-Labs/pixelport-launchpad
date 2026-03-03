@@ -24,7 +24,7 @@
 - [x] All docs moved from growth-swarm to monorepo
 - [x] 4 Codex slice instruction docs written in docs/phase0/
 - [x] Backend directory structure created (api/, infra/, supabase/)
-- [ ] Inngest Cloud account created (CTO, free tier)
+- [x] Inngest Cloud account created — Event Key + Signing Key received ✅
 
 ### Founder Track (Lovable Frontend)
 - [x] 0.2: Landing page — 8 sections (hero, features, how-it-works, pricing, security, integrations, FAQ, CTA) ✅

@@ -18,9 +18,10 @@
   - CTO: Rewrote Slice 3 instruction doc auth layer for Supabase Auth
   - CTO: Created migration 002 (clerk_org_id → supabase_user_id)
   - CTO: Added decision override to master plan v2.0
+  - Founder: Created Inngest Cloud account, provided Event Key + Signing Key
+  - CTO: Wrote Codex briefing for Slices 3-4 (all credentials and context included)
 - **What's next:**
-  - CTO: Write Codex briefing for Slices 3-4 (instruction docs updated and ready)
-  - CTO: Create Inngest Cloud account (free tier) — needed for Slice 4
+  - Codex: Execute Slices 3-4 (apply migration 002, build API bridge, build provisioning workflow)
   - After Slices 3-4: Run 0.9 dry-run gate (signup → provision → API returns data to dashboard)
 - **Blockers:** None
 - **Key infrastructure live:**
