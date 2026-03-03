@@ -74,6 +74,8 @@ const Onboarding = () => {
     localStorage.setItem("pixelport_onboarded", "true");
     localStorage.setItem("pixelport_agent_name", payload.agent_name);
     localStorage.setItem("pixelport_agent_avatar", payload.agent_avatar_url);
+    localStorage.setItem("pixelport_company_name", payload.company_name || "");
+    localStorage.setItem("pixelport_company_url", payload.company_url || "");
     localStorage.setItem("pixelport_agent_tone", payload.agent_tone);
 
     setLaunching(true);
