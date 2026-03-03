@@ -40,7 +40,7 @@ if (!LITELLM_URL || !LITELLM_MASTER_KEY || !DO_API_TOKEN) {
   throw new Error('Missing one or more required env vars: LITELLM_URL, LITELLM_MASTER_KEY, DO_API_TOKEN');
 }
 
-const DEFAULT_DROPLET_SIZE = 's-2vcpu-4gb';
+const DEFAULT_DROPLET_SIZE = 's-1vcpu-1gb';
 const DEFAULT_REGION = 'nyc1';
 
 export const provisionTenant = inngest.createFunction(
@@ -150,7 +150,11 @@ export const provisionTenant = inngest.createFunction(
       });
 
       if (!response.ok) {
-        throw new Error(`Droplet creation failed: ${await response.text()}`);
+        const errorBody = await response.text();
+        throw new Error(
+          `Droplet creation failed (HTTP ${response.status}): ${errorBody} ` +
+          `[size=${requestedSize}, region=${requestedRegion}, image=docker-20-04]`
+        );
       }
 
       const result = (await response.json()) as { droplet: { id: number } };
