@@ -94,6 +94,9 @@ body::after {
   .section-container {
     @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28;
   }
+  .section-container-tight {
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16;
+  }
   .section-title {
     @apply text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground;
   }
@@ -124,9 +127,19 @@ body::after {
 .scroll-fade-in {
   opacity: 0;
   transform: translateY(20px);
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
 }
 .scroll-fade-in.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* CTA button pulse glow */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px hsla(38, 60%, 58%, 0.2); }
+  50% { box-shadow: 0 0 30px hsla(38, 60%, 58%, 0.4); }
+}
+
+.cta-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite, shimmer 3s ease-in-out infinite;
 }

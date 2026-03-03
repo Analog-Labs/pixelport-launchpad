@@ -3,17 +3,17 @@ import { Badge } from "@/components/ui/badge";
 import ProductPreview from "./ProductPreview";
 
 const HeroSection = () => (
-  <section className="relative min-h-[90vh] flex items-center pt-20 pb-8 overflow-hidden">
-    {/* Large ambient amber glow */}
+  <section className="relative min-h-[90vh] flex items-center pt-16 pb-0 overflow-hidden">
+    {/* Large ambient amber glow — stronger */}
     <div
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] rounded-full pointer-events-none"
-      style={{ background: "radial-gradient(circle, hsla(38, 60%, 58%, 0.07) 0%, transparent 70%)" }}
+      className="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[600px] rounded-full pointer-events-none"
+      style={{ background: "radial-gradient(circle, hsla(38, 60%, 58%, 0.08) 0%, transparent 60%)" }}
     />
 
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-      <div className="grid lg:grid-cols-[55%_45%] gap-12 lg:gap-8 items-center">
+      <div className="grid lg:grid-cols-[55%_45%] gap-8 items-center">
         {/* Left copy */}
-        <div className="space-y-6">
+        <div className="space-y-5">
           <Badge
             variant="outline"
             className="border-primary/40 text-primary bg-primary/5 px-3 py-1 text-xs font-medium animate-fade-in-up"

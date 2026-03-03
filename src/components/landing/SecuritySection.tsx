@@ -12,9 +12,9 @@ const SecuritySection = () => {
   const { ref, isVisible } = useScrollAnimation();
 
   return (
-    <section className="section-container">
+    <section className="section-container-tight">
       <div ref={ref} className={`scroll-fade-in ${isVisible ? "visible" : ""}`}>
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h2 className="section-title">Enterprise-grade from day one</h2>
         </div>
 

@@ -10,14 +10,13 @@ const HowItWorksSection = () => {
   const { ref, isVisible } = useScrollAnimation();
 
   return (
-    <section id="how-it-works" className="section-container">
+    <section id="how-it-works" className="section-container-tight">
       <div ref={ref} className={`scroll-fade-in ${isVisible ? "visible" : ""}`}>
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h2 className="section-title">Live in 5 minutes</h2>
         </div>
 
         <div className="grid sm:grid-cols-3 gap-8 relative">
-          {/* Connector line (desktop) */}
           <div className="hidden sm:block absolute top-8 left-[16.67%] right-[16.67%] h-px bg-border" />
 
           {steps.map((s) => (

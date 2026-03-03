@@ -21,9 +21,9 @@ const FAQSection = () => {
   const { ref, isVisible } = useScrollAnimation();
 
   return (
-    <section id="faq" className="section-container pb-32">
+    <section id="faq" className="section-container-tight pb-20">
       <div ref={ref} className={`scroll-fade-in ${isVisible ? "visible" : ""}`}>
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h2 className="section-title">Frequently asked questions</h2>
         </div>
 
@@ -33,12 +33,12 @@ const FAQSection = () => {
               <AccordionItem
                 key={i}
                 value={`faq-${i}`}
-                className="border border-border rounded-lg px-4 bg-card"
+                className="border border-border rounded-lg px-5 bg-card"
               >
-                <AccordionTrigger className="text-sm font-semibold text-foreground hover:no-underline [&>svg]:text-primary">
+                <AccordionTrigger className="text-sm font-semibold text-foreground hover:text-primary transition-colors hover:no-underline [&>svg]:text-primary py-4">
                   {faq.q}
                 </AccordionTrigger>
-                <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-4">
                   {faq.a}
                 </AccordionContent>
               </AccordionItem>

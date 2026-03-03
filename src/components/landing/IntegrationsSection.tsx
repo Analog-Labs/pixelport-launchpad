@@ -1,4 +1,5 @@
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { useEffect, useRef } from "react";
 import {
   MessageSquare, Mail, Linkedin, Twitter, Brain, Sparkles, Bot, Zap,
   BarChart, Database, Cloud, FileText, Image, Video, Film, User,
@@ -24,20 +25,31 @@ const integrations = [
 ];
 
 const IntegrationsSection = () => {
-  const { ref, isVisible } = useScrollAnimation();
+  const { ref, isVisible } = useScrollAnimation(0.1);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isVisible || !gridRef.current) return;
+    const tiles = gridRef.current.querySelectorAll<HTMLElement>("[data-int-tile]");
+    tiles.forEach((tile, i) => {
+      tile.style.transitionDelay = `${i * 50}ms`;
+      tile.classList.add("visible");
+    });
+  }, [isVisible]);
 
   return (
-    <section id="integrations" className="section-container">
-      <div ref={ref} className={`scroll-fade-in ${isVisible ? "visible" : ""}`}>
-        <div className="text-center mb-16">
+    <section id="integrations" className="section-container-tight">
+      <div ref={ref}>
+        <div className={`text-center mb-12 scroll-fade-in ${isVisible ? "visible" : ""}`}>
           <h2 className="section-title">Connects to the tools you already use</h2>
         </div>
 
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 max-w-4xl mx-auto justify-items-center">
+        <div ref={gridRef} className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
           {integrations.map((item) => (
             <div
               key={item.name}
-              className="group flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-xl border border-border bg-card transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(212,168,83,0.1)] cursor-default"
+              data-int-tile
+              className="scroll-fade-in group flex flex-col items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-xl border border-border bg-card transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(212,168,83,0.1)] cursor-default"
             >
               <item.icon
                 size={28}
