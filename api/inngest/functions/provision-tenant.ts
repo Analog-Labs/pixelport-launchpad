@@ -285,7 +285,7 @@ export const provisionTenant = inngest.createFunction(
     // Poll for gateway readiness using Inngest durable steps
     // (each attempt is a separate step execution to avoid Vercel function timeout)
     const gatewayUrl = `http://${dropletIp}:18789`;
-    const gatewayMaxAttempts = 30;
+    const gatewayMaxAttempts = 40; // ~7 min: Docker install + image pull + OpenClaw startup
     let gatewayReady = false;
     for (let i = 0; i < gatewayMaxAttempts; i += 1) {
       const isReady = await step.run(`check-gateway-${i}`, async () => {
@@ -312,7 +312,7 @@ export const provisionTenant = inngest.createFunction(
     }
 
     if (!gatewayReady) {
-      throw new Error('OpenClaw gateway did not become healthy within 5 minutes');
+      throw new Error('OpenClaw gateway did not become healthy within 7 minutes');
     }
 
     await step.run('configure-agents', async () => {
@@ -444,11 +444,14 @@ fi
 # 2. Pull the OpenClaw image
 docker pull ${params.openclawImage}
 
-# 3. Create config and workspace directories on host
+# 3. Create config, workspace, and runtime directories on host
 mkdir -p /opt/openclaw
 mkdir -p /opt/openclaw/workspace-main
 mkdir -p /opt/openclaw/workspace-content
 mkdir -p /opt/openclaw/workspace-growth
+mkdir -p /opt/openclaw/canvas
+mkdir -p /opt/openclaw/cron
+mkdir -p /opt/openclaw/agents
 
 # 4. Write agent configuration
 cat > /opt/openclaw/openclaw.json << 'OPENCLAW_CONFIG'
@@ -471,16 +474,22 @@ ENV_FILE
 chown -R 1000:1000 /opt/openclaw
 
 # 8. Run the OpenClaw gateway container
+# Use --network host because OpenClaw binds to 127.0.0.1 inside the
+# container — host networking makes it accessible on the droplet's public IP.
 docker run -d \\
   --name openclaw-gateway \\
   --restart unless-stopped \\
-  -p 18789:18789 \\
+  --network host \\
   --env-file /opt/openclaw/.env \\
   -v /opt/openclaw/openclaw.json:/home/node/.openclaw/openclaw.json \\
   -v /opt/openclaw/workspace-main:/home/node/.openclaw/workspace-main \\
   -v /opt/openclaw/workspace-content:/home/node/.openclaw/workspace-content \\
   -v /opt/openclaw/workspace-growth:/home/node/.openclaw/workspace-growth \\
-  ${params.openclawImage}
+  -v /opt/openclaw/canvas:/home/node/.openclaw/canvas \\
+  -v /opt/openclaw/cron:/home/node/.openclaw/cron \\
+  -v /opt/openclaw/agents:/home/node/.openclaw/agents \\
+  ${params.openclawImage} \\
+  openclaw.mjs gateway --port 18789 --bind lan --allow-unconfigured
 
 echo "PixelPort provisioning complete for ${params.tenantSlug}"
 `;
@@ -489,31 +498,36 @@ echo "PixelPort provisioning complete for ${params.tenantSlug}"
 function buildOpenClawConfig(params: { tenantSlug: string; gatewayToken: string }): Record<string, unknown> {
   return {
     gateway: {
-      port: 18789,
-      token: params.gatewayToken,
+      auth: {
+        mode: 'token',
+        token: params.gatewayToken,
+      },
+      bind: 'lan',
+      controlUi: {
+        dangerouslyAllowHostHeaderOriginFallback: true,
+      },
     },
-    agents: [
-      {
-        id: 'main',
-        name: 'Chief of Staff',
-        workspace: 'workspace-main',
-        model: 'gpt-5.2-codex',
-      },
-      {
-        id: 'content',
-        name: 'Content Agent',
-        workspace: 'workspace-content',
-        model: 'gpt-4o-mini',
-      },
-      {
-        id: 'growth',
-        name: 'Research Agent',
-        workspace: 'workspace-growth',
-        model: 'gpt-4o-mini',
-      },
-    ],
-    metadata: {
-      tenant_slug: params.tenantSlug,
+    agents: {
+      list: [
+        {
+          id: 'main',
+          name: 'Chief of Staff',
+          workspace: '/home/node/.openclaw/workspace-main',
+          model: 'openai/gpt-5.2-codex',
+        },
+        {
+          id: 'content',
+          name: 'Content Agent',
+          workspace: '/home/node/.openclaw/workspace-content',
+          model: 'openai/gpt-4o-mini',
+        },
+        {
+          id: 'growth',
+          name: 'Research Agent',
+          workspace: '/home/node/.openclaw/workspace-growth',
+          model: 'openai/gpt-4o-mini',
+        },
+      ],
     },
   };
 }
