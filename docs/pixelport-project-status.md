@@ -1,6 +1,6 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-02-28
+**Last Updated:** 2026-03-04
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
 **Formerly:** Growth Swarm (now first tenant / dogfood instance of PixelPort)
 **Infrastructure:** OpenClaw on DigitalOcean droplet `openclaw-prod` (ID: `552336242`)
@@ -284,7 +284,7 @@ Constraints (locked):
 
 ### Phase 0: Foundation (Weeks 1-2)
 **Goal**: Web app shell + provisioning pipeline
-**Status: ✅ Complete (0.9 dry-run deferred — DO quota, not blocking Phase 1)**
+**Status: ✅ Complete — Phase 0.9 dry-run PASSED (2026-03-04)**
 
 **Founder + Lovable: ✅ COMPLETE**
 - [x] 0.1: Lovable project setup + Supabase Auth (CHANGED from Clerk — native Lovable integration)
@@ -297,27 +297,45 @@ Constraints (locked):
 - [x] 0.6: LiteLLM central deployment on Railway — 4 models, Docker pinned v1.81.3-stable ✅
 - [x] 0.8: Supabase schema (6 tables + indexes + RLS + triggers) ✅
 - [x] 0.5: API bridge — 16 route files + 3 shared libs (Supabase Auth + tenant isolation) ✅
-- [x] 0.4: Provisioning — 12-step Inngest workflow + templates (live trial Steps 1-3 passed) ✅
-- [ ] 0.9: Dry-run gate — deferred (DO droplet quota limit, will test when quota increased)
+- [x] 0.4: Provisioning — 12-step Inngest workflow + templates ✅
+- [x] 0.9: Dry-run gate — PASSED (2026-03-04). Full 12-step pipeline completes in ~7 min.
 
 **Shared: ✅ COMPLETE**
 - [x] Monorepo structure (Lovable frontend + api/ directory, Vercel deploys both)
 - [x] Inngest Cloud setup (free tier, Event Key + Signing Key received)
+- [x] All 11 Vercel env vars confirmed SET (AGENTMAIL_API_KEY + OPENCLAW_IMAGE optional)
 
 **CTO QA (2026-03-03):**
 - CTO reviewed all Codex Slices 3-4 code: BOTH PASS ✅
 - CTO QA'd all frontend: 9 issues found and fixed (signup validation, chat nav, footer, OAuth errors, etc.)
 
+**CTO Phase 0.9 Dry-Run (2026-03-04):**
+- Fixed 7 bugs during live testing (see Fixes & Lessons Learned §8)
+- Full pipeline verified: tenant→LiteLLM→droplet→Docker→OpenClaw→agents→active
+- Provisioning time: ~7 min (Docker CE install ~3 min, image pull ~1 min, OpenClaw boot ~2 min)
+- Test tenant created, verified active, cleaned up successfully
+
 ### Phase 1: Chief of Staff Alive (Weeks 3-5)
 **Goal**: Onboarding + Chief of Staff working in dashboard + Slack + email
-**Status: 🟡 Active — Phase 1 Codex slices ready
+**Status: 🟡 Active — Codex executing Slices 5+7, Slice 6 pending CTO architecture decision
 
-- [ ] 1.1-1.5: 3-step onboarding, website auto-scan, SOUL.md template, agent personalization
-- [ ] 1.6-1.7: Dashboard Home + chat widget + full-page chat
-- [ ] 1.8: Slack OAuth integration
-- [ ] 1.9: AgentMail per-tenant provisioning
-- [ ] 1.10-1.11: Mem0 tenant setup + PostHog basic instrumentation
-- [ ] 1.12-1.14: KPI negotiation, configurable reporting, Slack+dashboard sync
+**CTO + Codex:**
+- [ ] 1.C1 (Slice 5): Tenant creation endpoint (`POST /api/tenants`) — 🟢 ready for Codex
+- [ ] 1.C2 (Slice 6): Chat API streaming (SSE) + message history — ⚠️ BLOCKED: OpenClaw gateway is WebSocket-only, need architecture decision for HTTP-to-WS bridge
+- [ ] 1.C3 (Slice 7): Slack OAuth flow + webhook — 🟢 ready for Codex
+- [ ] 1.C4 (Slice 8): Mem0 tenant setup — ⬜ instruction doc not yet written
+- [ ] 1.C5 (Slice 9): PostHog integration — ⬜ instruction doc not yet written
+- [ ] 1.9: AgentMail per-tenant provisioning — ✅ already part of provisioning workflow
+
+**Founder + Lovable:**
+- [ ] 1.1-1.5: 3-step onboarding UI, agent personalization (consumes POST /api/tenants)
+- [ ] 1.6: Dashboard Home with agent status + pending approvals
+- [ ] 1.7: Chat widget (persistent sidebar) + full-page chat view
+- [ ] 1.8: Slack OAuth button (consumes GET /api/connections/slack/install)
+- [ ] 1.12-1.14: KPI negotiation, reporting config, Slack+dashboard sync
+
+**Architecture Decisions Needed:**
+- Chat integration: OpenClaw gateway is WebSocket-only (no REST API). Frontend cannot chat via Vercel serverless proxy. Options: (a) direct browser→droplet WebSocket, (b) HTTP-to-WS bridge container on droplet, (c) OpenClaw Control UI embed. CTO to decide.
 
 ### Phase 2: Content Pipeline + Images (Weeks 6-9)
 **Goal**: Full content production pipeline with image generation
@@ -507,6 +525,16 @@ Constraints (locked):
 | 2026-02-27 | SPARK/SCOUT had generic SOUL.md | Boilerplate personas, not role-specific | Replaced with content engine (SPARK) and intel analyst (SCOUT) personas |
 | 2026-02-27 | Raw subagent dumps in Slack | OpenClaw auto-announces subagent completion | ANNOUNCE_SKIP + file handoff (SPARK writes to file, replies ANNOUNCE_SKIP, LUNA reads file) |
 | 2026-02-27 | No approval CTA on content drafts | Founder didn't know what to do with content | Added 3-option CTA: 👍 approved / ✏️ edits / 🔄 new angle |
+| 2026-03-04 | All Vercel API routes crash | `"type": "module"` in root package.json | Created `api/package.json` with `{"type": "commonjs"}` to override |
+| 2026-03-04 | INNGEST_SIGNING_KEY missing | CTO omitted from initial env var checklist | Added to Vercel env vars + env-check diagnostic |
+| 2026-03-04 | Inngest functions never execute | Serve handler not synced with Inngest Cloud | `curl -X PUT /api/inngest` to register functions |
+| 2026-03-04 | Wait-for-droplet times out | In-process setTimeout exceeds Vercel timeout | Refactored to Inngest durable `step.run()` + `step.sleep()` per poll |
+| 2026-03-04 | OpenClaw config crash-loop | `gateway.token` wrong (needs `gateway.auth.token`), `agents[]` wrong (needs `agents.list[]`) | Updated `buildOpenClawConfig()` to match production Growth Swarm schema |
+| 2026-03-04 | Gateway not externally accessible | OpenClaw defaults to loopback binding | Added `--bind lan` + `controlUi.dangerouslyAllowHostHeaderOriginFallback` |
+| 2026-03-04 | configure-agents step fails | Gateway returns HTML for all HTTP routes (WebSocket-only) | Changed to simple HTTP 200 verification (verify-gateway-config) |
+| 2026-03-04 | Canvas/cron EACCES errors | Missing directories for OpenClaw runtime | Added canvas/cron/agents dirs to cloud-init + volume mounts |
+| 2026-03-04 | DO Marketplace OpenClaw image retired | Image slug=null, status=retired | Reverted to ubuntu-24-04-x64 with full Docker cloud-init |
+| 2026-03-04 | Test-provision re-triggers on status check | Default behavior re-sent Inngest event, creating duplicate runs | Added `mode=status` (read-only) and `mode=retry` (explicit) |
 
 ---
 
@@ -535,40 +563,31 @@ Constraints (locked):
 5. No infrastructure changes until PixelPort Phase 1 migration
 6. Growth Swarm stays on current droplet through PixelPort Phase 1 validation
 
-### PixelPort (product) — Phase 0 active
+### PixelPort (product) — Phase 1 active
 
-**Completed (CTO + Codex):**
-- ✅ Railway selected for LiteLLM deployment
-- ✅ LiteLLM deployed to Railway: `https://litellm-production-77cc.up.railway.app`
-  - 4 models: gpt-5.2-codex (primary), gemini-2.5-flash (fallback), gpt-4o-mini (budget), claude-sonnet (BYO)
-  - Docker image pinned: `ghcr.io/berriai/litellm:v1.81.3-stable`
-  - Team creation, key generation, completion routing, spend metering all verified
-- ✅ Supabase schema migrated: 6 tables + 17 indexes + RLS + triggers
-  - tenants, agents, content_items, approvals, api_keys, sessions_log
-  - Default trial_budget_usd: $20, configurable per-tenant in settings JSONB
-- ✅ Monorepo set up with coordination files, docs, backend directory structure
-- ✅ 4 Codex slice instruction docs written in docs/phase0/
-- ✅ Supabase credentials received and applied
+**Phase 0: ✅ COMPLETE (all items)**
+- ✅ LiteLLM on Railway, Supabase schema, API bridge (16 routes), Inngest provisioning workflow
+- ✅ Lovable frontend: landing page, auth, dashboard shell (9 routes)
+- ✅ Phase 0.9 dry-run PASSED: full 12-step pipeline creates tenant → droplet → OpenClaw → active in ~7 min
+- ✅ 11/13 Vercel env vars confirmed SET (AGENTMAIL_API_KEY + OPENCLAW_IMAGE optional)
 
-**Completed (Founder): ✅ ALL PHASE 0 ITEMS DONE**
-- ✅ Lovable Cloud project created ("PixelPort Launchpad")
-- ✅ GitHub repo connected
-- ✅ Supabase provisioned and credentials shared
-- ✅ Vercel connected and auto-deploying from main
-- ✅ Landing page — 8 sections (hero w/ animated agent mock, features, how-it-works, pricing, security, integrations, FAQ, CTA)
-- ✅ Supabase Auth — Google OAuth + email/password (**CHANGED from Clerk** — native Lovable integration, zero new vendors)
-- ✅ Dashboard shell — 9 protected routes, sidebar nav, empty states, greeting, stat cards, Chief of Staff card
+**Phase 1 — In progress (CTO + Codex):**
+1. 🟢 Slice 5 (Tenant Creation): `POST /api/tenants` — assigned to Codex
+2. ⚠️ Slice 6 (Chat API): BLOCKED — OpenClaw is WebSocket-only, CTO designing bridge solution
+3. 🟢 Slice 7 (Slack OAuth): OAuth flow + webhook — assigned to Codex
+4. ⬜ Slice 8 (Mem0): Not yet written
+5. ⬜ Slice 9 (PostHog): Not yet written
 
-**In progress (CTO + Codex):**
-1. Slice 3: API bridge routes in `api/` directory (instruction doc updated for Supabase Auth)
-2. Slice 4: Provisioning script + Inngest workflow (instruction doc ready)
-3. Set up Inngest Cloud account (free tier)
-4. Migration 002: clerk_org_id → supabase_user_id (included in Slice 3 for Codex)
+**Phase 1 — Founder (Lovable):**
+1. Onboarding widget (3-step: URL → goals → connect Slack) — consumes `POST /api/tenants`
+2. Dashboard Home with agent status — consumes `GET /api/tenants/me` + `/api/tenants/status`
+3. Connections page — consumes `GET /api/connections`
 
-**Coordination:**
-- CTO documented full API contracts in Slice 3 instruction doc (20+ endpoints) → founder builds Lovable pages against them
-- Schema is live — Lovable can read/write Supabase tables directly via the Supabase integration
-- Auth decision change documented: Supabase Auth replaces Clerk (decision override in master plan v2.0)
+**Critical Vercel patterns (discovered during Phase 0.9):**
+- `api/package.json` with `{"type": "commonjs"}` MUST exist (overrides root ESM)
+- Inngest client must be created inline (no local file imports that re-export)
+- All Inngest polling must use durable `step.run()` + `step.sleep()` (not setTimeout)
+- After deploy, sync Inngest with `curl -X PUT /api/inngest`
 
 ---
 
