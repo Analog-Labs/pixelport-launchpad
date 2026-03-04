@@ -46,8 +46,8 @@ if (!LITELLM_URL || !LITELLM_MASTER_KEY || !DO_API_TOKEN) {
   throw new Error('Missing one or more required env vars: LITELLM_URL, LITELLM_MASTER_KEY, DO_API_TOKEN');
 }
 
-// DO Marketplace 1-Click App — OpenClaw pre-installed with Docker + systemd
-const DO_MARKETPLACE_IMAGE = 'openclaw';
+const OPENCLAW_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.2.24';
+const DEFAULT_DROPLET_IMAGE = 'ubuntu-24-04-x64';
 const DEFAULT_DROPLET_SIZE = 's-1vcpu-2gb';
 const DEFAULT_REGION = 'nyc1';
 
@@ -134,6 +134,7 @@ export const provisionTenant = inngest.createFunction(
         tenantSlug: tenant.slug,
         tenantName: tenant.name,
         gatewayToken,
+        openclawImage: OPENCLAW_IMAGE,
         litellmUrl: LITELLM_URL,
         litellmKey: litellmKey.key,
         agentmailApiKey: AGENTMAIL_API_KEY || '',
@@ -158,7 +159,7 @@ export const provisionTenant = inngest.createFunction(
         name: `pixelport-${tenant.slug}`,
         region: requestedRegion,
         size: requestedSize,
-        image: DO_MARKETPLACE_IMAGE,
+        image: DEFAULT_DROPLET_IMAGE,
         user_data: cloudInit,
         tags: ['pixelport', `tenant-${tenant.slug}`, 'pixelport-trial'],
       };
@@ -180,7 +181,7 @@ export const provisionTenant = inngest.createFunction(
         const errorBody = await response.text();
         throw new Error(
           `Droplet creation failed (HTTP ${response.status}): ${errorBody} ` +
-          `[size=${requestedSize}, region=${requestedRegion}, image=${DO_MARKETPLACE_IMAGE}]`
+          `[size=${requestedSize}, region=${requestedRegion}, image=${DEFAULT_DROPLET_IMAGE}]`
         );
       }
 
@@ -411,6 +412,7 @@ function buildCloudInit(params: {
   tenantSlug: string;
   tenantName: string;
   gatewayToken: string;
+  openclawImage: string;
   litellmUrl: string;
   litellmKey: string;
   agentmailApiKey: string;
@@ -419,45 +421,66 @@ function buildCloudInit(params: {
   return `#!/bin/bash
 set -euo pipefail
 
-# PixelPort Tenant Provisioning (DO Marketplace OpenClaw image)
+# PixelPort Tenant Provisioning — Docker-based OpenClaw
 # Tenant: ${params.tenantSlug}
-# OpenClaw is pre-installed via DO Marketplace 1-Click App.
-# We just write config files and restart the service.
+# Image: ${params.openclawImage}
 
-# Stop the pre-installed OpenClaw service so we can reconfigure
-systemctl stop openclaw 2>/dev/null || true
+export DEBIAN_FRONTEND=noninteractive
 
-# Find OpenClaw config directory
-# Marketplace image may run as root or a dedicated user
-OPENCLAW_DIR="/root/.openclaw"
-if [ -d "/home/openclaw/.openclaw" ]; then
-  OPENCLAW_DIR="/home/openclaw/.openclaw"
+# 1. Install Docker CE if not already present
+if ! command -v docker &> /dev/null; then
+  apt-get update -y
+  apt-get install -y ca-certificates curl gnupg
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  chmod a+r /etc/apt/keyrings/docker.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
+  apt-get update -y
+  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+  systemctl enable docker
+  systemctl start docker
 fi
 
-# Create workspace directories
-mkdir -p "$OPENCLAW_DIR/workspace-main"
-mkdir -p "$OPENCLAW_DIR/workspace-content"
-mkdir -p "$OPENCLAW_DIR/workspace-growth"
+# 2. Pull the OpenClaw image
+docker pull ${params.openclawImage}
 
-# Write agent configuration (JSON5)
-cat > "$OPENCLAW_DIR/openclaw.json" << 'OPENCLAW_CONFIG'
+# 3. Create config and workspace directories on host
+mkdir -p /opt/openclaw
+mkdir -p /opt/openclaw/workspace-main
+mkdir -p /opt/openclaw/workspace-content
+mkdir -p /opt/openclaw/workspace-growth
+
+# 4. Write agent configuration
+cat > /opt/openclaw/openclaw.json << 'OPENCLAW_CONFIG'
 ${JSON.stringify(buildOpenClawConfig(params), null, 2)}
 OPENCLAW_CONFIG
 
-# Write agent persona
-cat > "$OPENCLAW_DIR/workspace-main/SOUL.md" << 'SOUL_MD'
+# 5. Write agent persona
+cat > /opt/openclaw/workspace-main/SOUL.md << 'SOUL_MD'
 ${buildSoulTemplate(params)}
 SOUL_MD
 
-# Write environment secrets (LiteLLM proxy + AgentMail)
-cat > "$OPENCLAW_DIR/.env" << 'ENV_FILE'
+# 6. Write environment secrets (LiteLLM proxy + AgentMail)
+cat > /opt/openclaw/.env << 'ENV_FILE'
 OPENAI_API_KEY=${params.litellmKey}
 OPENAI_BASE_URL=${params.litellmUrl}/v1
 AGENTMAIL_API_KEY=${params.agentmailApiKey}
 ENV_FILE
 
-# Start the OpenClaw service with our configuration
-systemctl start openclaw
+# 7. Set ownership (OpenClaw container runs as node:1000)
+chown -R 1000:1000 /opt/openclaw
+
+# 8. Run the OpenClaw gateway container
+docker run -d \\
+  --name openclaw-gateway \\
+  --restart unless-stopped \\
+  -p 18789:18789 \\
+  --env-file /opt/openclaw/.env \\
+  -v /opt/openclaw/openclaw.json:/home/node/.openclaw/openclaw.json \\
+  -v /opt/openclaw/workspace-main:/home/node/.openclaw/workspace-main \\
+  -v /opt/openclaw/workspace-content:/home/node/.openclaw/workspace-content \\
+  -v /opt/openclaw/workspace-growth:/home/node/.openclaw/workspace-growth \\
+  ${params.openclawImage}
 
 echo "PixelPort provisioning complete for ${params.tenantSlug}"
 `;
