@@ -115,6 +115,7 @@ function sshExec(host: string, command: string): Promise<string> {
 }
 
 function buildSlackConfig(botToken: string): string {
+  // OpenClaw 2026.2.24 validated schema — no capitalized action keys or allowBotMessages
   return JSON.stringify(
     {
       enabled: true,
@@ -122,17 +123,7 @@ function buildSlackConfig(botToken: string): string {
       appToken: '${SLACK_APP_TOKEN}',
       dmPolicy: 'open',
       allowFrom: ['*'],
-      actions: {
-        Messages: true,
-        DM: true,
-        Reactions: true,
-        Pins: true,
-        MemberInfo: true,
-        EmojiList: true,
-        ChannelInfo: true,
-      },
       replyToMode: 'first',
-      allowBotMessages: true,
       configWrites: true,
     },
     null,
