@@ -21,17 +21,33 @@
     - consumes `onboarding_data.scan_results`,
     - maps `agent_tone` to a concrete personality profile,
     - injects a `## Knowledge Base` section from extracted brand context.
+  - Implemented Slice 9 Slack activation workflow:
+    - added `api/inngest/functions/activate-slack.ts` (`pixelport/slack.connected`),
+    - added SSH config patch workflow + hot-reload wait + gateway verify + mark-active,
+    - added idempotency check path for already-active Slack setups,
+    - registered function in `api/inngest/index.ts`,
+    - updated `api/connections/slack/callback.ts` to set `is_active: false` and emit `pixelport/slack.connected`,
+    - updated cloud-init `.env` template in `provision-tenant.ts` to include `SLACK_APP_TOKEN`,
+    - added `ssh2` + `@types/ssh2`.
+  - Applied Slack webhook hardening:
+    - updated `api/connections/slack/events.ts` to verify signatures against raw request bytes,
+    - added safer raw-body extraction paths and strict JSON parse handling.
   - Verification checks:
-    - `npx tsc --noEmit api/tenants/scan.ts`: pass.
-    - secret scan on `api/tenants/scan.ts`: no hardcoded secrets.
+    - `npx tsc --noEmit api/tenants/scan.ts api/inngest/functions/activate-slack.ts api/connections/slack/callback.ts api/connections/slack/events.ts`: pass.
+    - `node -e "require('ssh2')"`: pass.
+    - secret scans on changed files: pass.
+    - forbidden local Inngest import scans on changed files: pass.
 - **What's next:**
-  - Execute Slice 9: Slack activation workflow + callback trigger + cloud-init env update.
-  - Apply Slack events raw-body signature hardening in same run.
+  - Founder: add `SLACK_APP_TOKEN` in Vercel and complete Slack Socket Mode + Event Subscriptions setup.
+  - CTO: add `SSH_PRIVATE_KEY` in Vercel for activation workflow execution.
+  - Team: run live Slice 9 smoke (`OAuth callback -> Inngest event -> droplet config update -> mark active`) after env readiness.
 - **Blockers:**
-  - Live Slice 9 activation smoke still depends on `SLACK_APP_TOKEN` and `SSH_PRIVATE_KEY` availability in Vercel.
+  - Live Slice 9 end-to-end verification is pending `SLACK_APP_TOKEN` and `SSH_PRIVATE_KEY` availability in Vercel.
 - **Feedback & Observations (CTO):**
   - Website scan quality will be highly dependent on static HTML availability; JS-rendered sites will often return partial context. Current fallback behavior is safe and explicit.
   - SSRF guardrails were added to avoid scanning internal/private targets during onboarding.
+  - Slack webhook reliability risk was addressed by using raw-body signature verification; this should prevent intermittent `401 Invalid signature` failures when Event Subscriptions are enabled.
+  - Keep `aws-1-eu-west-1` as primary Supabase pooler in runbooks for this runtime due repeated `aws-0` failures.
 
 ---
 

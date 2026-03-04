@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHmac, createCipheriv, randomBytes } from 'crypto';
+import { Inngest } from 'inngest';
 import { supabase } from '../../lib/supabase';
 
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
@@ -7,6 +8,11 @@ const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
 const STATE_SECRET = process.env.SLACK_STATE_SECRET || process.env.API_KEY_ENCRYPTION_KEY;
 const ENCRYPTION_KEY = process.env.API_KEY_ENCRYPTION_KEY;
 const DEFAULT_APP_URL = 'https://pixelport-launchpad.vercel.app';
+
+const inngest = new Inngest({
+  id: 'pixelport',
+  eventKey: process.env.INNGEST_EVENT_KEY,
+});
 
 function getHexKey(): Buffer {
   if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
@@ -173,7 +179,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           bot_user_id: tokenData.bot_user_id || null,
           installer_user_id: tokenData.authed_user?.id || null,
           scopes: tokenData.scope ? tokenData.scope.split(',') : [],
-          is_active: true,
+          is_active: false,
           connected_at: new Date().toISOString(),
         },
         { onConflict: 'tenant_id' }
@@ -182,6 +188,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     if (upsertError) {
       console.error('Failed to save Slack connection', upsertError);
       return res.redirect(302, `${appUrl}/dashboard/connections?error=save_failed`);
+    }
+
+    try {
+      await inngest.send({
+        name: 'pixelport/slack.connected',
+        data: { tenantId },
+      });
+    } catch (inngestError) {
+      console.error('Failed to emit slack.connected event', inngestError);
     }
 
     return res.redirect(302, `${appUrl}/dashboard/connections?slack=connected`);

@@ -465,6 +465,7 @@ cat > /opt/openclaw/.env << 'ENV_FILE'
 OPENAI_API_KEY=${params.litellmKey}
 OPENAI_BASE_URL=${params.litellmUrl}/v1
 AGENTMAIL_API_KEY=${params.agentmailApiKey}
+SLACK_APP_TOKEN=${process.env.SLACK_APP_TOKEN || ''}
 ENV_FILE
 
 # 7. Set ownership (OpenClaw container runs as node:1000)

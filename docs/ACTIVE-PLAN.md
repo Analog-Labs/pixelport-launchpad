@@ -36,7 +36,7 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 - [x] 1.C5: PostHog ← REDESIGNED: user-facing integration (customers connect their PostHog), deferred to Phase 2
 - [x] 1.C6: AgentMail per-tenant inbox ← already in provisioning workflow
 - [x] 1.C7: Website auto-scan during onboarding ← CODEX SLICE 8 complete (`POST /api/tenants/scan` + SOUL knowledge injection)
-- [ ] 1.C8: Slack activation workflow ← CODEX SLICE 9 (docs ready, awaiting Codex execution + founder Slack App config)
+- [ ] 1.C8: Slack activation workflow ← CODEX SLICE 9 backend complete (`activate-slack` + callback trigger + webhook hardening), pending live env-gated smoke (`SLACK_APP_TOKEN`, `SSH_PRIVATE_KEY`)
 
 ### Integration (CTO + Founder)
 - [x] 1.I1: Wire onboarding widget → POST /api/tenants (create + provision) ← COMPLETE (Lovable + CTO review)
