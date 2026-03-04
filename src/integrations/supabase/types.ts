@@ -174,6 +174,89 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          agent_id: string
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          role: string
+          session_id: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id?: string
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role: string
+          session_id: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          session_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_sessions: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          last_message_at: string | null
+          tenant_id: string
+          title: string | null
+        }
+        Insert: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          tenant_id: string
+          title?: string | null
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          tenant_id?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_items: {
         Row: {
           agent_id: string | null
@@ -299,6 +382,59 @@ export type Database = {
           },
           {
             foreignKeyName: "sessions_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      slack_connections: {
+        Row: {
+          bot_token: string
+          bot_user_id: string | null
+          connected_at: string | null
+          created_at: string
+          id: string
+          installer_user_id: string | null
+          is_active: boolean
+          scopes: string[] | null
+          team_id: string
+          team_name: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          bot_token: string
+          bot_user_id?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          installer_user_id?: string | null
+          is_active?: boolean
+          scopes?: string[] | null
+          team_id: string
+          team_name?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          bot_token?: string
+          bot_user_id?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          installer_user_id?: string | null
+          is_active?: boolean
+          scopes?: string[] | null
+          team_id?: string
+          team_name?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slack_connections_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
