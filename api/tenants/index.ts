@@ -1,6 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { inngest } from '../inngest/client';
+import { Inngest } from 'inngest';
+
+// Inline client creation — importing from a local file that re-exports inngest
+// crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
+const inngest = new Inngest({
+  id: 'pixelport',
+  eventKey: process.env.INNGEST_EVENT_KEY,
+});
 
 const supabaseUrl = process.env.SUPABASE_PROJECT_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

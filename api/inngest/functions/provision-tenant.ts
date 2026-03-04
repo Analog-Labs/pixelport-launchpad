@@ -1,6 +1,13 @@
 import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
-import { inngest } from '../client';
+import { Inngest } from 'inngest';
+
+// Inline client creation — importing from a local file that re-exports inngest
+// crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
+const inngest = new Inngest({
+  id: 'pixelport',
+  eventKey: process.env.INNGEST_EVENT_KEY,
+});
 
 type Json = Record<string, unknown>;
 
