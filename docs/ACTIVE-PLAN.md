@@ -35,7 +35,7 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 - [ ] 1.C4: Mem0 managed cloud — per-tenant scoping (user has active plan, Slice 10 planned)
 - [x] 1.C5: PostHog ← REDESIGNED: user-facing integration (customers connect their PostHog), deferred to Phase 2
 - [x] 1.C6: AgentMail per-tenant inbox ← already in provisioning workflow
-- [ ] 1.C7: Website auto-scan during onboarding ← CODEX SLICE 8 (docs ready, awaiting Codex execution)
+- [x] 1.C7: Website auto-scan during onboarding ← CODEX SLICE 8 complete (`POST /api/tenants/scan` + SOUL knowledge injection)
 - [ ] 1.C8: Slack activation workflow ← CODEX SLICE 9 (docs ready, awaiting Codex execution + founder Slack App config)
 
 ### Integration (CTO + Founder)

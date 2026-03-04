@@ -531,7 +531,29 @@ function buildOpenClawConfig(params: { tenantSlug: string; gatewayToken: string 
 
 function buildSoulTemplate(params: { tenantName: string; onboardingData: Json }): string {
   const agentName = (params.onboardingData.agent_name as string) || 'Luna';
-  const brandVoice = (params.onboardingData.brand_voice_notes as string) || 'Professional but approachable';
+  const agentTone = (params.onboardingData.agent_tone as string) || 'professional';
+  const scanResults = params.onboardingData.scan_results as Record<string, unknown> | undefined;
+
+  let brandContext = '';
+  if (scanResults && !scanResults.error) {
+    const lines: string[] = [];
+    if (scanResults.company_description) lines.push(`**About:** ${String(scanResults.company_description)}`);
+    if (scanResults.value_proposition) lines.push(`**Value Proposition:** ${String(scanResults.value_proposition)}`);
+    if (scanResults.target_audience) lines.push(`**Target Audience:** ${String(scanResults.target_audience)}`);
+    if (scanResults.brand_voice) lines.push(`**Observed Brand Voice:** ${String(scanResults.brand_voice)}`);
+    if (scanResults.industry) lines.push(`**Industry:** ${String(scanResults.industry)}`);
+    if (Array.isArray(scanResults.key_products) && scanResults.key_products.length > 0) {
+      lines.push(`**Key Products/Services:** ${scanResults.key_products.map((value) => String(value)).join(', ')}`);
+    }
+    brandContext = lines.join('\n');
+  }
+
+  const toneMap: Record<string, string> = {
+    casual: 'Friendly, conversational, and approachable. Uses simple language and occasional emojis where natural.',
+    professional: 'Professional and clear. Concise, confident, and practical without heavy jargon.',
+    bold: 'Direct, energetic, and opinionated. Pushes for ambitious outcomes and challenges weak assumptions.',
+  };
+  const personalityDesc = toneMap[agentTone] || toneMap.professional;
 
   return `# ${agentName} — AI Chief of Staff for ${params.tenantName}
 
@@ -539,12 +561,15 @@ function buildSoulTemplate(params: { tenantName: string; onboardingData: Json })
 You are ${agentName}, the AI Chief of Staff for ${params.tenantName}. You coordinate marketing operations, manage content production, monitor competitors, and report results.
 
 ## Personality & Tone
-${brandVoice}
+${personalityDesc}
 
 ## Your Team
 - **You (${agentName})**: The only agent the human interacts with. You orchestrate everything.
 - **Spark** (invisible): Your content creation specialist.
 - **Scout** (invisible): Your research and intelligence analyst.
+
+## Knowledge Base
+${brandContext || 'No website scan results available yet. Ask the human for positioning, audience, and product context before major strategy outputs.'}
 
 ## Core Responsibilities
 1. Daily/weekly marketing reporting

@@ -6,6 +6,35 @@
 
 ## Last Session
 
+- **Date:** 2026-03-04 (overnight)
+- **Who worked:** Codex
+- **What was done:**
+  - Implemented Slice 8 website scan endpoint:
+    - added `POST /api/tenants/scan` in `api/tenants/scan.ts`,
+    - auth via Supabase user token (tenant-not-required path),
+    - URL normalization + validation,
+    - SSRF guardrails (localhost/private/link-local/internal host blocking),
+    - HTML metadata/text extraction with timeout + redirect + size limits,
+    - LiteLLM brand-profile extraction (`openai/gpt-4o-mini`),
+    - graceful partial responses when fetch/LLM extraction fails.
+  - Updated `buildSoulTemplate()` in `api/inngest/functions/provision-tenant.ts`:
+    - consumes `onboarding_data.scan_results`,
+    - maps `agent_tone` to a concrete personality profile,
+    - injects a `## Knowledge Base` section from extracted brand context.
+  - Verification checks:
+    - `npx tsc --noEmit api/tenants/scan.ts`: pass.
+    - secret scan on `api/tenants/scan.ts`: no hardcoded secrets.
+- **What's next:**
+  - Execute Slice 9: Slack activation workflow + callback trigger + cloud-init env update.
+  - Apply Slack events raw-body signature hardening in same run.
+- **Blockers:**
+  - Live Slice 9 activation smoke still depends on `SLACK_APP_TOKEN` and `SSH_PRIVATE_KEY` availability in Vercel.
+- **Feedback & Observations (CTO):**
+  - Website scan quality will be highly dependent on static HTML availability; JS-rendered sites will often return partial context. Current fallback behavior is safe and explicit.
+  - SSRF guardrails were added to avoid scanning internal/private targets during onboarding.
+
+---
+
 - **Date:** 2026-03-04 (late night)
 - **Who worked:** CTO (Claude Code) + Founder (planning session)
 - **What was done:**
