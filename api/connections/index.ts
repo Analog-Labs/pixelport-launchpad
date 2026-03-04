@@ -25,7 +25,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       integrations: {
         slack: slackConn
           ? {
-              connected: slackConn.is_active,
+              connected: true,
+              active: slackConn.is_active,
               team_id: slackConn.team_id,
               team_name: slackConn.team_name,
               connected_at: slackConn.connected_at,
@@ -33,6 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
             }
           : {
               connected: false,
+              active: false,
             },
         email: {
           connected: Boolean(tenant.agentmail_inbox),
