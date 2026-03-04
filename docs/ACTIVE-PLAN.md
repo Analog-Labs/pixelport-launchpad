@@ -36,12 +36,13 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 - [x] 1.C5: PostHog ← REDESIGNED: user-facing integration (customers connect their PostHog), deferred to Phase 2
 - [x] 1.C6: AgentMail per-tenant inbox ← already in provisioning workflow
 - [x] 1.C7: Website auto-scan during onboarding ← CODEX SLICE 8 complete (`POST /api/tenants/scan` + SOUL knowledge injection)
-- [ ] 1.C8: Slack activation workflow ← CODEX SLICE 9 backend complete (`activate-slack` + callback trigger + webhook hardening), pending live env-gated smoke (`SLACK_APP_TOKEN`, `SSH_PRIVATE_KEY`)
+- [x] 1.C8: Slack activation workflow ← CODEX SLICE 9 complete + CTO reviewed (ALL PASS). Env vars set: `SLACK_APP_TOKEN`, `SSH_PRIVATE_KEY`. Ready for live E2E test.
 
 ### Integration (CTO + Founder)
 - [x] 1.I1: Wire onboarding widget → POST /api/tenants (create + provision) ← COMPLETE (Lovable + CTO review)
-- [ ] 1.I2: Wire chat widget → POST /api/chat (streaming) — ships as-is for Phase 1 (graceful fallback for WS-only gateway)
-- [ ] 1.I3: Wire dashboard home → GET /api/tenants/status + /api/content
+- [ ] 1.I1b: Wire scan API into onboarding → POST /api/tenants/scan during Step 1 (CTO proposal pending)
+- [ ] 1.I2: Wire chat widget → POST /api/chat (streaming) — lower priority, Slack is primary channel
+- [ ] 1.I3: Wire dashboard home → GET /api/tenants/status (real provisioning polling)
 - [ ] 1.I4: Wire connections page → Slack OAuth install + status
 
 ---

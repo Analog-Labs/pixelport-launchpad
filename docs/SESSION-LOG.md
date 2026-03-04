@@ -6,7 +6,35 @@
 
 ## Last Session
 
-- **Date:** 2026-03-04 (overnight)
+- **Date:** 2026-03-05
+- **Who worked:** CTO (Claude Code) + Founder
+- **What was done:**
+  - **CTO Review of Codex Slices 8+9: ALL FILES PASS ✅**
+    - `scan.ts`: Auth (supabase.auth.getUser), SSRF guards (DNS validation, private IP blocking), HTML extraction, LiteLLM brand profile, graceful partial failure ✅
+    - `provision-tenant.ts` changes: buildSoulTemplate reads scan_results, tone mapping (casual/professional/bold), Knowledge Base injection, SLACK_APP_TOKEN in cloud-init ✅
+    - `activate-slack.ts`: 6-step Inngest workflow, AES-256-CBC decrypt, SSH config patch with backup, idempotency guard, env safety checks ✅
+    - `activate-slack.ts` line 121 `appToken: '${SLACK_APP_TOKEN}'`: Confirmed NOT a bug — OpenClaw supports `${VAR_NAME}` env var substitution in config (reference doc Section 3). Token resolves at runtime from droplet `.env`.
+    - `inngest/index.ts`: Both functions registered ✅
+    - `callback.ts`: is_active=false, Inngest event fired after upsert ✅
+    - `events.ts`: Raw body signature verification (not JSON.stringify), timingSafeEqual ✅
+  - **Founder completed all infra tasks:**
+    - SSH public key added to DigitalOcean account
+    - `SSH_PRIVATE_KEY` added to Vercel env vars
+    - Slack Socket Mode enabled, App-Level Token created (`xapp-...`)
+    - `SLACK_APP_TOKEN` added to Vercel env vars
+    - Bot events subscribed: `app_mention`, `message.channels`, `message.im`
+  - **All Phase 1 backend endpoints are now deployed and ready.**
+  - **Identified remaining work:** 4 frontend integration wiring tasks (scan wiring, I4, I3, I2)
+- **What's next:**
+  - CTO: Write frontend integration proposals for founder to apply in Lovable
+  - Founder: Apply scan wiring (Priority 1), I4 Connections page (Priority 2), I3 Dashboard status (Priority 3)
+  - CTO: End-to-end smoke test after frontend wiring
+- **Blockers:**
+  - None — all backend complete, all env vars set. Waiting on frontend integration wiring.
+
+---
+
+### 2026-03-04 (overnight)
 - **Who worked:** Codex
 - **What was done:**
   - Implemented Slice 8 website scan endpoint:
