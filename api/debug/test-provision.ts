@@ -16,8 +16,8 @@ import { inngest } from '../inngest/client';
  * NOT for production use — remove after Phase 0.9 gate.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed. Use GET or POST.' });
   }
 
   // Auth: require shared secret
