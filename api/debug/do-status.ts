@@ -134,16 +134,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           status: string;
         }>;
       };
-      const dockerImage = (data.images ?? []).find((i) => i.slug === 'docker-20-04');
-      results.image = dockerImage
+      const ubuntuImage = (data.images ?? []).find((i) => i.slug === 'ubuntu-24-04-x64');
+      results.image = ubuntuImage
         ? {
-            slug: dockerImage.slug,
-            distribution: dockerImage.distribution,
-            in_nyc1: dockerImage.regions.includes('nyc1'),
-            status: dockerImage.status,
-            regions_count: dockerImage.regions.length,
+            slug: ubuntuImage.slug,
+            distribution: ubuntuImage.distribution,
+            in_nyc1: ubuntuImage.regions.includes('nyc1'),
+            status: ubuntuImage.status,
+            regions_count: ubuntuImage.regions.length,
           }
-        : 'docker-20-04 NOT FOUND';
+        : 'ubuntu-24-04-x64 NOT FOUND';
     } else {
       results.images_error = `HTTP ${imagesRes.status}: ${await imagesRes.text()}`;
     }

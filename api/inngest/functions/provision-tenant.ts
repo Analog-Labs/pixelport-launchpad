@@ -143,7 +143,7 @@ export const provisionTenant = inngest.createFunction(
           name: `pixelport-${tenant.slug}`,
           region: requestedRegion,
           size: requestedSize,
-          image: 'docker-20-04',
+          image: 'ubuntu-24-04-x64',
           user_data: cloudInit,
           tags: ['pixelport', `tenant-${tenant.slug}`, 'pixelport-trial'],
         }),
@@ -153,7 +153,7 @@ export const provisionTenant = inngest.createFunction(
         const errorBody = await response.text();
         throw new Error(
           `Droplet creation failed (HTTP ${response.status}): ${errorBody} ` +
-          `[size=${requestedSize}, region=${requestedRegion}, image=docker-20-04]`
+          `[size=${requestedSize}, region=${requestedRegion}, image=ubuntu-24-04-x64]`
         );
       }
 
@@ -376,6 +376,20 @@ set -euo pipefail
 # PixelPort Tenant Provisioning
 # Tenant: ${params.tenantSlug}
 # Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+# Install Docker on plain Ubuntu 24.04
+if ! command -v docker &> /dev/null; then
+  apt-get update -y
+  apt-get install -y ca-certificates curl
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  chmod a+r /etc/apt/keyrings/docker.asc
+  echo "deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \$(. /etc/os-release && echo \$VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+  apt-get update -y
+  apt-get install -y docker-ce docker-ce-cli containerd.io
+  systemctl enable docker
+  systemctl start docker
+fi
 
 while ! docker info > /dev/null 2>&1; do sleep 2; done
 
