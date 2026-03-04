@@ -119,31 +119,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     results.sizes_error = String(err);
   }
 
-  // 4. Check if docker image exists in target region
+  // 4. Check marketplace OpenClaw image availability
   try {
     const imagesRes = await fetch(
-      'https://api.digitalocean.com/v2/images?type=distribution&per_page=200',
+      'https://api.digitalocean.com/v2/images?type=application&per_page=200',
       { headers: { Authorization: `Bearer ${DO_API_TOKEN}` } }
     );
     if (imagesRes.ok) {
       const data = (await imagesRes.json()) as {
         images?: Array<{
           slug: string;
+          name: string;
           distribution: string;
           regions: string[];
           status: string;
+          min_disk_size: number;
         }>;
       };
-      const ubuntuImage = (data.images ?? []).find((i) => i.slug === 'ubuntu-24-04-x64');
-      results.image = ubuntuImage
+      const openclawImage = (data.images ?? []).find((i) => i.slug === 'openclaw');
+      results.marketplace_image = openclawImage
         ? {
-            slug: ubuntuImage.slug,
-            distribution: ubuntuImage.distribution,
-            in_nyc1: ubuntuImage.regions.includes('nyc1'),
-            status: ubuntuImage.status,
-            regions_count: ubuntuImage.regions.length,
+            slug: openclawImage.slug,
+            name: openclawImage.name,
+            in_nyc1: openclawImage.regions.includes('nyc1'),
+            status: openclawImage.status,
+            min_disk_size_gb: openclawImage.min_disk_size,
+            regions_count: openclawImage.regions.length,
+            available_regions: openclawImage.regions.slice(0, 10),
           }
-        : 'ubuntu-24-04-x64 NOT FOUND';
+        : 'openclaw marketplace image NOT FOUND';
     } else {
       results.images_error = `HTTP ${imagesRes.status}: ${await imagesRes.text()}`;
     }

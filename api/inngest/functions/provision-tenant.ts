@@ -41,13 +41,14 @@ const LITELLM_URL = process.env.LITELLM_URL;
 const LITELLM_MASTER_KEY = process.env.LITELLM_MASTER_KEY;
 const DO_API_TOKEN = process.env.DO_API_TOKEN;
 const AGENTMAIL_API_KEY = process.env.AGENTMAIL_API_KEY;
-const OPENCLAW_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.2.24';
 
 if (!LITELLM_URL || !LITELLM_MASTER_KEY || !DO_API_TOKEN) {
   throw new Error('Missing one or more required env vars: LITELLM_URL, LITELLM_MASTER_KEY, DO_API_TOKEN');
 }
 
-const DEFAULT_DROPLET_SIZE = 's-1vcpu-1gb';
+// DO Marketplace 1-Click App — OpenClaw pre-installed with Docker + systemd
+const DO_MARKETPLACE_IMAGE = 'openclaw';
+const DEFAULT_DROPLET_SIZE = 's-1vcpu-2gb';
 const DEFAULT_REGION = 'nyc1';
 
 export const provisionTenant = inngest.createFunction(
@@ -133,12 +134,38 @@ export const provisionTenant = inngest.createFunction(
         tenantSlug: tenant.slug,
         tenantName: tenant.name,
         gatewayToken,
-        openclawImage: OPENCLAW_IMAGE,
         litellmUrl: LITELLM_URL,
         litellmKey: litellmKey.key,
         agentmailApiKey: AGENTMAIL_API_KEY || '',
         onboardingData: tenant.onboarding_data ?? {},
       });
+
+      // Fetch account SSH keys so we can SSH into the droplet for debugging
+      let sshKeyIds: number[] = [];
+      try {
+        const keysRes = await fetch('https://api.digitalocean.com/v2/account/keys?per_page=50', {
+          headers: { Authorization: `Bearer ${DO_API_TOKEN}` },
+        });
+        if (keysRes.ok) {
+          const keysData = (await keysRes.json()) as { ssh_keys?: Array<{ id: number }> };
+          sshKeyIds = (keysData.ssh_keys ?? []).map((k) => k.id);
+        }
+      } catch {
+        // Non-fatal — droplet just won't have SSH keys
+      }
+
+      const dropletBody: Record<string, unknown> = {
+        name: `pixelport-${tenant.slug}`,
+        region: requestedRegion,
+        size: requestedSize,
+        image: DO_MARKETPLACE_IMAGE,
+        user_data: cloudInit,
+        tags: ['pixelport', `tenant-${tenant.slug}`, 'pixelport-trial'],
+      };
+
+      if (sshKeyIds.length > 0) {
+        dropletBody.ssh_keys = sshKeyIds;
+      }
 
       const response = await fetch('https://api.digitalocean.com/v2/droplets', {
         method: 'POST',
@@ -146,21 +173,14 @@ export const provisionTenant = inngest.createFunction(
           Authorization: `Bearer ${DO_API_TOKEN}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: `pixelport-${tenant.slug}`,
-          region: requestedRegion,
-          size: requestedSize,
-          image: 'ubuntu-24-04-x64',
-          user_data: cloudInit,
-          tags: ['pixelport', `tenant-${tenant.slug}`, 'pixelport-trial'],
-        }),
+        body: JSON.stringify(dropletBody),
       });
 
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(
           `Droplet creation failed (HTTP ${response.status}): ${errorBody} ` +
-          `[size=${requestedSize}, region=${requestedRegion}, image=ubuntu-24-04-x64]`
+          `[size=${requestedSize}, region=${requestedRegion}, image=${DO_MARKETPLACE_IMAGE}]`
         );
       }
 
@@ -391,7 +411,6 @@ function buildCloudInit(params: {
   tenantSlug: string;
   tenantName: string;
   gatewayToken: string;
-  openclawImage: string;
   litellmUrl: string;
   litellmKey: string;
   agentmailApiKey: string;
@@ -400,58 +419,47 @@ function buildCloudInit(params: {
   return `#!/bin/bash
 set -euo pipefail
 
-# PixelPort Tenant Provisioning
+# PixelPort Tenant Provisioning (DO Marketplace OpenClaw image)
 # Tenant: ${params.tenantSlug}
-# Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+# OpenClaw is pre-installed via DO Marketplace 1-Click App.
+# We just write config files and restart the service.
 
-# Install Docker on plain Ubuntu 24.04
-if ! command -v docker &> /dev/null; then
-  apt-get update -y
-  apt-get install -y ca-certificates curl
-  install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-  chmod a+r /etc/apt/keyrings/docker.asc
-  echo "deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \$(. /etc/os-release && echo \$VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
-  apt-get update -y
-  apt-get install -y docker-ce docker-ce-cli containerd.io
-  systemctl enable docker
-  systemctl start docker
+# Stop the pre-installed OpenClaw service so we can reconfigure
+systemctl stop openclaw 2>/dev/null || true
+
+# Find OpenClaw config directory
+# Marketplace image may run as root or a dedicated user
+OPENCLAW_DIR="/root/.openclaw"
+if [ -d "/home/openclaw/.openclaw" ]; then
+  OPENCLAW_DIR="/home/openclaw/.openclaw"
 fi
 
-while ! docker info > /dev/null 2>&1; do sleep 2; done
+# Create workspace directories
+mkdir -p "$OPENCLAW_DIR/workspace-main"
+mkdir -p "$OPENCLAW_DIR/workspace-content"
+mkdir -p "$OPENCLAW_DIR/workspace-growth"
 
-mkdir -p /opt/openclaw/workspace-main
-mkdir -p /opt/openclaw/workspace-content
-mkdir -p /opt/openclaw/workspace-growth
-
-docker pull ${params.openclawImage}
-
-cat > /opt/openclaw/openclaw.json << 'OPENCLAW_CONFIG'
+# Write agent configuration (JSON5)
+cat > "$OPENCLAW_DIR/openclaw.json" << 'OPENCLAW_CONFIG'
 ${JSON.stringify(buildOpenClawConfig(params), null, 2)}
 OPENCLAW_CONFIG
 
-cat > /opt/openclaw/workspace-main/SOUL.md << 'SOUL_MD'
+# Write agent persona
+cat > "$OPENCLAW_DIR/workspace-main/SOUL.md" << 'SOUL_MD'
 ${buildSoulTemplate(params)}
 SOUL_MD
 
-cat > /opt/openclaw/.env << 'ENV_FILE'
+# Write environment secrets (LiteLLM proxy + AgentMail)
+cat > "$OPENCLAW_DIR/.env" << 'ENV_FILE'
 OPENAI_API_KEY=${params.litellmKey}
 OPENAI_BASE_URL=${params.litellmUrl}/v1
 AGENTMAIL_API_KEY=${params.agentmailApiKey}
 ENV_FILE
 
-docker run -d \\
-  --name openclaw-gateway \\
-  --restart unless-stopped \\
-  -p 18789:18789 \\
-  -v /opt/openclaw/openclaw.json:/home/node/.openclaw/openclaw.json \\
-  -v /opt/openclaw/workspace-main:/home/node/.openclaw/workspace-main \\
-  -v /opt/openclaw/workspace-content:/home/node/.openclaw/workspace-content \\
-  -v /opt/openclaw/workspace-growth:/home/node/.openclaw/workspace-growth \\
-  --env-file /opt/openclaw/.env \\
-  ${params.openclawImage}
+# Start the OpenClaw service with our configuration
+systemctl start openclaw
 
-echo "OpenClaw provisioning complete for ${params.tenantSlug}"
+echo "PixelPort provisioning complete for ${params.tenantSlug}"
 `;
 }
 
