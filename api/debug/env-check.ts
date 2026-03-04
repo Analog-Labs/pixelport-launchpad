@@ -19,6 +19,8 @@ export default async function handler(_req: VercelRequest, res: VercelResponse):
     'SLACK_CLIENT_ID',
     'SLACK_CLIENT_SECRET',
     'SLACK_SIGNING_SECRET',
+    'SSH_PRIVATE_KEY',
+    'SLACK_APP_TOKEN',
     'AGENTMAIL_API_KEY',
     'OPENCLAW_IMAGE',
   ];
