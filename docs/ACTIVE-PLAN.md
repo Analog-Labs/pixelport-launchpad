@@ -40,10 +40,10 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 
 ### Integration (CTO + Founder)
 - [x] 1.I1: Wire onboarding widget → POST /api/tenants (create + provision) ← COMPLETE (Lovable + CTO review)
-- [ ] 1.I1b: Wire scan API into onboarding → POST /api/tenants/scan during Step 1 (CTO proposal pending)
-- [ ] 1.I2: Wire chat widget → POST /api/chat (streaming) — lower priority, Slack is primary channel
-- [ ] 1.I3: Wire dashboard home → GET /api/tenants/status (real provisioning polling)
-- [ ] 1.I4: Wire connections page → Slack OAuth install + status
+- [ ] 1.I1b: Wire scan API into onboarding → POST /api/tenants/scan during Step 1 ← CTO PROPOSAL READY (`docs/phase1/frontend-integration-proposals.md` Priority 1)
+- [ ] 1.I2: Wire chat widget → POST /api/chat (streaming) — lower priority ← CTO PROPOSAL READY (Priority 4)
+- [ ] 1.I3: Wire dashboard home → GET /api/tenants/status (real provisioning polling) ← CTO PROPOSAL READY (Priority 3)
+- [ ] 1.I4: Wire connections page → Slack OAuth install + status ← CTO PROPOSAL READY (Priority 2)
 
 ---
 
@@ -63,8 +63,9 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 ### Blockers
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|--------------|-----------------|
-| Slack App Socket Mode setup (App-Level Token) | Slice 9 testing | Founder configures in Slack App settings |
-| SSH key pair for droplet access | Slice 9 testing | CTO generates, adds to Vercel + DO |
+| ~~Slack App Socket Mode setup~~ | ~~Slice 9 testing~~ | ✅ DONE (2026-03-04) |
+| ~~SSH key pair for droplet access~~ | ~~Slice 9 testing~~ | ✅ DONE (2026-03-04) |
+| Frontend integration wiring (I1b, I2, I3, I4) | E2E smoke test | Founder applies CTO proposals in Lovable |
 
 ### Notes
 - **Phase 0 → Phase 1 transition (2026-03-03):** CTO reviewed all Codex code (PASS), merged branch to main, created Phase 1 Codex slice docs.
@@ -72,25 +73,26 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 - **F1-F4 complete (2026-03-03 evening):** Founder built onboarding wizard, dashboard home (pre/post modes), chat widget (slide-up + full-page), agent personalization. All merged to main. Frontend runs on localStorage + simulated data — needs backend wiring.
 - **Frontend data contract locked:** Onboarding payload fields: `company_name`, `company_url`, `goals[]`, `agent_name`, `agent_tone` (casual|professional|bold), `agent_avatar_url` (6 avatar IDs). See `src/lib/avatars.ts` for avatar map.
 - **Codex Slices 5-7 COMPLETE:** All reviewed by CTO, all pass. Merged to main.
-- **Codex Slices 8-9 READY:** Instruction docs + go-package v2 written by CTO. Slice 8 = website auto-scan, Slice 9 = Slack activation via SSH config update.
+- **Codex Slices 8-9 COMPLETE + CTO REVIEWED (ALL PASS):** Slice 8 = website auto-scan (`POST /api/tenants/scan`), Slice 9 = Slack activation (6-step Inngest workflow via SSH). All env vars set.
 - **Codex Slice 10 planned:** Mem0 integration — lower priority, depends on Mem0 API key.
 - **Architecture decisions (2026-03-04):** Slack is PRIMARY channel for Phase 1. Dashboard chat ships as-is (WS bridge deferred to Phase 2). PostHog redesigned as user-facing integration (deferred to Phase 2). Website scan: lightweight fetch + LLM extraction.
 - **DO droplet quota:** 1 slot available. Use `/api/debug/test-provision?cleanup=true` after each test to free the slot.
 - Auth decision change: Supabase Auth replaces Clerk (2026-03-03).
 - Codex is a full project participant: reads full project context, provides feedback to CTO, updates session docs after every work session.
 - **Integration wiring (I1-I4):** CTO proposes changes to Lovable-managed frontend files, founder reviews and applies. Do NOT modify `src/` files directly without founder approval.
+- **Frontend integration proposals READY (2026-03-05):** All 4 proposals written in `docs/phase1/frontend-integration-proposals.md`. Includes exact code snippets, API contracts, and implementation order. Founder can hand directly to Lovable.
 
 ---
 
 ## Founder Tasks (Required for Phase 1 Completion)
 
-1. **Slack App ("Pixel") Socket Mode setup:**
-   - Enable Socket Mode (Settings > Socket Mode)
-   - Create App-Level Token with scope `connections:write` → gives `xapp-...` token
-   - Add `SLACK_APP_TOKEN` to Vercel env vars
-   - Configure Event Subscriptions URL → `https://pixelport-launchpad.vercel.app/api/connections/slack/events`
-   - Subscribe to bot events: `message.channels`, `message.im`, `app_mention`
-2. **Apply I2/I3/I4 wiring** proposed by CTO to Lovable frontend
+1. ~~**Slack App ("Pixel") Socket Mode setup:**~~ ✅ DONE (2026-03-04)
+2. ~~**SSH key + Vercel env vars:**~~ ✅ DONE (2026-03-04)
+3. **Apply frontend integration wiring** from `docs/phase1/frontend-integration-proposals.md`:
+   - [ ] **Priority 1:** Scan wiring in `Onboarding.tsx` (add ~20 lines)
+   - [ ] **Priority 2:** Connections page in `Connections.tsx` (full replacement)
+   - [ ] **Priority 3:** Dashboard status polling in `Home.tsx` (replace 1 useEffect)
+   - [ ] **Priority 4:** Chat SSE streaming in `ChatContext.tsx` + `ChatWidget.tsx` + `Chat.tsx` (can defer)
 
 ---
 

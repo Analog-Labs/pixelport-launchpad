@@ -25,9 +25,13 @@
     - Bot events subscribed: `app_mention`, `message.channels`, `message.im`
   - **All Phase 1 backend endpoints are now deployed and ready.**
   - **Identified remaining work:** 4 frontend integration wiring tasks (scan wiring, I4, I3, I2)
+- **CTO: Wrote all 4 frontend integration proposals** → `docs/phase1/frontend-integration-proposals.md`
+  - Priority 1: Scan wiring in `Onboarding.tsx` — call `POST /api/tenants/scan` when leaving Step 1, include results in tenant creation
+  - Priority 2: Connections page `Connections.tsx` — full replacement with Slack OAuth button, status display, OAuth callback handling
+  - Priority 3: Dashboard home `Home.tsx` — replace hardcoded 10s delay with `GET /api/tenants/status` polling
+  - Priority 4: Chat SSE streaming in `ChatContext.tsx` + widget/page — replace simulated replies with real SSE (lower priority, can defer)
 - **What's next:**
-  - CTO: Write frontend integration proposals for founder to apply in Lovable
-  - Founder: Apply scan wiring (Priority 1), I4 Connections page (Priority 2), I3 Dashboard status (Priority 3)
+  - Founder: Apply proposals in Lovable (Priorities 1+2 are must-haves for E2E test)
   - CTO: End-to-end smoke test after frontend wiring
 - **Blockers:**
   - None — all backend complete, all env vars set. Waiting on frontend integration wiring.
