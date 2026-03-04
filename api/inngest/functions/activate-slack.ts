@@ -133,6 +133,8 @@ function buildSlackConfig(botToken: string): string {
 
 function buildConfigPatchScript(botToken: string): string {
   const slackConfig = buildSlackConfig(botToken);
+  // Use python3 — it's always available on Ubuntu 24.04 droplets.
+  // Node.js is NOT installed on the host (only inside the Docker container).
   return `
 set -euo pipefail
 CONFIG="/opt/openclaw/openclaw.json"
@@ -144,38 +146,40 @@ cat > /tmp/pixelport-slack.json << 'SLACK_JSON'
 ${slackConfig}
 SLACK_JSON
 
-node - <<'NODE'
-const fs = require('fs');
-const configPath = '/opt/openclaw/openclaw.json';
-const tmpPath = '/tmp/openclaw.json.tmp';
-const current = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-const slack = JSON.parse(fs.readFileSync('/tmp/pixelport-slack.json', 'utf8'));
+python3 << 'PYEOF'
+import json, os
+config_path = "/opt/openclaw/openclaw.json"
+tmp_path = "/tmp/openclaw.json.tmp"
+with open(config_path) as f:
+    current = json.load(f)
+with open("/tmp/pixelport-slack.json") as f:
+    slack = json.load(f)
+if "channels" not in current:
+    current["channels"] = {}
+current["channels"]["slack"] = slack
+with open(tmp_path, "w") as f:
+    json.dump(current, f, indent=2)
+os.rename(tmp_path, config_path)
+PYEOF
 
-if (!current.channels) current.channels = {};
-current.channels.slack = slack;
-
-fs.writeFileSync(tmpPath, JSON.stringify(current, null, 2));
-fs.renameSync(tmpPath, configPath);
-NODE
-
-rm -f /tmp/pixelport-slack.json /tmp/openclaw.json.tmp
+rm -f /tmp/pixelport-slack.json
 chown 1000:1000 "$CONFIG"
 echo "SLACK_CONFIG_UPDATED"
 `.trim();
 }
 
+// Use python3 — node is not installed on the host
 const CONFIG_CHECK_SCRIPT = `
 set -euo pipefail
-node - <<'NODE'
-const fs = require('fs');
-const config = JSON.parse(fs.readFileSync('/opt/openclaw/openclaw.json', 'utf8'));
-const slack = config.channels && config.channels.slack;
-if (slack && slack.enabled === true && typeof slack.botToken === 'string' && slack.botToken.length > 0) {
-  process.stdout.write('ACTIVE');
-} else {
-  process.stdout.write('MISSING');
-}
-NODE
+python3 -c "
+import json, sys
+config = json.load(open('/opt/openclaw/openclaw.json'))
+slack = config.get('channels', {}).get('slack', {})
+if slack.get('enabled') is True and isinstance(slack.get('botToken', ''), str) and len(slack.get('botToken', '')) > 0:
+    sys.stdout.write('ACTIVE')
+else:
+    sys.stdout.write('MISSING')
+"
 `.trim();
 
 export const activateSlack = inngest.createFunction(

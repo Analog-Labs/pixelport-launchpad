@@ -149,21 +149,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   try {
     const { Client } = await import('ssh2');
 
+    // OpenClaw 2026.2.24 validated schema — no capitalized action keys or allowBotMessages
     const slackConfig = JSON.stringify({
       enabled: true,
       botToken,
       appToken: '${SLACK_APP_TOKEN}',
       dmPolicy: 'open',
       allowFrom: ['*'],
-      actions: {
-        Messages: true, DM: true, Reactions: true,
-        Pins: true, MemberInfo: true, EmojiList: true, ChannelInfo: true,
-      },
       replyToMode: 'first',
-      allowBotMessages: true,
       configWrites: true,
     }, null, 2);
 
+    // Use python3 — node is not installed on the host
     const script = `
 set -euo pipefail
 CONFIG="/opt/openclaw/openclaw.json"
@@ -173,18 +170,23 @@ cat > /tmp/pixelport-slack.json << 'SLACK_JSON'
 ${slackConfig}
 SLACK_JSON
 
-node - <<'NODE'
-const fs = require('fs');
-const configPath = '/opt/openclaw/openclaw.json';
-const current = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-const slack = JSON.parse(fs.readFileSync('/tmp/pixelport-slack.json', 'utf8'));
-if (!current.channels) current.channels = {};
-current.channels.slack = slack;
-fs.writeFileSync('/tmp/openclaw.json.tmp', JSON.stringify(current, null, 2));
-fs.renameSync('/tmp/openclaw.json.tmp', configPath);
-NODE
+python3 << 'PYEOF'
+import json, os
+config_path = "/opt/openclaw/openclaw.json"
+tmp_path = "/tmp/openclaw.json.tmp"
+with open(config_path) as f:
+    current = json.load(f)
+with open("/tmp/pixelport-slack.json") as f:
+    slack = json.load(f)
+if "channels" not in current:
+    current["channels"] = {}
+current["channels"]["slack"] = slack
+with open(tmp_path, "w") as f:
+    json.dump(current, f, indent=2)
+os.rename(tmp_path, config_path)
+PYEOF
 
-rm -f /tmp/pixelport-slack.json /tmp/openclaw.json.tmp
+rm -f /tmp/pixelport-slack.json
 chown 1000:1000 "$CONFIG"
 echo "SLACK_CONFIG_UPDATED"
 `.trim();
