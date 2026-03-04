@@ -45,19 +45,52 @@ const preQuickActions = [
 ];
 
 const Home = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const navigate = useNavigate();
   const isOnboarded = localStorage.getItem("pixelport_onboarded") === "true";
   const agentName = getAgentName();
   const companyUrl = localStorage.getItem("pixelport_company_url") || "";
 
-  const [agentActive, setAgentActive] = useState(false);
+  const [tenantStatus, setTenantStatus] = useState<string>(
+    localStorage.getItem("pixelport_tenant_status") || "provisioning"
+  );
+  const agentActive = tenantStatus === "active";
 
   useEffect(() => {
     if (!isOnboarded) return;
-    const timer = setTimeout(() => setAgentActive(true), 10000);
-    return () => clearTimeout(timer);
-  }, [isOnboarded]);
+
+    let cancelled = false;
+
+    const checkStatus = async () => {
+      try {
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch("/api/tenants/status", {
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+        if (res.ok && !cancelled) {
+          const data = await res.json();
+          setTenantStatus(data.status);
+          localStorage.setItem("pixelport_tenant_status", data.status);
+        }
+      } catch {
+        // Silently retry on next interval
+      }
+    };
+
+    checkStatus();
+
+    const interval = setInterval(() => {
+      if (tenantStatus !== "active" && tenantStatus !== "failed") {
+        checkStatus();
+      }
+    }, 10000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [isOnboarded, session, tenantStatus]);
 
   const postQuickActions = [
     { icon: MessageSquare, title: `Chat with ${agentName}`, sub: "Ask questions or give directions", to: "/dashboard/chat" },
@@ -76,9 +109,17 @@ const Home = () => {
     ? [
         {
           label: "Agent Status",
-          value: agentActive ? "● Active" : "● Provisioning...",
-          valueClass: agentActive ? "text-green-400" : "text-primary",
-          pulse: !agentActive,
+          value: tenantStatus === "active"
+            ? "Active"
+            : tenantStatus === "failed"
+            ? "Setup Failed"
+            : "Provisioning...",
+          valueClass: tenantStatus === "active"
+            ? "text-green-400"
+            : tenantStatus === "failed"
+            ? "text-red-400"
+            : "text-primary",
+          pulse: tenantStatus === "provisioning",
         },
         { label: "Pending Approvals", value: "0", valueClass: "text-foreground" },
         { label: "Monthly Cost", value: "$0.00", valueClass: "text-foreground" },
