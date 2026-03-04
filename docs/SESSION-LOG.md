@@ -6,6 +6,47 @@
 
 ## Last Session
 
+- **Date:** 2026-03-05 (session 2)
+- **Who worked:** CTO (Claude Code) + Founder
+- **What was done:**
+  - **E2E Smoke Test — Slack Bot Activation**
+    - Founder DM'd bot in Slack → bot showed as online but didn't respond
+    - **Root cause 1: SSH key mismatch.** `SSH_PRIVATE_KEY` in Vercel (ed25519) doesn't match any key on the droplet. Diagnosis via debug endpoint confirmed `"All configured authentication methods failed"`.
+    - **Root cause 2: Config scripts use `node` on host.** The activate-slack workflow runs `node -` via SSH on the droplet, but Node.js is NOT installed on the host (only inside Docker). Fixed by replacing all `node -` scripts with `python3` — always available on Ubuntu 24.04.
+    - **Root cause 3: OpenClaw config schema mismatch.** The Slack config template used capitalized action keys (`Messages`, `DM`, `Reactions`, etc.) and `allowBotMessages` that OpenClaw 2026.2.24 rejects. Config validation failure caused gateway crash-loop. Fixed to minimal validated schema.
+    - **Manual fix for Vidacious:** Injected Slack config via local SSH, marked `is_active=true` in DB. Bot now responding.
+    - **Permanent fixes committed:**
+      - `5670bdd`: Replace `node -` with `python3` in SSH scripts (activate-slack + debug endpoint)
+      - `4bd886e`: Remove unrecognized OpenClaw config keys from Slack template
+      - `a41d042`: Restore newlines in SSH_PRIVATE_KEY from Vercel env var
+      - `06a3665`: Fix connected vs active status in connections endpoint
+      - `ad836ec`: Support query param token for Slack OAuth initiation
+      - `23b9f15`: Add SPA rewrites to vercel.json
+    - **Pending founder action:** Update `SSH_PRIVATE_KEY` in Vercel to match a key registered in DigitalOcean. See detailed instructions below.
+  - **Debug endpoints created (temporary — remove after Phase 1 gate):**
+    - `GET /api/debug/env-check` — lists env var status
+    - `GET /api/debug/slack-status` — tenant + Slack connection state
+    - `POST /api/debug/test-activate-slack?tenantId=` — full activate-slack diagnostic with SSH test
+    - `POST /api/debug/retry-activate-slack?tenantId=` — re-triggers Inngest event
+    - `POST /api/debug/mark-slack-active?tenantId=` — marks Slack active in DB
+    - `POST /api/debug/get-slack-token?tenantId=` — decrypts bot token (remove ASAP!)
+  - **Slack channel functionality assessed:** All bot scopes already support channels (`channels:history`, `channels:read`, `app_mentions:read`, `chat:write`). OpenClaw config enables channel messages (`dmPolicy: 'open'`, `allowFrom: ['*']`). No code changes needed.
+- **SSH Key Fix Instructions for Founder:**
+  1. Option A (quickest): Copy `~/.ssh/id_rsa` content → paste as `SSH_PRIVATE_KEY` in Vercel env vars
+  2. Option B (recommended): Generate `ssh-keygen -t ed25519 -f ~/.ssh/pixelport-deploy -N ""` → register pub key in DO → set private in Vercel → add pub key to existing Vidacious droplet
+  3. After fixing: run `POST /api/debug/test-activate-slack?tenantId=c8334b37-0c6b-4c90-9565-1dfe64e88cb2` to verify
+- **What's next:**
+  - Founder: Fix SSH key in Vercel (see instructions above)
+  - CTO: Verify activate-slack works end-to-end after key fix
+  - CTO: Remove debug endpoints after Phase 1 gate
+  - CTO: Post-connection UX proposal for Lovable (show next steps after Slack connect)
+- **Blockers:**
+  - `SSH_PRIVATE_KEY` mismatch — founder must update in Vercel for new customer activations to work
+
+---
+
+### 2026-03-05 (session 1)
+
 - **Date:** 2026-03-05
 - **Who worked:** CTO (Claude Code) + Founder
 - **What was done:**
