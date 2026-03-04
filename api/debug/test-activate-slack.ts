@@ -27,7 +27,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const steps: Array<{ step: string; status: string; detail?: string }> = [];
 
   // Step 1: Check env vars
-  const sshKey = process.env.SSH_PRIVATE_KEY;
+  // Vercel may store multiline env vars with literal \n — restore real newlines
+  const sshKey = process.env.SSH_PRIVATE_KEY?.replace(/\\n/g, '\n');
   const appToken = process.env.SLACK_APP_TOKEN;
   steps.push({
     step: 'env-check',

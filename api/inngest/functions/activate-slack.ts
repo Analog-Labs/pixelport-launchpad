@@ -11,7 +11,8 @@ const inngest = new Inngest({
 const SUPABASE_PROJECT_URL = process.env.SUPABASE_PROJECT_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const API_KEY_ENCRYPTION_KEY = process.env.API_KEY_ENCRYPTION_KEY;
-const SSH_PRIVATE_KEY = process.env.SSH_PRIVATE_KEY;
+// Vercel may store multiline env vars with literal \n — restore real newlines
+const SSH_PRIVATE_KEY = process.env.SSH_PRIVATE_KEY?.replace(/\\n/g, '\n');
 const SLACK_APP_TOKEN = process.env.SLACK_APP_TOKEN;
 
 type EventData = { tenantId?: string };
