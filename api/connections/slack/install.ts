@@ -63,6 +63,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   try {
+    // Browser redirects (window.location.href) cannot carry Authorization headers.
+    // Accept the Supabase JWT as a query parameter for OAuth initiation.
+    // The token is short-lived and only consumed by our server — never forwarded to Slack.
+    const queryToken = typeof req.query.token === 'string' ? req.query.token : undefined;
+    if (queryToken && !req.headers.authorization) {
+      req.headers.authorization = `Bearer ${queryToken}`;
+    }
+
     const { tenant } = await authenticateRequest(req);
     const { clientId, stateSecret } = getConfig();
 
