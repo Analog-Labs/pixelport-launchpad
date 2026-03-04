@@ -67,8 +67,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         return res.status(200).json({ message: 'No test tenants found to clean up' });
       }
 
+      const doToken = process.env.DO_API_TOKEN;
       const results = [];
       for (const t of testTenants) {
+        // Delete DO droplet if it exists
+        let dropletDeleted = false;
+        if (t.droplet_id && doToken) {
+          try {
+            const doResp = await fetch(`https://api.digitalocean.com/v2/droplets/${t.droplet_id}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${doToken}` },
+            });
+            dropletDeleted = doResp.status === 204 || doResp.status === 404;
+          } catch {
+            dropletDeleted = false;
+          }
+        }
         // Delete agents first (FK constraint)
         await supabase.from('agents').delete().eq('tenant_id', t.id);
         // Delete chat sessions and messages
@@ -82,8 +96,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           status: t.status,
           droplet_id: t.droplet_id,
           deleted: !error,
+          droplet_deleted: dropletDeleted,
           error: error?.message,
-          note: t.droplet_id ? 'REMEMBER: Manually delete this droplet from DO dashboard!' : null,
         });
       }
 
