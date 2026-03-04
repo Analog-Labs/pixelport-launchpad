@@ -9,6 +9,9 @@
     },
     "api/debug/test-provision.ts": {
       "maxDuration": 30
+    },
+    "api/debug/test-activate-slack.ts": {
+      "maxDuration": 60
     }
   }
 }
