@@ -1,33 +1,17 @@
 
 
-## Plan: Replace Connections.tsx with Integration Management Page
+## Plan: Replace Hardcoded Timer with Real Status Polling
 
-Full replacement of `src/pages/dashboard/Connections.tsx` (12 lines → ~130 lines).
+Three surgical edits to `src/pages/dashboard/Home.tsx`:
 
-### What it does
-- Fetches integration status from `GET /api/connections` on mount using the auth token
-- Handles Slack OAuth callback query params (`?slack=connected` → success toast, `?error=...` → error toast), then clears params
-- Shows a loading spinner while fetching
-- **Slack card**: purple `#4A154B` background icon circle, `MessageSquare` icon, "Connect Slack" button (with `Loader2` spinner while redirecting) or green `CheckCircle` + "Connected to {team_name}" status
-- **Email card**: blue background icon circle, `Mail` icon, shows inbox address with green "Active" badge or "automatically set up when provisioned" message
-- Connect Slack button redirects to `/api/connections/slack/install`
+1. **Line 48** — Add `session` to `useAuth()` destructure: `const { user, session } = useAuth();`
 
-### Components used
-- `Card`, `CardContent` from ui/card
-- `Button` from ui/button
-- `useAuth` for session token
-- `useToast` for notifications
-- `useSearchParams` for OAuth callback handling
-- Icons: `MessageSquare`, `Mail`, `CheckCircle`, `Loader2` from lucide-react
+2. **Lines 54-60** — Replace `agentActive` state + fake timer `useEffect` with:
+   - `tenantStatus` state (initialized from localStorage, default `"provisioning"`)
+   - Derived `agentActive = tenantStatus === "active"`
+   - `useEffect` that polls `GET /api/tenants/status` every 10s, stops when `active` or `failed`
 
-### Structure
-```text
-<div className="space-y-6">
-  <header> — title + subtitle
-  <Card> — Slack row: icon circle (bg-[#4A154B]) | name + status | button
-  <Card> — Email row: icon circle (bg-blue-600) | name + status
-</div>
-```
+3. **Lines 77-82** — Replace the Agent Status stat card object to handle three states: `active` (green), `failed` (red), `provisioning` (primary + pulse)
 
-Single file change, no other files affected.
+No other changes. No new imports needed.
 
