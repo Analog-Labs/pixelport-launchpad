@@ -6,7 +6,42 @@
 
 ## Last Session
 
-- **Date:** 2026-03-04 (night)
+- **Date:** 2026-03-04 (late night)
+- **Who worked:** CTO (Claude Code) + Founder (planning session)
+- **What was done:**
+  - **Phase 1 Architecture Planning — COMPLETE ✅**
+    - Explored OpenClaw channel options: confirmed NO embeddable web chat widget (Web UI = admin SPA only)
+    - Decided: Slack is PRIMARY channel for Phase 1, dashboard chat ships as-is (graceful fallback)
+    - PostHog redesigned: user-facing integration (customers connect their PostHog), deferred to Phase 2
+    - Website auto-scan: lightweight fetch + LLM brand extraction during onboarding
+    - Mem0: user has active plan, ready for per-tenant integration
+    - OpenClaw hot-reloads channel changes — no restart needed after Slack config update
+  - **Codex Slice 8 instruction doc created: `docs/phase1/codex-slice-8-scan.md`**
+    - Website auto-scan API (`POST /api/tenants/scan`)
+    - Fetch homepage → extract metadata + body text → LLM brand profile → structured JSON
+    - SOUL.md template enrichment with scan results + tone mapping
+  - **Codex Slice 9 instruction doc created: `docs/phase1/codex-slice-9-slack-activation.md`**
+    - Inngest workflow: SSH into droplet → inject Slack channel config → OpenClaw hot-reloads → bot alive
+    - 6 steps: load-tenant → decrypt-bot-token → ssh-update-config → wait-hot-reload → verify-gateway → mark-active
+    - Modifications to callback.ts (fire Inngest event), inngest/index.ts (register function), provision-tenant.ts (SLACK_APP_TOKEN in cloud-init)
+  - **Go-package v2 created: `docs/phase1/cto-phase1-go-package-v2.md`**
+    - Assigns Slices 8+9 to Codex with critical Vercel patterns, execution order, testing instructions
+    - Includes callback.ts `is_active` fix (false initially, true after droplet config confirmed)
+  - **ACTIVE-PLAN.md updated** with Phase 0.9 completion, new Slice 8/9 tracking, architecture decisions, founder tasks
+- **What's next:**
+  - CTO: Generate SSH key pair (private → Vercel env, public → DO account)
+  - CTO: Add `SSH_PRIVATE_KEY` to Vercel env vars
+  - Founder: Slack App Socket Mode setup (App-Level Token → `SLACK_APP_TOKEN` to Vercel)
+  - Founder: Hand go-package v2 to Codex for Slices 8+9 execution
+  - CTO: Review Codex Slice 8+9 deliveries when complete
+  - CTO: Prepare I2/I3/I4 frontend integration proposals for founder
+- **Blockers:**
+  - `SSH_PRIVATE_KEY` needed before Slice 9 testing (CTO generates)
+  - `SLACK_APP_TOKEN` needed before Slice 9 testing (Founder creates in Slack App)
+
+---
+
+### 2026-03-04 (night)
 - **Who worked:** CTO (Claude Code)
 - **What was done:**
   - **CTO Review of Codex Slice 7 (Slack OAuth): ALL 5 FILES PASS ✅**

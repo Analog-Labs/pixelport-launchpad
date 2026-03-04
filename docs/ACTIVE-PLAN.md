@@ -6,13 +6,11 @@
 
 ## Previous Phase: Phase 0 — Foundation ✅
 
-**Status:** Complete (0.9 dry-run deferred — DO quota limit, not blocking Phase 1)
+**Status:** Complete. Phase 0.9 dry-run PASSED (12-step Inngest pipeline, ~7 min end-to-end).
 
-All items done: landing page, auth, dashboard shell, LiteLLM, Supabase schema, API bridge (16 routes), provisioning workflow (12-step Inngest), Inngest Cloud setup, CTO QA (9 frontend fixes), Codex review (both slices pass).
+All items done: landing page, auth, dashboard shell, LiteLLM, Supabase schema, API bridge (16 routes), provisioning workflow (12-step Inngest), Inngest Cloud setup, CTO QA (9 frontend fixes), Codex review (both slices pass), dry-run (7 bugs found + fixed).
 
 Branch `codex/phase0-slices-3-4` merged to `main`.
-
-**Deferred:** 0.9 dry-run gate — DO droplet quota exceeded. Will retest when founder increases quota. Steps 1-3 verified live (tenant insert, LiteLLM team, LiteLLM key). Step 4 (droplet creation) blocked by account limit.
 
 ---
 
@@ -34,14 +32,15 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 - [x] 1.C1: Tenant creation endpoint + Inngest trigger ← CODEX SLICE 5 complete (`POST /api/tenants`)
 - [x] 1.C2: Chat API streaming (SSE) + message history ← CODEX SLICE 6 complete (`POST /api/chat` SSE + `GET /api/chat/history`)
 - [x] 1.C3: Slack OAuth flow + webhook ← CODEX SLICE 7 complete (`/api/connections/slack/{install,callback,events}` + `GET /api/connections`)
-- [ ] 1.C4: Mem0 managed cloud — apply for startup program, set up per-tenant scoping
-- [ ] 1.C5: PostHog basic instrumentation (user analytics + agent events)
-- [ ] 1.C6: AgentMail per-tenant inbox (already in provisioning workflow)
-- [ ] 1.C7: Website auto-scan during onboarding (agent scrapes URL, populates vault)
+- [ ] 1.C4: Mem0 managed cloud — per-tenant scoping (user has active plan, Slice 10 planned)
+- [x] 1.C5: PostHog ← REDESIGNED: user-facing integration (customers connect their PostHog), deferred to Phase 2
+- [x] 1.C6: AgentMail per-tenant inbox ← already in provisioning workflow
+- [ ] 1.C7: Website auto-scan during onboarding ← CODEX SLICE 8 (docs ready, awaiting Codex execution)
+- [ ] 1.C8: Slack activation workflow ← CODEX SLICE 9 (docs ready, awaiting Codex execution + founder Slack App config)
 
 ### Integration (CTO + Founder)
 - [x] 1.I1: Wire onboarding widget → POST /api/tenants (create + provision) ← COMPLETE (Lovable + CTO review)
-- [ ] 1.I2: Wire chat widget → POST /api/chat (streaming)
+- [ ] 1.I2: Wire chat widget → POST /api/chat (streaming) — ships as-is for Phase 1 (graceful fallback for WS-only gateway)
 - [ ] 1.I3: Wire dashboard home → GET /api/tenants/status + /api/content
 - [ ] 1.I4: Wire connections page → Slack OAuth install + status
 
@@ -63,20 +62,34 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 ### Blockers
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|--------------|-----------------|
-| DigitalOcean droplet quota (deferred from Phase 0) | CTO | Founder increases limit |
-| Mem0 startup program approval | CTO | Mem0 team (apply first) |
+| Slack App Socket Mode setup (App-Level Token) | Slice 9 testing | Founder configures in Slack App settings |
+| SSH key pair for droplet access | Slice 9 testing | CTO generates, adds to Vercel + DO |
 
 ### Notes
 - **Phase 0 → Phase 1 transition (2026-03-03):** CTO reviewed all Codex code (PASS), merged branch to main, created Phase 1 Codex slice docs.
+- **Phase 0.9 dry-run PASSED (2026-03-04):** 12-step Inngest pipeline completes in ~7 min. 7 bugs found and fixed (OpenClaw config schema, gateway binding, container permissions, Inngest polling, ESM/CJS bundler crash).
 - **F1-F4 complete (2026-03-03 evening):** Founder built onboarding wizard, dashboard home (pre/post modes), chat widget (slide-up + full-page), agent personalization. All merged to main. Frontend runs on localStorage + simulated data — needs backend wiring.
 - **Frontend data contract locked:** Onboarding payload fields: `company_name`, `company_url`, `goals[]`, `agent_name`, `agent_tone` (casual|professional|bold), `agent_avatar_url` (6 avatar IDs). See `src/lib/avatars.ts` for avatar map.
-- Codex Slices 5-7 ready in `docs/phase1/` — Slice 5 sent to Codex (zero blockers).
-- Slice 6 requires OpenClaw gateway accessible (blocked until DO quota resolved for real testing).
-- Slice 7 backend is complete; founder now needs to configure Event Subscriptions URL in Slack App settings after deployment verification.
-- Strategic improvement ideas saved in `docs/strategic-ideas-backlog.md` for future review.
+- **Codex Slices 5-7 COMPLETE:** All reviewed by CTO, all pass. Merged to main.
+- **Codex Slices 8-9 READY:** Instruction docs + go-package v2 written by CTO. Slice 8 = website auto-scan, Slice 9 = Slack activation via SSH config update.
+- **Codex Slice 10 planned:** Mem0 integration — lower priority, depends on Mem0 API key.
+- **Architecture decisions (2026-03-04):** Slack is PRIMARY channel for Phase 1. Dashboard chat ships as-is (WS bridge deferred to Phase 2). PostHog redesigned as user-facing integration (deferred to Phase 2). Website scan: lightweight fetch + LLM extraction.
+- **DO droplet quota:** 1 slot available. Use `/api/debug/test-provision?cleanup=true` after each test to free the slot.
 - Auth decision change: Supabase Auth replaces Clerk (2026-03-03).
 - Codex is a full project participant: reads full project context, provides feedback to CTO, updates session docs after every work session.
 - **Integration wiring (I1-I4):** CTO proposes changes to Lovable-managed frontend files, founder reviews and applies. Do NOT modify `src/` files directly without founder approval.
+
+---
+
+## Founder Tasks (Required for Phase 1 Completion)
+
+1. **Slack App ("Pixel") Socket Mode setup:**
+   - Enable Socket Mode (Settings > Socket Mode)
+   - Create App-Level Token with scope `connections:write` → gives `xapp-...` token
+   - Add `SLACK_APP_TOKEN` to Vercel env vars
+   - Configure Event Subscriptions URL → `https://pixelport-launchpad.vercel.app/api/connections/slack/events`
+   - Subscribe to bot events: `message.channels`, `message.im`, `app_mention`
+2. **Apply I2/I3/I4 wiring** proposed by CTO to Lovable frontend
 
 ---
 
@@ -86,6 +99,8 @@ Branch `codex/phase0-slices-3-4` merged to `main`.
 - Sub-agent auto-provisioning, inter-agent comms
 - Content pipeline UI, approval workflow (Inngest)
 - Platform-native content + image generation
+- Dashboard chat WebSocket bridge (deferred from Phase 1)
+- PostHog user-facing integration
 - Competitor intel dashboard, calendar, Knowledge Vault page
 
 See `docs/pixelport-master-plan-v2.md` Section 15 for full phase details.
