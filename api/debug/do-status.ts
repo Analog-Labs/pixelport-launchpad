@@ -136,7 +136,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           min_disk_size: number;
         }>;
       };
-      const openclawImage = (data.images ?? []).find((i) => i.slug === 'openclaw');
+      const allImages = data.images ?? [];
+      // Search for OpenClaw by slug or name (slug may vary: openclaw, moltbot, clawdbot, etc.)
+      const openclawImage = allImages.find(
+        (i) => i.slug?.includes('openclaw') || i.slug?.includes('claw') || i.name?.toLowerCase().includes('openclaw')
+      );
       results.marketplace_image = openclawImage
         ? {
             slug: openclawImage.slug,
@@ -147,12 +151,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
             regions_count: openclawImage.regions.length,
             available_regions: openclawImage.regions.slice(0, 10),
           }
-        : 'openclaw marketplace image NOT FOUND';
+        : {
+            note: 'No openclaw marketplace image found in application images',
+            all_app_slugs: allImages.map((i) => i.slug).filter(Boolean).slice(0, 20),
+          };
     } else {
       results.images_error = `HTTP ${imagesRes.status}: ${await imagesRes.text()}`;
     }
   } catch (err) {
     results.images_error = String(err);
+  }
+
+  // 5. Check existing marketplace droplet's image info (discover correct slug)
+  try {
+    // The founder's marketplace droplet — query its image details
+    const existingMarketplaceDropletId = 555041719;
+    const dropletRes = await fetch(
+      `https://api.digitalocean.com/v2/droplets/${existingMarketplaceDropletId}`,
+      { headers: { Authorization: `Bearer ${DO_API_TOKEN}` } }
+    );
+    if (dropletRes.ok) {
+      const data = (await dropletRes.json()) as {
+        droplet?: { image?: { slug: string; name: string; id: number; distribution: string } };
+      };
+      results.existing_marketplace_droplet_image = data.droplet?.image ?? 'no image info';
+    }
+  } catch {
+    // Non-critical
   }
 
   return res.status(200).json({
