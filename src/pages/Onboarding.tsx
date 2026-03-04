@@ -31,6 +31,8 @@ const Onboarding = () => {
   const [launching, setLaunching] = useState(false);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);
+  const [scanResults, setScanResults] = useState<Record<string, any> | null>(null);
+  const [scanError, setScanError] = useState(false);
 
   const [data, setData] = useState<OnboardingData>({
     company_name: "",
@@ -60,6 +62,30 @@ const Onboarding = () => {
     return () => clearInterval(interval);
   }, [launching]);
 
+  const triggerScan = async (url: string) => {
+    if (!url.trim()) return;
+    try {
+      const token = session?.access_token;
+      if (!token) return;
+      const res = await fetch("/api/tenants/scan", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ company_url: url.trim() }),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        setScanResults(result.scan_results || null);
+      } else {
+        setScanError(true);
+      }
+    } catch {
+      setScanError(true);
+    }
+  };
+
   const handleLaunch = async () => {
     const payload = {
       company_name: data.company_name.trim(),
@@ -68,6 +94,7 @@ const Onboarding = () => {
       agent_name: data.agent_name.trim() || "Luna",
       agent_tone: data.agent_tone,
       agent_avatar_url: data.agent_avatar,
+      scan_results: scanResults,
     };
 
     localStorage.setItem("pixelport_onboarded", "true");
@@ -172,7 +199,10 @@ const Onboarding = () => {
             <StepCompanyInfo
               data={data}
               onChange={patch}
-              onNext={() => changeStep(2)}
+              onNext={() => {
+                changeStep(2);
+                triggerScan(data.company_url);
+              }}
             />
           )}
           {step === 2 && (
