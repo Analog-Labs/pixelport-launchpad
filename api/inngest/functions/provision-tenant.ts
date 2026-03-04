@@ -174,11 +174,12 @@ export const provisionTenant = inngest.createFunction(
       };
     });
 
-    const dropletIp = await step.run('wait-for-droplet', async () => {
-      const maxAttempts = 30;
-      const pollIntervalMs = 10_000;
-
-      for (let i = 0; i < maxAttempts; i += 1) {
+    // Poll for droplet readiness using Inngest durable steps
+    // (each attempt is a separate step execution to avoid Vercel function timeout)
+    let dropletIp = '';
+    const dropletMaxAttempts = 30;
+    for (let i = 0; i < dropletMaxAttempts; i += 1) {
+      const checkResult = await step.run(`check-droplet-${i}`, async () => {
         const response = await fetch(`https://api.digitalocean.com/v2/droplets/${droplet.dropletId}`, {
           headers: { Authorization: `Bearer ${DO_API_TOKEN}` },
         });
@@ -196,15 +197,26 @@ export const provisionTenant = inngest.createFunction(
           const status = payload.droplet?.status;
 
           if (publicIp && status === 'active') {
-            return publicIp;
+            return { ready: true, ip: publicIp };
           }
         }
 
-        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+        return { ready: false, ip: '' };
+      });
+
+      if (checkResult.ready) {
+        dropletIp = checkResult.ip;
+        break;
       }
 
+      if (i < dropletMaxAttempts - 1) {
+        await step.sleep(`wait-droplet-${i}`, '10s');
+      }
+    }
+
+    if (!dropletIp) {
       throw new Error('Droplet did not become ready within 5 minutes');
-    });
+    }
 
     const agentmailInbox = await step.run('create-agentmail-inbox', async () => {
       if (!AGENTMAIL_API_KEY) {
@@ -249,30 +261,38 @@ export const provisionTenant = inngest.createFunction(
       }
     });
 
-    await step.run('wait-for-gateway', async () => {
-      const maxAttempts = 30;
-      const pollIntervalMs = 10_000;
-      const gatewayUrl = `http://${dropletIp}:18789`;
-
-      for (let i = 0; i < maxAttempts; i += 1) {
+    // Poll for gateway readiness using Inngest durable steps
+    // (each attempt is a separate step execution to avoid Vercel function timeout)
+    const gatewayUrl = `http://${dropletIp}:18789`;
+    const gatewayMaxAttempts = 30;
+    let gatewayReady = false;
+    for (let i = 0; i < gatewayMaxAttempts; i += 1) {
+      const isReady = await step.run(`check-gateway-${i}`, async () => {
         try {
           const response = await fetch(`${gatewayUrl}/health`, {
             headers: { Authorization: `Bearer ${droplet.gatewayToken}` },
             signal: AbortSignal.timeout(5_000),
           });
 
-          if (response.ok) {
-            return true;
-          }
+          return response.ok;
         } catch {
-          // not ready yet
+          return false;
         }
+      });
 
-        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+      if (isReady) {
+        gatewayReady = true;
+        break;
       }
 
+      if (i < gatewayMaxAttempts - 1) {
+        await step.sleep(`wait-gateway-${i}`, '10s');
+      }
+    }
+
+    if (!gatewayReady) {
       throw new Error('OpenClaw gateway did not become healthy within 5 minutes');
-    });
+    }
 
     await step.run('configure-agents', async () => {
       const gatewayUrl = `http://${dropletIp}:18789`;

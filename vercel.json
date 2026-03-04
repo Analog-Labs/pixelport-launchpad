@@ -1,2 +1,10 @@
 {
+  "functions": {
+    "api/inngest/index.ts": {
+      "maxDuration": 60
+    },
+    "api/debug/test-provision.ts": {
+      "maxDuration": 30
+    }
+  }
 }
