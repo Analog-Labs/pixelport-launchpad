@@ -74,7 +74,7 @@ const Connections = () => {
 
   const handleConnectSlack = () => {
     setConnecting(true);
-    window.location.href = "/api/connections/slack/install";
+    window.location.href = `/api/connections/slack/install?token=${session?.access_token}`;
   };
 
   if (loading) {
