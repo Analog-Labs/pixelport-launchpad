@@ -108,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    // Check for existing test tenants stuck in provisioning
+    // Check for existing test tenants
     const { data: existingTest } = await supabase
       .from('tenants')
       .select('id, slug, status, droplet_id, droplet_ip, created_at')
@@ -116,12 +116,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .order('created_at', { ascending: false })
       .limit(5);
 
+    // Status mode: just show current state without re-triggering
+    if (mode === 'status') {
+      return res.status(200).json({
+        action: 'status',
+        tenants: existingTest || [],
+      });
+    }
+
     // If there's a stuck provisioning tenant and we're not forcing new
     if (existingTest && existingTest.length > 0 && mode !== 'new') {
       const stuck = existingTest.find((t) => t.status === 'provisioning');
 
-      if (stuck) {
-        // Re-trigger provisioning for stuck tenant
+      if (stuck && mode === 'retry') {
+        // Only re-trigger if explicitly asked
         await inngest.send({
           name: 'pixelport/tenant.created',
           data: {
@@ -139,14 +147,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         });
       }
 
-      // There are existing test tenants but none stuck — show them
-      if (mode !== 'new') {
-        return res.status(200).json({
-          action: 'existing-found',
-          message: 'Found existing test tenants. Use ?mode=new to create a fresh one, or ?cleanup=true to remove them.',
-          tenants: existingTest,
-        });
-      }
+      // Show existing tenants without re-triggering
+      return res.status(200).json({
+        action: 'existing-found',
+        message: 'Found existing test tenants. Use ?mode=new to create fresh, ?mode=retry to re-trigger, ?mode=status to check, or ?cleanup=true to remove.',
+        tenants: existingTest,
+      });
     }
 
     // Create new test tenant
