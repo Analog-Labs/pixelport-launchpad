@@ -14,6 +14,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse):
     'LITELLM_MASTER_KEY',
     'DO_API_TOKEN',
     'INNGEST_EVENT_KEY',
+    'INNGEST_SIGNING_KEY',
     'API_KEY_ENCRYPTION_KEY',
     'SLACK_CLIENT_ID',
     'SLACK_CLIENT_SECRET',
@@ -26,13 +27,11 @@ export default async function handler(_req: VercelRequest, res: VercelResponse):
     const val = process.env[name];
     return {
       name,
-      set: !!val,
-      length: val ? val.length : 0,
-      prefix: val ? val.substring(0, 4) + '...' : '(not set)',
+      status: val ? 'SET' : 'MISSING',
     };
   });
 
-  const missing = results.filter((r) => !r.set).map((r) => r.name);
+  const missing = results.filter((r) => r.status === 'MISSING').map((r) => r.name);
 
   return res.status(200).json({
     diagnostic: 'Environment Variable Check',
@@ -40,7 +39,7 @@ export default async function handler(_req: VercelRequest, res: VercelResponse):
     node_env: process.env.NODE_ENV,
     vercel_env: process.env.VERCEL_ENV,
     total_vars: results.length,
-    set_count: results.filter((r) => r.set).length,
+    set_count: results.filter((r) => r.status === 'SET').length,
     missing_count: missing.length,
     missing,
     details: results,
