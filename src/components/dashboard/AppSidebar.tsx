@@ -49,9 +49,9 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-[hsl(0_0%_100%/0.06)] bg-[hsl(240_33%_4%)]"
+      className="border-r border-border bg-sidebar"
     >
-      <SidebarContent className="bg-[hsl(240_33%_4%)]">
+      <SidebarContent className="bg-sidebar">
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-4 py-5">
           <PixelPortLogo className="h-7 w-7 shrink-0" />
@@ -84,7 +84,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="bg-[hsl(240_33%_4%)] border-t border-[hsl(0_0%_100%/0.06)]">
+      <SidebarFooter className="bg-sidebar border-t border-border">
         {/* User info */}
         <div className="flex items-center gap-3 px-3 py-3">
           <Avatar className="h-8 w-8 shrink-0">
