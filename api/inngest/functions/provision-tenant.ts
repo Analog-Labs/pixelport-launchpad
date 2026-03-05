@@ -91,7 +91,7 @@ export const provisionTenant = inngest.createFunction(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          team_alias: `pixelport-${tenant.slug}`,
+          team_alias: `pixelport-${tenant.slug}-${randomUUID().slice(0, 8)}`,
           max_budget: budgetUsd,
           budget_duration: '30d',
           models: ['gpt-5.2-codex', 'gemini-2.5-flash', 'gpt-4o-mini'],
