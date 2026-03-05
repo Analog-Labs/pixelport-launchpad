@@ -6,42 +6,49 @@
 
 ## Last Session
 
-- **Date:** 2026-03-05 (session 2)
+- **Date:** 2026-03-05 (session 3)
+- **Who worked:** CTO (Claude Code) + Founder + Codex (QA)
+- **What was done:**
+  - **Slack Bot E2E: WORKING** — DM @Pixel → "Hi Sanchal! How can I assist you today?" ✅
+  - **4 bugs fixed to get E2E working:**
+    1. SSH key mismatch (founder updated Vercel env var to RSA key)
+    2. `node` not available on host → replaced with `python3` (`5670bdd`)
+    3. OpenClaw config schema validation → stripped to minimal keys (`4bd886e`)
+    4. **LiteLLM 401** — OpenClaw ignores `OPENAI_BASE_URL` env var, hardcodes `api.openai.com` for built-in `openai` provider. Fix: custom `litellm` provider in `models.providers` with `baseUrl` pointing to LiteLLM proxy. All model refs changed to `litellm/` prefix. (`929b7ad`)
+  - **Post-E2E stabilization (commit `d100fbf`):**
+    - `activate-slack.ts`: gateway health check now throws if unhealthy (was fail-open). Inngest retries.
+    - Deleted 5 mutating debug endpoints (no auth, no longer needed)
+    - Added shared-secret auth to 3 remaining read-only debug endpoints
+    - Created `backfill-litellm-config.ts` for existing tenants (Vidacious already patched)
+  - **SOP updated:** Codex formally added as QA/debug resource in `project-coordination-system.md` and `CLAUDE.md`
+  - **Codex QA audit:** Reviewed all 4 fixes, identified P1 risks (debug endpoints, fail-open activation, backfill needed) — all resolved this session
+  - **WI-4 dispatched to Codex:** Sync `openclaw-reference.md`, `openclaw-template.json`, `cloud-init.yaml` with runtime code
+- **Key commits:**
+  - `1abd995`: Add agents.defaults.model to OpenClaw config template
+  - `929b7ad`: Route LLM calls through LiteLLM via custom provider
+  - `d04ddd5`: Codex QA brief documenting all 4 bugs
+  - `d100fbf`: Stabilization (health gate, debug security, backfill script, SOP)
+  - `129f356`: Codex instruction pack for WI-4
+- **Key architectural decision:** OpenClaw custom provider (`litellm`) is required because OpenClaw 2026.2.24 bypasses `OPENAI_BASE_URL` env var. The built-in `openai` provider hardcodes `api.openai.com`. See `docs/CODEX-QA-BRIEF.md` for full details.
+- **What's next:**
+  - Codex: Execute WI-4 (docs/template sync) — in progress
+  - CTO: Delete `backfill-litellm-config.ts` after confirming no stale tenants
+  - CTO: Full E2E re-test with a NEW tenant (signup → scan → provision → Slack → DM)
+  - CTO: Phase 1 gate assessment
+- **Blockers:** None. E2E flow works.
+
+---
+
+### 2026-03-05 (session 2)
+
+- **Date:** 2026-03-05
 - **Who worked:** CTO (Claude Code) + Founder
 - **What was done:**
-  - **E2E Smoke Test — Slack Bot Activation**
-    - Founder DM'd bot in Slack → bot showed as online but didn't respond
-    - **Root cause 1: SSH key mismatch.** `SSH_PRIVATE_KEY` in Vercel (ed25519) doesn't match any key on the droplet. Diagnosis via debug endpoint confirmed `"All configured authentication methods failed"`.
-    - **Root cause 2: Config scripts use `node` on host.** The activate-slack workflow runs `node -` via SSH on the droplet, but Node.js is NOT installed on the host (only inside Docker). Fixed by replacing all `node -` scripts with `python3` — always available on Ubuntu 24.04.
-    - **Root cause 3: OpenClaw config schema mismatch.** The Slack config template used capitalized action keys (`Messages`, `DM`, `Reactions`, etc.) and `allowBotMessages` that OpenClaw 2026.2.24 rejects. Config validation failure caused gateway crash-loop. Fixed to minimal validated schema.
-    - **Manual fix for Vidacious:** Injected Slack config via local SSH, marked `is_active=true` in DB. Bot now responding.
-    - **Permanent fixes committed:**
-      - `5670bdd`: Replace `node -` with `python3` in SSH scripts (activate-slack + debug endpoint)
-      - `4bd886e`: Remove unrecognized OpenClaw config keys from Slack template
-      - `a41d042`: Restore newlines in SSH_PRIVATE_KEY from Vercel env var
-      - `06a3665`: Fix connected vs active status in connections endpoint
-      - `ad836ec`: Support query param token for Slack OAuth initiation
-      - `23b9f15`: Add SPA rewrites to vercel.json
-    - **Pending founder action:** Update `SSH_PRIVATE_KEY` in Vercel to match a key registered in DigitalOcean. See detailed instructions below.
-  - **Debug endpoints created (temporary — remove after Phase 1 gate):**
-    - `GET /api/debug/env-check` — lists env var status
-    - `GET /api/debug/slack-status` — tenant + Slack connection state
-    - `POST /api/debug/test-activate-slack?tenantId=` — full activate-slack diagnostic with SSH test
-    - `POST /api/debug/retry-activate-slack?tenantId=` — re-triggers Inngest event
-    - `POST /api/debug/mark-slack-active?tenantId=` — marks Slack active in DB
-    - `POST /api/debug/get-slack-token?tenantId=` — decrypts bot token (remove ASAP!)
-  - **Slack channel functionality assessed:** All bot scopes already support channels (`channels:history`, `channels:read`, `app_mentions:read`, `chat:write`). OpenClaw config enables channel messages (`dmPolicy: 'open'`, `allowFrom: ['*']`). No code changes needed.
-- **SSH Key Fix Instructions for Founder:**
-  1. Option A (quickest): Copy `~/.ssh/id_rsa` content → paste as `SSH_PRIVATE_KEY` in Vercel env vars
-  2. Option B (recommended): Generate `ssh-keygen -t ed25519 -f ~/.ssh/pixelport-deploy -N ""` → register pub key in DO → set private in Vercel → add pub key to existing Vidacious droplet
-  3. After fixing: run `POST /api/debug/test-activate-slack?tenantId=c8334b37-0c6b-4c90-9565-1dfe64e88cb2` to verify
-- **What's next:**
-  - Founder: Fix SSH key in Vercel (see instructions above)
-  - CTO: Verify activate-slack works end-to-end after key fix
-  - CTO: Remove debug endpoints after Phase 1 gate
-  - CTO: Post-connection UX proposal for Lovable (show next steps after Slack connect)
-- **Blockers:**
-  - `SSH_PRIVATE_KEY` mismatch — founder must update in Vercel for new customer activations to work
+  - E2E Smoke Test — found 3 bugs (SSH key, python3, config schema). Manual fix for Vidacious. Permanent fixes committed.
+  - Debug endpoints created for diagnosis (now secured/deleted in session 3).
+  - SSH key fixed by founder (Vercel env var updated to RSA key matching DO account).
+- **What's next:** Fix LiteLLM 401 error (resolved in session 3)
+- **Blockers:** None (SSH key fixed)
 
 ---
 
