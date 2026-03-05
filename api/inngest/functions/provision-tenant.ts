@@ -493,7 +493,11 @@ echo "PixelPort provisioning complete for ${params.tenantSlug}"
 `;
 }
 
-function buildOpenClawConfig(params: { tenantSlug: string; gatewayToken: string }): Record<string, unknown> {
+function buildOpenClawConfig(params: {
+  tenantSlug: string;
+  gatewayToken: string;
+  litellmUrl: string;
+}): Record<string, unknown> {
   return {
     gateway: {
       auth: {
@@ -508,8 +512,8 @@ function buildOpenClawConfig(params: { tenantSlug: string; gatewayToken: string 
     agents: {
       defaults: {
         model: {
-          primary: 'openai/gpt-5.2-codex',
-          fallbacks: ['openai/gpt-4o-mini'],
+          primary: 'litellm/gpt-5.2-codex',
+          fallbacks: ['litellm/gpt-4o-mini'],
         },
       },
       list: [
@@ -517,21 +521,64 @@ function buildOpenClawConfig(params: { tenantSlug: string; gatewayToken: string 
           id: 'main',
           name: 'Chief of Staff',
           workspace: '/home/node/.openclaw/workspace-main',
-          model: 'openai/gpt-5.2-codex',
+          model: 'litellm/gpt-5.2-codex',
         },
         {
           id: 'content',
           name: 'Content Agent',
           workspace: '/home/node/.openclaw/workspace-content',
-          model: 'openai/gpt-4o-mini',
+          model: 'litellm/gpt-4o-mini',
         },
         {
           id: 'growth',
           name: 'Research Agent',
           workspace: '/home/node/.openclaw/workspace-growth',
-          model: 'openai/gpt-4o-mini',
+          model: 'litellm/gpt-4o-mini',
         },
       ],
+    },
+    models: {
+      mode: 'merge',
+      providers: {
+        litellm: {
+          baseUrl: `${params.litellmUrl}/v1`,
+          apiKey: '${OPENAI_API_KEY}',
+          api: 'openai-responses',
+          authHeader: true,
+          models: [
+            {
+              id: 'gpt-5.2-codex',
+              name: 'GPT 5.2 Codex',
+              api: 'openai-responses',
+              reasoning: false,
+              input: ['text'],
+              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+              contextWindow: 128000,
+              maxTokens: 32000,
+            },
+            {
+              id: 'gpt-4o-mini',
+              name: 'GPT 4o Mini',
+              api: 'openai-responses',
+              reasoning: false,
+              input: ['text'],
+              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+              contextWindow: 128000,
+              maxTokens: 16384,
+            },
+            {
+              id: 'gemini-2.5-flash',
+              name: 'Gemini 2.5 Flash',
+              api: 'openai-responses',
+              reasoning: false,
+              input: ['text'],
+              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+              contextWindow: 128000,
+              maxTokens: 16384,
+            },
+          ],
+        },
+      },
     },
   };
 }
