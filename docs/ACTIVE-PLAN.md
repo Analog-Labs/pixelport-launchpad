@@ -63,10 +63,17 @@
 
 ---
 
-## Current Phase: Phase 2 — Content Pipeline + Images
+## Current Phase: Phase 2 — Dynamic Chief + Real Dashboard Data
 
 **Target:** Weeks 6–9 (March 10 – April 4, 2026)
-**Goal:** Sub-agents alive, content pipeline end-to-end, dashboard pages populated with real data
+**Goal:** 1 persistent Chief agent per tenant (dynamic sub-agents), dashboard pages populated with real data
+
+### Architecture Pivot (2026-03-05)
+- **Killed** SPARK + SCOUT as permanent provisioned agents
+- **Kept** only 1 persistent agent per tenant: the Chief of Staff
+- Chief dynamically spawns sub-agents using OpenClaw's native `sessions_spawn`
+- Dashboard pages show **real data** populated by the Chief (no mock data)
+- Chief auto-starts research after onboarding → populates vault, competitors, content ideas
 
 ---
 
@@ -82,33 +89,36 @@
 
 ### CTO + Codex Track (Backend)
 
-- [ ] 2.B1: Sub-agent auto-provisioning — SPARK + SCOUT per tenant (OpenClaw config)
-- [ ] 2.B2: Inter-agent communication wiring (allowlist mesh, delegation contracts)
-- [ ] 2.B3: Content pipeline API — create, approve, schedule, publish endpoints
-- [ ] 2.B4: Inngest approval workflow — content approval + scheduling durable flow
-- [ ] 2.B5: Image generation integration (OpenAI Images API via LiteLLM)
-- [ ] 2.B6: Mem0 per-tenant integration (carry-forward from 1.C4)
-- [ ] 2.B7: Chat WebSocket bridge (carry-forward from 1.I2)
-- [ ] 2.B8: PostHog user-facing integration (carry-forward from 1.C5)
-- [ ] 2.B9: Recent Activity API — real event data for dashboard feed
+- [x] 2.B1: Architecture pivot — remove SPARK/SCOUT, dynamic sub-agent model
+- [x] 2.B2: Database schema (agent_tasks, vault_sections, competitors tables + agent_api_key)
+- [x] 2.B3: Agent auth helper (`authenticateAgentRequest()` — X-Agent-Key header)
+- [x] 2.B4: Provisioning update — 1-agent config, sub-agent settings, vault seeding, SOUL.md rewrite
+- [x] 2.B5: Agent write API — `/api/agent/tasks`, `/api/agent/vault`, `/api/agent/competitors`
+- [x] 2.B6: Dashboard read API — `/api/tasks`, `/api/vault`, `/api/competitors`
+- [x] 2.B7: Content approval API — `/api/tasks/approve`, `/api/tasks/reject`
+- [ ] 2.B8: Image generation integration (OpenAI Images API via LiteLLM)
+- [ ] 2.B9: Mem0 per-tenant integration (carry-forward from 1.C4)
+- [ ] 2.B10: Chat WebSocket bridge (carry-forward from 1.I2)
+- [ ] 2.B11: PostHog user-facing integration (carry-forward from 1.C5)
+- [ ] 2.B12: Inngest approval workflow — content approval + scheduling durable flow
 
 ### Founder + Lovable Track (Frontend)
 
-- [ ] 2.F1: Content Pipeline page — draft/approve/schedule/publish workflow UI
-- [ ] 2.F2: Content Calendar page — calendar view of scheduled content
-- [ ] 2.F3: Knowledge Vault page — brand docs, competitor intel, ICP data
-- [ ] 2.F4: Competitor Intelligence page — competitive landscape dashboard
-- [ ] 2.F5: Recent Activity feed — real data (replace static placeholder)
-- [ ] 2.F6: Chat WebSocket UI — real-time agent chat (when 2.B7 is ready)
+- [ ] 2.F1: Content Pipeline page — reads `GET /api/tasks?task_type=draft_content`
+- [ ] 2.F2: Content Calendar page — reads `GET /api/tasks?scheduled_for=true`
+- [ ] 2.F3: Knowledge Vault page — reads `GET /api/vault`, edits via `PUT /api/vault/:key`
+- [ ] 2.F4: Competitor Intelligence page — reads `GET /api/competitors`
+- [ ] 2.F5: Dashboard Home updates — Team Roster + Work Feed from `/api/tasks`
+- [ ] 2.F6: Chat WebSocket UI — real-time agent chat (when 2.B10 is ready)
 - [ ] 2.F7: Performance page — KPI tracking + agent metrics
 
 ### Integration (CTO + Founder)
 
-- [ ] 2.I1: Wire Content Pipeline page → content API endpoints
-- [ ] 2.I2: Wire Knowledge Vault → tenant knowledge store
-- [ ] 2.I3: Wire Chat widget → WebSocket bridge
-- [ ] 2.I4: Wire Recent Activity → real event feed
-- [ ] 2.I5: Wire Performance page → PostHog / metrics API
+- [ ] 2.I1: Wire Content Pipeline page → tasks API
+- [ ] 2.I2: Wire Knowledge Vault → vault API
+- [ ] 2.I3: Wire Competitor Intelligence → competitors API
+- [ ] 2.I4: Wire Dashboard Home → tasks API (work feed + team roster)
+- [ ] 2.I5: Wire Chat widget → WebSocket bridge
 
 ---
 
@@ -116,13 +126,14 @@
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
-| Mem0 API key / startup program | 2.B6 | Founder applies to Mem0 |
-| Content pipeline API design | 2.F1, 2.I1 | CTO designs API contract |
-| Sub-agent provisioning templates | 2.B3+ | CTO designs SPARK/SCOUT templates |
+| Mem0 API key / startup program | 2.B9 | Founder applies to Mem0 |
 
 ### Notes
 
-- **Phase 1 → Phase 2 transition (2026-03-05):** CTO closed Phase 1 gate, archived 16 completed slice/instruction files, updated all status docs.
+- **Architecture pivot (2026-03-05):** Founder locked decision to kill permanent sub-agents. Chief uses OpenClaw native `sessions_spawn` for dynamic sub-agents. Simplifies provisioning, reduces idle LLM cost.
+- **Agent API key pattern:** Per-tenant `agent_api_key` (prefix `ppk-`) stored in tenants table, injected as `PIXELPORT_API_KEY` in droplet `.env`. Chief authenticates via `X-Agent-Key` header.
+- **Dashboard data flow:** Chief → `/api/agent/*` (writes) → Supabase → `/api/tasks/*`, `/api/vault/*`, `/api/competitors/*` (reads) → Lovable dashboard
+- **Loading states:** Dashboard pages show "[Agent name] is working on this..." until Chief populates data.
 - **Integration wiring pattern (from Phase 1):** CTO proposes changes to Lovable-managed frontend files, founder reviews and applies. Do NOT modify `src/` files directly without founder approval.
 - **DO droplet quota:** 1 slot available. Use `/api/debug/test-provision?cleanup=true` after each test to free the slot.
 - **Vercel build cost discipline:** Docs-only changes auto-skipped. Batch code pushes. Target <$5/day.

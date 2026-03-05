@@ -130,6 +130,9 @@ export const provisionTenant = inngest.createFunction(
       const requestedSize = trialMode && testDropletSize ? testDropletSize : DEFAULT_DROPLET_SIZE;
       const requestedRegion = regionOverride || DEFAULT_REGION;
 
+      // Generate agent API key for Chief → Vercel API auth
+      const agentApiKey = `ppk-${randomUUID()}`;
+
       const cloudInit = buildCloudInit({
         tenantSlug: tenant.slug,
         tenantName: tenant.name,
@@ -138,6 +141,7 @@ export const provisionTenant = inngest.createFunction(
         litellmUrl: LITELLM_URL,
         litellmKey: litellmKey.key,
         agentmailApiKey: AGENTMAIL_API_KEY || '',
+        agentApiKey,
         onboardingData: tenant.onboarding_data ?? {},
       });
 
@@ -190,6 +194,7 @@ export const provisionTenant = inngest.createFunction(
       return {
         dropletId: String(result.droplet.id),
         gatewayToken,
+        agentApiKey,
         requestedSize,
         requestedRegion,
       };
@@ -274,6 +279,7 @@ export const provisionTenant = inngest.createFunction(
           gateway_token: droplet.gatewayToken,
           litellm_team_id: litellmTeam.team_id,
           agentmail_inbox: agentmailInbox,
+          agent_api_key: droplet.agentApiKey,
         })
         .eq('id', tenantId);
 
@@ -352,24 +358,60 @@ export const provisionTenant = inngest.createFunction(
         throw new Error(`Failed to create main agent record: ${mainError.message}`);
       }
 
-      const subAgents = [
-        { agent_id: 'content', display_name: 'Spark', role: 'content' },
-        { agent_id: 'growth', display_name: 'Scout', role: 'research' },
+      // Phase 2 pivot: No permanent SPARK/SCOUT agents.
+      // Chief dynamically spawns sub-agents via OpenClaw's native sessions_spawn.
+    });
+
+    await step.run('seed-vault', async () => {
+      const scanResults = (tenant.onboarding_data ?? {} as Json).scan_results as Record<string, unknown> | undefined;
+
+      const sections = [
+        { section_key: 'company_profile', section_title: 'Company Profile' },
+        { section_key: 'brand_voice', section_title: 'Brand Voice' },
+        { section_key: 'icp', section_title: 'Target Audience & ICP' },
+        { section_key: 'competitors', section_title: 'Competitors' },
+        { section_key: 'products', section_title: 'Products & Services' },
       ];
 
-      for (const sub of subAgents) {
-        const { error: subError } = await supabase.from('agents').insert({
+      for (const s of sections) {
+        // Pre-populate company_profile from scan results if available
+        let content = '';
+        let status = 'pending';
+        let lastUpdatedBy = 'system';
+
+        if (s.section_key === 'company_profile' && scanResults && !scanResults.error) {
+          const lines: string[] = [];
+          if (scanResults.company_description) lines.push(`**About:** ${String(scanResults.company_description)}`);
+          if (scanResults.value_proposition) lines.push(`**Value Proposition:** ${String(scanResults.value_proposition)}`);
+          if (scanResults.target_audience) lines.push(`**Target Audience:** ${String(scanResults.target_audience)}`);
+          if (scanResults.industry) lines.push(`**Industry:** ${String(scanResults.industry)}`);
+          if (Array.isArray(scanResults.key_products) && scanResults.key_products.length > 0) {
+            lines.push(`**Key Products/Services:** ${scanResults.key_products.map((v) => String(v)).join(', ')}`);
+          }
+          if (lines.length > 0) {
+            content = lines.join('\n\n');
+            status = 'ready';
+            lastUpdatedBy = 'scan';
+          }
+        }
+
+        if (s.section_key === 'brand_voice' && scanResults && scanResults.brand_voice) {
+          content = `**Observed Brand Voice:** ${String(scanResults.brand_voice)}`;
+          status = 'ready';
+          lastUpdatedBy = 'scan';
+        }
+
+        const { error } = await supabase.from('vault_sections').insert({
           tenant_id: tenantId,
-          agent_id: sub.agent_id,
-          display_name: sub.display_name,
-          role: sub.role,
-          model: 'gpt-4o-mini',
-          is_visible: false,
-          status: 'active',
+          section_key: s.section_key,
+          section_title: s.section_title,
+          content,
+          status,
+          last_updated_by: lastUpdatedBy,
         });
 
-        if (subError) {
-          throw new Error(`Failed to create sub-agent ${sub.agent_id}: ${subError.message}`);
+        if (error) {
+          console.warn(`Failed to seed vault section ${s.section_key}: ${error.message}`);
         }
       }
     });
@@ -413,6 +455,7 @@ function buildCloudInit(params: {
   litellmUrl: string;
   litellmKey: string;
   agentmailApiKey: string;
+  agentApiKey: string;
   onboardingData: Json;
 }): string {
   return `#!/bin/bash
@@ -444,15 +487,13 @@ docker pull ${params.openclawImage}
 # 3. Create config, workspace, and runtime directories on host
 mkdir -p /opt/openclaw
 mkdir -p /opt/openclaw/workspace-main
-mkdir -p /opt/openclaw/workspace-content
-mkdir -p /opt/openclaw/workspace-growth
 mkdir -p /opt/openclaw/canvas
 mkdir -p /opt/openclaw/cron
 mkdir -p /opt/openclaw/agents
 
 # 4. Write agent configuration
 cat > /opt/openclaw/openclaw.json << 'OPENCLAW_CONFIG'
-${JSON.stringify(buildOpenClawConfig(params), null, 2)}
+${JSON.stringify(buildOpenClawConfig({ ...params, agentName: (params.onboardingData.agent_name as string) || 'Luna' }), null, 2)}
 OPENCLAW_CONFIG
 
 # 5. Write agent persona
@@ -460,11 +501,12 @@ cat > /opt/openclaw/workspace-main/SOUL.md << 'SOUL_MD'
 ${buildSoulTemplate(params)}
 SOUL_MD
 
-# 6. Write environment secrets (LiteLLM proxy + AgentMail)
+# 6. Write environment secrets (LiteLLM proxy + AgentMail + PixelPort API)
 cat > /opt/openclaw/.env << 'ENV_FILE'
 OPENAI_API_KEY=${params.litellmKey}
 OPENAI_BASE_URL=${params.litellmUrl}/v1
 AGENTMAIL_API_KEY=${params.agentmailApiKey}
+PIXELPORT_API_KEY=${params.agentApiKey}
 SLACK_APP_TOKEN=${process.env.SLACK_APP_TOKEN || ''}
 ENV_FILE
 
@@ -481,8 +523,6 @@ docker run -d \\
   --env-file /opt/openclaw/.env \\
   -v /opt/openclaw/openclaw.json:/home/node/.openclaw/openclaw.json \\
   -v /opt/openclaw/workspace-main:/home/node/.openclaw/workspace-main \\
-  -v /opt/openclaw/workspace-content:/home/node/.openclaw/workspace-content \\
-  -v /opt/openclaw/workspace-growth:/home/node/.openclaw/workspace-growth \\
   -v /opt/openclaw/canvas:/home/node/.openclaw/canvas \\
   -v /opt/openclaw/cron:/home/node/.openclaw/cron \\
   -v /opt/openclaw/agents:/home/node/.openclaw/agents \\
@@ -497,6 +537,7 @@ function buildOpenClawConfig(params: {
   tenantSlug: string;
   gatewayToken: string;
   litellmUrl: string;
+  agentName: string;
 }): Record<string, unknown> {
   return {
     gateway: {
@@ -509,31 +550,37 @@ function buildOpenClawConfig(params: {
         dangerouslyAllowHostHeaderOriginFallback: true,
       },
     },
+    tools: {
+      sessions: {
+        visibility: 'all',
+      },
+      agentToAgent: {
+        enabled: true,
+      },
+    },
     agents: {
       defaults: {
         model: {
           primary: 'litellm/gpt-5.2-codex',
           fallbacks: ['litellm/gpt-4o-mini'],
         },
+        subagents: {
+          maxSpawnDepth: 2,
+          maxChildrenPerAgent: 5,
+        },
       },
       list: [
         {
           id: 'main',
-          name: 'Chief of Staff',
+          name: params.agentName,
           workspace: '/home/node/.openclaw/workspace-main',
           model: 'litellm/gpt-5.2-codex',
-        },
-        {
-          id: 'content',
-          name: 'Content Agent',
-          workspace: '/home/node/.openclaw/workspace-content',
-          model: 'litellm/gpt-4o-mini',
-        },
-        {
-          id: 'growth',
-          name: 'Research Agent',
-          workspace: '/home/node/.openclaw/workspace-growth',
-          model: 'litellm/gpt-4o-mini',
+          subagents: {
+            allowAgents: ['*'],
+          },
+          tools: {
+            allow: ['group:all', 'group:sessions', 'group:runtime'],
+          },
         },
       ],
     },
@@ -609,33 +656,120 @@ function buildSoulTemplate(params: { tenantName: string; onboardingData: Json })
   };
   const personalityDesc = toneMap[agentTone] || toneMap.professional;
 
+  // Vercel deployment URL for API calls
+  const apiBaseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : 'https://pixelport.ai';
+
   return `# ${agentName} — AI Chief of Staff for ${params.tenantName}
 
 ## Identity
-You are ${agentName}, the AI Chief of Staff for ${params.tenantName}. You coordinate marketing operations, manage content production, monitor competitors, and report results.
+You are ${agentName}, the AI Chief of Staff for ${params.tenantName}. You coordinate marketing operations, manage content production, monitor competitors, and report results. You are the ONLY agent the human interacts with directly.
 
 ## Personality & Tone
 ${personalityDesc}
 
-## Your Team
-- **You (${agentName})**: The only agent the human interacts with. You orchestrate everything.
-- **Spark** (invisible): Your content creation specialist.
-- **Scout** (invisible): Your research and intelligence analyst.
+## Sub-Agent Capabilities
+You can dynamically spawn specialist sub-agents to handle specific tasks. Sub-agents run in their own sessions and return results to you.
+
+**When to spawn a sub-agent:**
+- Content writing (draft posts, articles, email campaigns)
+- Market research (competitor analysis, trend reports)
+- Data analysis (performance metrics, audience insights)
+- Strategy work (content calendars, campaign planning)
+
+**Sub-agent model selection:**
+- Use \`litellm/gpt-5.2-codex\` for complex tasks (strategy, long-form content)
+- Use \`litellm/gpt-4o-mini\` for quick tasks (summaries, short drafts, data formatting)
+- Use \`litellm/gemini-2.5-flash\` as fallback
+
+**Important:** You orchestrate everything. Sub-agents work behind the scenes — the human only talks to you.
 
 ## Knowledge Base
 ${brandContext || 'No website scan results available yet. Ask the human for positioning, audience, and product context before major strategy outputs.'}
 
+## Post-Onboarding Auto-Research
+When you first start (or when the vault has sections in "pending" status), automatically run this research sequence:
+
+1. **Company Profile** — Deep-dive into the company. Fill in the vault with positioning, mission, products, and target market.
+2. **Brand Voice** — Analyze existing content to define tone, vocabulary, and communication style.
+3. **Target Audience & ICP** — Research and document the ideal customer profile.
+4. **Competitors** — Identify 3-5 key competitors. Create competitor profiles with analysis.
+5. **Products & Services** — Document all products/services with positioning and key benefits.
+6. **Content Ideas** — Generate 5-10 initial content ideas based on the research above.
+
+For each research task, spawn a sub-agent, then store results via the API.
+
+## API Integration
+You have access to the PixelPort API to read and write data. Use these endpoints to store your work so the dashboard stays up-to-date.
+
+**Authentication:** All API calls use your PIXELPORT_API_KEY from the environment.
+
+\`\`\`bash
+# Load environment
+source /opt/openclaw/.env
+
+# --- VAULT OPERATIONS ---
+
+# Read all vault sections (check what needs populating)
+curl -s -H "X-Agent-Key: $PIXELPORT_API_KEY" ${apiBaseUrl}/api/agent/vault
+
+# Update a vault section (e.g., company_profile)
+curl -s -X PUT -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"content": "Your markdown content here", "status": "ready"}' \\
+  ${apiBaseUrl}/api/agent/vault/company_profile
+
+# --- TASK OPERATIONS ---
+
+# Create a task (e.g., content draft that needs approval)
+curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "agent_role": "Content Writer",
+    "task_type": "draft_content",
+    "task_description": "LinkedIn post about product launch",
+    "task_output": {"title": "...", "body": "...", "platform": "linkedin"},
+    "status": "completed",
+    "requires_approval": true,
+    "platform": "linkedin"
+  }' \\
+  ${apiBaseUrl}/api/agent/tasks
+
+# Update a task (e.g., mark as completed with output)
+curl -s -X PATCH -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"status": "completed", "task_output": {"result": "..."}}' \\
+  ${apiBaseUrl}/api/agent/tasks/TASK_UUID
+
+# --- COMPETITOR OPERATIONS ---
+
+# Add a competitor profile
+curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "company_name": "Competitor Inc",
+    "website_url": "https://competitor.com",
+    "summary": "Direct competitor in the marketing AI space",
+    "threat_level": "high",
+    "analysis": {"strengths": ["..."], "weaknesses": ["..."]}
+  }' \\
+  ${apiBaseUrl}/api/agent/competitors
+\`\`\`
+
 ## Core Responsibilities
-1. Daily/weekly marketing reporting
-2. Content creation orchestration (delegate to Spark)
-3. Competitor monitoring (delegate to Scout)
-4. Proactive suggestions and strategy
-5. Respond to human requests promptly
+1. **Knowledge Management** — Keep the vault populated and up-to-date via auto-research
+2. **Content Creation** — Spawn sub-agents for content, store drafts as tasks requiring approval
+3. **Competitor Monitoring** — Track competitors, update profiles, alert on significant moves
+4. **Proactive Strategy** — Suggest content ideas, campaigns, and improvements
+5. **Reporting** — Respond to human requests promptly with data-backed answers
 
 ## Operating Rules
-- You are the ONLY interface to the human. Spark and Scout work behind the scenes.
-- Always present content for human approval before publishing.
-- Be proactive — do not just wait for instructions.
+- You are the ONLY interface to the human. Sub-agents work behind the scenes.
+- **ALL content requires human approval before publishing.** Create tasks with \`requires_approval: true\`.
+- Be proactive — start research immediately, don't wait for instructions.
 - Keep the human informed of important developments.
+- Store ALL work via the API so the dashboard reflects real progress.
+- When a vault section is being populated, set status to "populating". When done, set to "ready".
 `;
 }

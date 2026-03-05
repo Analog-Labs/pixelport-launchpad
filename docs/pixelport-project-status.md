@@ -512,6 +512,20 @@ Constraints (locked):
 | Q8 | Trial LLM budget | $20 per trial user via LiteLLM |
 | Q9 | Decision log count | Skip (not important) |
 
+### Phase 2 Architecture Pivot (2026-03-05)
+
+| # | Decision | Detail |
+|---|----------|--------|
+| P2-1 | Kill SPARK/SCOUT as permanent agents | 1 persistent Chief per tenant instead of 3 agents |
+| P2-2 | Dynamic sub-agents | Chief uses OpenClaw native `sessions_spawn` to spawn specialists on demand |
+| P2-3 | Agent API key pattern | Per-tenant `agent_api_key` (prefix `ppk-`) for Chief → Vercel API auth via X-Agent-Key header |
+| P2-4 | Content + Calendar = filtered tasks | No separate content_items table; content pipeline and calendar are filtered views of `agent_tasks` |
+| P2-5 | Vault seeding | 5 sections pre-created during provisioning, auto-populated from scan results |
+| P2-6 | No mock data | Dashboard pages show loading states until Chief populates real data |
+| P2-7 | Post-onboarding auto-research | Chief auto-starts vault, competitor, and content research after provisioning |
+| P2-8 | Sub-agent config | maxSpawnDepth: 2, maxChildrenPerAgent: 5, allowAgents: ['*'] |
+| P2-9 | SOUL.md includes API curl patterns | Chief knows how to call Vercel API endpoints from SOUL.md instructions |
+
 ---
 
 ## 8. Fixes & Lessons Learned
@@ -599,24 +613,35 @@ Constraints (locked):
 - 15 bugs fixed across 4 sessions
 - Deferred: Mem0, Chat SSE, PostHog
 
-**Phase 2: 🟡 PLANNING — Content Pipeline + Images (Weeks 6-9)**
+**Phase 2: 🟡 IN PROGRESS — Dynamic Chief + Real Dashboard Data (Weeks 6-9)**
 
-CTO + Codex (Backend):
-1. Sub-agent auto-provisioning (SPARK + SCOUT per tenant)
-2. Inter-agent communication wiring
-3. Content pipeline API (create/approve/schedule/publish)
-4. Inngest approval workflow
-5. Image generation integration
-6. Mem0 per-tenant integration (carry-forward)
-7. Chat WebSocket bridge (carry-forward)
-8. PostHog user-facing integration (carry-forward)
-9. Recent Activity API (real event data)
+Architecture Pivot (2026-03-05):
+- Killed SPARK/SCOUT as permanent provisioned agents
+- 1 persistent Chief per tenant, dynamic sub-agents via OpenClaw `sessions_spawn`
+- Dashboard shows real data populated by Chief (no mock data)
+- Per-tenant `agent_api_key` (prefix `ppk-`) for Chief → Vercel API auth
+
+CTO + Codex (Backend) — DONE:
+1. ✅ Architecture pivot implementation (remove SPARK/SCOUT from provisioning)
+2. ✅ Database schema: agent_tasks, vault_sections, competitors tables + agent_api_key
+3. ✅ Agent auth helper (authenticateAgentRequest with X-Agent-Key header)
+4. ✅ Provisioning update: 1-agent config, sub-agent settings, vault seeding, SOUL.md rewrite
+5. ✅ Agent write APIs: /api/agent/tasks, /api/agent/vault, /api/agent/competitors
+6. ✅ Dashboard read APIs: /api/tasks, /api/vault, /api/competitors
+7. ✅ Content approval APIs: /api/tasks/approve, /api/tasks/reject
+
+CTO + Codex (Backend) — REMAINING:
+8. Image generation integration
+9. Mem0 per-tenant integration (carry-forward)
+10. Chat WebSocket bridge (carry-forward)
+11. PostHog user-facing integration (carry-forward)
+12. Inngest approval workflow (durable flow)
 
 Founder + Lovable (Frontend):
-1. Content Pipeline page
-2. Content Calendar page
-3. Knowledge Vault page
-4. Competitor Intelligence page
+1. Content Pipeline page (reads GET /api/tasks?task_type=draft_content)
+2. Content Calendar page (reads GET /api/tasks?scheduled_for=true)
+3. Knowledge Vault page (reads GET /api/vault, edits PUT /api/vault/:key)
+4. Competitor Intelligence page (reads GET /api/competitors)
 5. Recent Activity feed (real data)
 6. Chat WebSocket UI
 7. Performance page

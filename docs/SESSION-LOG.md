@@ -7,27 +7,42 @@
 
 ## Last Session
 
-- **Date:** 2026-03-05 (session 4)
+- **Date:** 2026-03-05 (session 5)
 - **Who worked:** CTO (Claude Code) + Founder
 - **What was done:**
-  - **E2E re-test with NEW tenant (sr@ziffyhomes.com): FULL FLOW WORKS ✅**
-    - Signup → scan → provision (~6.5 min) → dashboard shows Active → Slack DM → bot responds
-    - Verified via Inngest dashboard: all 12 steps completed, `success: true`
-    - Droplet created: `137.184.17.111` (ID: 556065901)
-    - Gateway health check: HTTP 200 ✅
-  - **Bug fixed: LiteLLM team_alias collision** — added UUID suffix to `team_alias` in `provision-tenant.ts` (same pattern as key_alias fix from session 3). Prevents 422 errors on re-provisioning. (`44a1394`)
-  - **Cleanup:** Deleted temporary `api/debug/provision-diagnose.ts` diagnostic endpoint (`44a1394`)
-  - **Phase 1 Gate: PASSED** ✅
-    - 2 tenants tested end-to-end (sanchal@analog.one + sr@ziffyhomes.com)
-    - 15 bugs found and fixed across 4 sessions
-    - Deferred to Phase 2: Mem0 (1.C4), Chat SSE (1.I2), PostHog (1.C5)
-  - **Doc cleanup:** Archived 16 completed slice/instruction files, created Phase 2 planning docs
-- **Key commit:** `44a1394` — fix: make LiteLLM team_alias unique + remove diagnostic endpoint
+  - **Architecture Pivot: Dynamic Sub-Agent Model** — Founder locked decision to kill permanent SPARK/SCOUT agents. Chief of Staff is now the only persistent agent per tenant, dynamically spawning sub-agents via OpenClaw's native `sessions_spawn`.
+  - **Database migration** (`006_phase2_schema.sql`) — 3 new tables: `agent_tasks`, `vault_sections`, `competitors` + `agent_api_key` column on tenants
+  - **Agent auth helper** — Added `authenticateAgentRequest()` to `api/lib/auth.ts` for X-Agent-Key header auth
+  - **Provisioning pipeline overhaul** (`provision-tenant.ts`):
+    - Removed SPARK/SCOUT agent records, workspace dirs, and volume mounts
+    - Added `agent_api_key` generation (`ppk-` prefix) injected into droplet `.env`
+    - Updated OpenClaw config: sub-agent settings (`maxSpawnDepth: 2`, `maxChildrenPerAgent: 5`), `group:sessions` permissions
+    - Rewrote SOUL.md: dynamic sub-agent instructions, API curl patterns, post-onboarding auto-research sequence
+    - Added `seed-vault` step: pre-creates 5 vault sections (pre-populated from scan where available)
+  - **12 new API endpoints created:**
+    - Agent write: `POST /api/agent/tasks`, `PATCH /api/agent/tasks/[id]`, `GET /api/agent/vault`, `PUT /api/agent/vault/[key]`, `POST /api/agent/competitors`
+    - Dashboard read: `GET /api/tasks`, `GET /api/tasks/[id]`, `POST /api/tasks/approve`, `POST /api/tasks/reject`, `GET /api/vault`, `PUT /api/vault/[key]`, `GET /api/competitors`
+  - **TypeScript compile check: CLEAN** ✅
 - **What's next:**
-  - Phase 2 planning begins — see `docs/ACTIVE-PLAN.md` for full work split
-  - CTO + Codex: Mem0 integration, Chat WebSocket bridge, sub-agent provisioning
-  - Founder + Lovable: Content Pipeline page, Content Calendar, Knowledge Vault
-- **Blockers:** None. Phase 1 complete, Phase 2 ready to begin.
+  - Apply database migration to Supabase
+  - Push + deploy to Vercel
+  - Test: create new tenant → verify 1-agent provisioning, vault seeding, API endpoints
+  - Founder: Build 4 Lovable dashboard pages wired to real APIs
+- **Blockers:** None.
+- **Decisions made:**
+  - Per-tenant `agent_api_key` (`ppk-` prefix) for Chief → Vercel API auth (follows AgentMail pattern)
+  - Content + Calendar = filtered views of `agent_tasks` table (no separate tables)
+  - Vault: 5 sections pre-seeded during provisioning, auto-populated from scan results
+
+---
+
+### 2026-03-05 (session 4)
+- **Who worked:** CTO (Claude Code) + Founder
+- **What was done:**
+  - E2E re-test with NEW tenant (sr@ziffyhomes.com): FULL FLOW WORKS ✅
+  - Bug fixed: LiteLLM team_alias collision (`44a1394`)
+  - Phase 1 Gate: PASSED ✅ (2 tenants, 15 bugs fixed)
+  - Doc cleanup: archived 16 files, created Phase 2 planning docs
 
 ---
 

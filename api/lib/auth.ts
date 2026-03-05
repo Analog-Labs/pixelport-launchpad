@@ -22,6 +22,7 @@ export interface Tenant {
   gateway_token: string | null;
   litellm_team_id: string | null;
   agentmail_inbox: string | null;
+  agent_api_key: string | null;
   onboarding_data: Record<string, unknown>;
   settings: Record<string, unknown>;
   trial_ends_at: string | null;
@@ -32,6 +33,10 @@ export interface Tenant {
 export interface AuthResult {
   tenant: Tenant;
   userId: string;
+}
+
+export interface AgentAuthResult {
+  tenant: Tenant;
 }
 
 export class AuthError extends Error {
@@ -81,6 +86,31 @@ export async function authenticateRequest(req: VercelRequest): Promise<AuthResul
     tenant: tenant as Tenant,
     userId: user.id,
   };
+}
+
+/**
+ * Authenticate requests from the Chief agent on tenant droplets.
+ * The agent sends X-Agent-Key header with the per-tenant PIXELPORT_API_KEY.
+ */
+export async function authenticateAgentRequest(req: VercelRequest): Promise<AgentAuthResult> {
+  const agentKey = req.headers['x-agent-key'];
+  const key = Array.isArray(agentKey) ? agentKey[0] : agentKey;
+
+  if (!key) {
+    throw new AuthError('Missing X-Agent-Key header', 401);
+  }
+
+  const { data: tenant, error } = await supabase
+    .from('tenants')
+    .select('*')
+    .eq('agent_api_key', key)
+    .single();
+
+  if (error || !tenant) {
+    throw new AuthError('Invalid agent key', 401);
+  }
+
+  return { tenant: tenant as Tenant };
 }
 
 export function errorResponse(res: VercelResponse, error: unknown): VercelResponse {
