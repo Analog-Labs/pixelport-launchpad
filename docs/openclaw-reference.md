@@ -307,19 +307,16 @@ channels: {
   slack: {
     enabled: true,
     botToken: "xoxb-...",
-    appToken: "xapp-...",
-    dmPolicy: "open",       // pairing | allowlist | open | disabled
-    allowFrom: ["*"],       // required when dmPolicy is "open"
-    actions: {
-      Messages: true, DM: true, Reactions: true,
-      Pins: true, MemberInfo: true, EmojiList: true, ChannelInfo: true,
-    },
-    replyToMode: "first",
-    allowBotMessages: true,
-    configWrites: true,
+    appToken: "xapp-...",    // Socket Mode token (env var substitution: "${SLACK_APP_TOKEN}")
+    dmPolicy: "open",        // pairing | allowlist | open | disabled
+    allowFrom: ["*"],        // required when dmPolicy is "open"
+    replyToMode: "first",    // first | all
+    configWrites: true,      // allow config changes via Slack commands
   },
 }
 ```
+
+> **Note (2026.2.24):** OpenClaw strictly validates the Slack config schema. The following keys are **rejected** and must NOT be included: `Messages`, `DM`, `Reactions`, `Pins`, `MemberInfo`, `EmojiList`, `ChannelInfo`, `allowBotMessages`. Only the keys shown above are accepted.
 
 ---
 

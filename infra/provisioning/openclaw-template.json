@@ -1,27 +1,84 @@
 {
-  "_comment": "OpenClaw configuration template for PixelPort tenants. Variables are replaced during provisioning.",
+  "_comment": "OpenClaw configuration template for PixelPort tenants. Matches buildOpenClawConfig() in provision-tenant.ts.",
   "gateway": {
-    "port": 18789,
-    "token": "{{GATEWAY_TOKEN}}"
-  },
-  "agents": [
-    {
-      "id": "main",
-      "name": "Chief of Staff",
-      "workspace": "workspace-main",
-      "model": "gpt-5.2-codex"
+    "auth": {
+      "mode": "token",
+      "token": "{{GATEWAY_TOKEN}}"
     },
-    {
-      "id": "content",
-      "name": "Content Agent",
-      "workspace": "workspace-content",
-      "model": "gpt-4o-mini"
-    },
-    {
-      "id": "growth",
-      "name": "Research Agent",
-      "workspace": "workspace-growth",
-      "model": "gpt-4o-mini"
+    "bind": "lan",
+    "controlUi": {
+      "dangerouslyAllowHostHeaderOriginFallback": true
     }
-  ]
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "litellm/gpt-5.2-codex",
+        "fallbacks": ["litellm/gpt-4o-mini"]
+      }
+    },
+    "list": [
+      {
+        "id": "main",
+        "name": "Chief of Staff",
+        "workspace": "/home/node/.openclaw/workspace-main",
+        "model": "litellm/gpt-5.2-codex"
+      },
+      {
+        "id": "content",
+        "name": "Content Agent",
+        "workspace": "/home/node/.openclaw/workspace-content",
+        "model": "litellm/gpt-4o-mini"
+      },
+      {
+        "id": "growth",
+        "name": "Research Agent",
+        "workspace": "/home/node/.openclaw/workspace-growth",
+        "model": "litellm/gpt-4o-mini"
+      }
+    ]
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "litellm": {
+        "baseUrl": "{{LITELLM_URL}}/v1",
+        "apiKey": "${OPENAI_API_KEY}",
+        "api": "openai-responses",
+        "authHeader": true,
+        "models": [
+          {
+            "id": "gpt-5.2-codex",
+            "name": "GPT 5.2 Codex",
+            "api": "openai-responses",
+            "reasoning": false,
+            "input": ["text"],
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "contextWindow": 128000,
+            "maxTokens": 32000
+          },
+          {
+            "id": "gpt-4o-mini",
+            "name": "GPT 4o Mini",
+            "api": "openai-responses",
+            "reasoning": false,
+            "input": ["text"],
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "contextWindow": 128000,
+            "maxTokens": 16384
+          },
+          {
+            "id": "gemini-2.5-flash",
+            "name": "Gemini 2.5 Flash",
+            "api": "openai-responses",
+            "reasoning": false,
+            "input": ["text"],
+            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "contextWindow": 128000,
+            "maxTokens": 16384
+          }
+        ]
+      }
+    }
+  }
 }
