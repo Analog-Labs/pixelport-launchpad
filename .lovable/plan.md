@@ -1,31 +1,27 @@
 
 
-## Plan: Content Pipeline Page
+## Plan: Competitor Intelligence Page
 
-Replace `src/pages/dashboard/Content.tsx` with a full content pipeline wired to the tasks and approval APIs.
+Replace `src/pages/dashboard/Competitors.tsx` with a full page wired to `GET /api/competitors`.
 
-### Single file change: `src/pages/dashboard/Content.tsx`
+### Single file change: `src/pages/dashboard/Competitors.tsx`
 
-**Imports:** `useState, useEffect` from React; `FileText, Loader2` from lucide-react; `useAuth`; `Button, Badge, Skeleton`; `getAgentName` from avatars; `toast` from sonner; `formatDistanceToNow` from date-fns.
+**Imports:** `useState, useEffect` from React; `Search, Loader2` from lucide-react; `useAuth`; `Skeleton`; `getAgentName`; `toast` from sonner.
 
-**State:** `tasks` (array), `loading` (bool), `filter` (`"all" | "pending" | "approved" | "published"`), `actionLoading` (task ID string or null).
+**State:** `competitors` (array), `loading` (bool).
 
-**Data fetching:** `useEffect` calls `GET /api/tasks?task_type=draft_content&limit=50` with Bearer token. Fails gracefully → empty array.
+**Data fetching:** `useEffect` calls `GET /api/competitors` with Bearer token. Fails gracefully → empty array.
 
-**Actions:**
-- Approve: `POST /api/tasks/approve` with `{ task_id }` → update local state, toast
-- Reject: `POST /api/tasks/reject` with `{ task_id }` → update local state, toast
-- Both set `actionLoading` to the task ID during request
+**Card grid:** `grid grid-cols-1 md:grid-cols-2 gap-4`. Each card: `border border-zinc-800 bg-zinc-900 rounded-lg p-5 space-y-3`.
 
-**Filter tabs:** 4 text buttons (All, Pending, Approved, Published). Active tab gets `bg-zinc-800 text-zinc-100`, inactive gets `text-zinc-400`. Client-side filtering on `approval_status` / `status`.
+**Card contents:**
+- Header row: company_name (text-base font-semibold) + website link (text-xs text-zinc-500 hover:text-amber-400, shows hostname only) + threat badge
+- Summary paragraph (text-sm text-zinc-300)
+- Recent activity section (conditional, border-t border-zinc-800)
 
-**Card layout per task:** `border border-zinc-800 bg-zinc-900 rounded-lg p-5`. Shows platform badge, status chip, description, relative timestamp. Pending tasks get Approve (emerald) + Reject (red outline) buttons.
+**Threat level badges:** high → red, medium → amber, low → emerald. Same `bg-{color}-500/15 text-{color}-400` pattern.
 
-**Platform badges:** linkedin → blue, twitter/x → zinc-300, other → zinc-400.
+**Empty state:** Search icon + "{agentName} is identifying your competitors..." centered message.
 
-**Status chips:** pending → amber, approved → emerald, rejected → red, completed without approval → blue "Published".
-
-**Empty state:** "{agentName} is analyzing your brand and will suggest content soon." centered with FileText icon.
-
-**Routing:** Already at `/dashboard/content` in App.tsx — no change needed.
+**Routing:** Already at `/dashboard/competitors` — no change needed.
 
