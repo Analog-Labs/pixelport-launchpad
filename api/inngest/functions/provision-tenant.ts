@@ -506,6 +506,12 @@ function buildOpenClawConfig(params: { tenantSlug: string; gatewayToken: string 
       },
     },
     agents: {
+      defaults: {
+        model: {
+          primary: 'openai/gpt-5.2-codex',
+          fallbacks: ['openai/gpt-4o-mini'],
+        },
+      },
       list: [
         {
           id: 'main',
