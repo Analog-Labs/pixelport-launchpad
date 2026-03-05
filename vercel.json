@@ -10,9 +10,6 @@
     },
     "api/debug/test-provision.ts": {
       "maxDuration": 30
-    },
-    "api/debug/backfill-litellm-config.ts": {
-      "maxDuration": 60
     }
   }
 }
