@@ -7,32 +7,41 @@
 
 ## Last Session
 
-- **Date:** 2026-03-05 (session 5)
+- **Date:** 2026-03-05 (session 6)
 - **Who worked:** CTO (Claude Code) + Founder
 - **What was done:**
-  - **Architecture Pivot: Dynamic Sub-Agent Model** — Founder locked decision to kill permanent SPARK/SCOUT agents. Chief of Staff is now the only persistent agent per tenant, dynamically spawning sub-agents via OpenClaw's native `sessions_spawn`.
-  - **Database migration** (`006_phase2_schema.sql`) — 3 new tables: `agent_tasks`, `vault_sections`, `competitors` + `agent_api_key` column on tenants
-  - **Agent auth helper** — Added `authenticateAgentRequest()` to `api/lib/auth.ts` for X-Agent-Key header auth
-  - **Provisioning pipeline overhaul** (`provision-tenant.ts`):
-    - Removed SPARK/SCOUT agent records, workspace dirs, and volume mounts
-    - Added `agent_api_key` generation (`ppk-` prefix) injected into droplet `.env`
-    - Updated OpenClaw config: sub-agent settings (`maxSpawnDepth: 2`, `maxChildrenPerAgent: 5`), `group:sessions` permissions
-    - Rewrote SOUL.md: dynamic sub-agent instructions, API curl patterns, post-onboarding auto-research sequence
-    - Added `seed-vault` step: pre-creates 5 vault sections (pre-populated from scan where available)
-  - **12 new API endpoints created:**
-    - Agent write: `POST /api/agent/tasks`, `PATCH /api/agent/tasks/[id]`, `GET /api/agent/vault`, `PUT /api/agent/vault/[key]`, `POST /api/agent/competitors`
-    - Dashboard read: `GET /api/tasks`, `GET /api/tasks/[id]`, `POST /api/tasks/approve`, `POST /api/tasks/reject`, `GET /api/vault`, `PUT /api/vault/[key]`, `GET /api/competitors`
-  - **TypeScript compile check: CLEAN** ✅
+  - **Secrets management system** — Created `~/.pixelport/secrets.env` (local, chmod 600, outside git) with all 21 env vars. Pulled 13 values from Vercel CLI (`npx vercel env pull`). Helper script `get-secret.sh` + usage log at `~/.pixelport/usage.log`. CTO and Codex can now access keys without asking founder.
+  - **Database migration applied** — `006_phase2_schema.sql` applied via `npx supabase db push`. 3 new tables + agent_api_key column verified.
+  - **E2E test: Phase 2 provisioning — ALL PASS** ✅
+    - Test tenant: "TestCo Phase2" (droplet `142.93.195.23`, ID `556101720`)
+    - Only 1 agent record created (`main` / Chief of Staff) — no SPARK/SCOUT ✅
+    - Only `workspace-main/` on droplet — no workspace-content/growth ✅
+    - `agent_api_key` generated (`ppk-f633202f-...`) and stored in DB ✅
+    - `PIXELPORT_API_KEY` present in droplet `.env` ✅
+    - OpenClaw config: 1 agent, `maxSpawnDepth: 2`, `maxChildrenPerAgent: 5`, `sessions.visibility: all`, `agentToAgent.enabled: true` ✅
+    - 5 vault sections seeded (all `pending` status) ✅
+    - SOUL.md has sub-agent + API curl instructions (11 references) ✅
+    - Agent write APIs tested: `POST /api/agent/tasks`, `PUT /api/agent/vault/company_profile`, `POST /api/agent/competitors` — all work ✅
+    - Dashboard read APIs verified: tasks + competitors returned from DB ✅
 - **What's next:**
-  - Apply database migration to Supabase
-  - Push + deploy to Vercel
-  - Test: create new tenant → verify 1-agent provisioning, vault seeding, API endpoints
   - Founder: Build 4 Lovable dashboard pages wired to real APIs
+  - CTO: Image gen integration, Mem0, Chat WebSocket, Inngest approval workflow
 - **Blockers:** None.
 - **Decisions made:**
-  - Per-tenant `agent_api_key` (`ppk-` prefix) for Chief → Vercel API auth (follows AgentMail pattern)
-  - Content + Calendar = filtered views of `agent_tasks` table (no separate tables)
-  - Vault: 5 sections pre-seeded during provisioning, auto-populated from scan results
+  - Local secrets store at `~/.pixelport/` — CTO reads via helper, Codex via grep/cat
+  - Supabase CLI linked to project for future migrations
+
+---
+
+### 2026-03-05 (session 5)
+- **Who worked:** CTO (Claude Code) + Founder
+- **What was done:**
+  - Architecture Pivot: Dynamic Sub-Agent Model — killed SPARK/SCOUT, 1 Chief per tenant
+  - Database migration (`006_phase2_schema.sql`) — 3 new tables + agent_api_key
+  - Agent auth helper, provisioning overhaul, SOUL.md rewrite
+  - 12 new API endpoints (agent write + dashboard read)
+  - TypeScript compile check: CLEAN ✅
+  - Pushed + deployed to Vercel
 
 ---
 

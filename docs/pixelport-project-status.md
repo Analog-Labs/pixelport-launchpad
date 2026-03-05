@@ -350,14 +350,23 @@ Constraints (locked):
 - Website auto-scan: lightweight fetch + LLM brand extraction during onboarding
 - PostHog redesigned: user-facing integration (customers connect their PostHog)
 
-### Phase 2: Content Pipeline + Images (Weeks 6-9)
-**Goal**: Full content production pipeline with image generation
-**Status: ⬜ Not started**
+### Phase 2: Dynamic Chief + Real Dashboard Data (Weeks 6-9)
+**Goal**: 1 persistent Chief per tenant with dynamic sub-agents, dashboard pages with real data
+**Status: 🟡 IN PROGRESS — Backend complete + E2E tested. Frontend in progress.**
 
-- [ ] 2.1-2.3: Sub-agent provisioning + inter-agent comms
-- [ ] 2.4-2.5: Content pipeline UI + Inngest approval workflow
-- [ ] 2.6-2.7: Platform-native content + image gen integration
-- [ ] 2.8-2.10: Competitor intel dashboard + calendar + Knowledge Vault page
+**CTO Backend: ✅ COMPLETE + E2E TESTED**
+- [x] Architecture pivot (kill SPARK/SCOUT, dynamic sub-agents)
+- [x] Database schema + migration applied (agent_tasks, vault_sections, competitors, agent_api_key)
+- [x] Agent auth, provisioning update, SOUL.md rewrite, vault seeding
+- [x] Agent write APIs + Dashboard read APIs (12 endpoints)
+- [x] E2E test: TestCo Phase2 (droplet 142.93.195.23) — ALL 15 checks pass
+- [x] Secrets management system (~/.pixelport/secrets.env)
+
+**CTO Remaining:** Image gen, Mem0, Chat WebSocket, PostHog, Inngest approval workflow
+
+**Founder Frontend (Lovable): IN PROGRESS**
+- [ ] Content Pipeline, Calendar, Knowledge Vault, Competitor Intel pages
+- [ ] Dashboard Home updates, Chat WebSocket UI, Performance page
 
 ### Phase 3: Social Publishing + Video (Weeks 10-12)
 **Goal**: Social integrations + video generation
@@ -525,6 +534,8 @@ Constraints (locked):
 | P2-7 | Post-onboarding auto-research | Chief auto-starts vault, competitor, and content research after provisioning |
 | P2-8 | Sub-agent config | maxSpawnDepth: 2, maxChildrenPerAgent: 5, allowAgents: ['*'] |
 | P2-9 | SOUL.md includes API curl patterns | Chief knows how to call Vercel API endpoints from SOUL.md instructions |
+| P2-10 | Local secrets management | `~/.pixelport/secrets.env` (chmod 600, outside git) — CTO/Codex access without asking founder |
+| P2-11 | Vercel CLI linked | `npx vercel env pull` for env var sync; Supabase CLI linked for migrations |
 
 ---
 
@@ -598,55 +609,28 @@ Constraints (locked):
 4. Get founder approval on content packs → first publishes
 5. No infrastructure changes until PixelPort Phase 2
 
-### PixelPort (product) — Phase 2 planning
+### PixelPort (product) — Phase 2 active
 
-**Phase 0: ✅ COMPLETE**
-- LiteLLM on Railway, Supabase schema, API bridge (16 routes), Inngest provisioning workflow
-- Lovable frontend: landing page, auth, dashboard shell (9 routes)
-- Phase 0.9 dry-run PASSED
+**Phase 0: ✅ COMPLETE** | **Phase 1: ✅ COMPLETE (gate passed 2026-03-05)**
 
-**Phase 1: ✅ COMPLETE (gate passed 2026-03-05)**
-- All CTO Slices 5-9 complete and reviewed
-- All frontend pages (F1-F5) complete
-- All integration wiring complete (I1-I4; I2 deferred)
-- E2E tested with 2 tenants (sanchal@analog.one + sr@ziffyhomes.com)
-- 15 bugs fixed across 4 sessions
-- Deferred: Mem0, Chat SSE, PostHog
+**Phase 2: 🟡 IN PROGRESS — Dynamic Chief + Real Dashboard Data**
 
-**Phase 2: 🟡 IN PROGRESS — Dynamic Chief + Real Dashboard Data (Weeks 6-9)**
+CTO Backend: ✅ COMPLETE + E2E TESTED (session 5+6, 2026-03-05)
+- Architecture pivot, DB migration applied, 12 API endpoints, provisioning rewrite
+- E2E: TestCo Phase2 tenant (droplet 142.93.195.23) — all 15 checks pass
+- Secrets management: ~/.pixelport/secrets.env (local, secure, Codex-accessible)
 
-Architecture Pivot (2026-03-05):
-- Killed SPARK/SCOUT as permanent provisioned agents
-- 1 persistent Chief per tenant, dynamic sub-agents via OpenClaw `sessions_spawn`
-- Dashboard shows real data populated by Chief (no mock data)
-- Per-tenant `agent_api_key` (prefix `ppk-`) for Chief → Vercel API auth
+CTO Remaining:
+- Image gen integration, Mem0, Chat WebSocket, PostHog, Inngest approval workflow
 
-CTO + Codex (Backend) — DONE:
-1. ✅ Architecture pivot implementation (remove SPARK/SCOUT from provisioning)
-2. ✅ Database schema: agent_tasks, vault_sections, competitors tables + agent_api_key
-3. ✅ Agent auth helper (authenticateAgentRequest with X-Agent-Key header)
-4. ✅ Provisioning update: 1-agent config, sub-agent settings, vault seeding, SOUL.md rewrite
-5. ✅ Agent write APIs: /api/agent/tasks, /api/agent/vault, /api/agent/competitors
-6. ✅ Dashboard read APIs: /api/tasks, /api/vault, /api/competitors
-7. ✅ Content approval APIs: /api/tasks/approve, /api/tasks/reject
+**Founder + Lovable (Frontend): NOW ACTIVE** — Build 4 dashboard pages wired to real APIs:
+1. Content Pipeline → `GET /api/tasks?task_type=draft_content`
+2. Content Calendar → `GET /api/tasks?scheduled_for=true`
+3. Knowledge Vault → `GET /api/vault` + `PUT /api/vault/:key`
+4. Competitor Intelligence → `GET /api/competitors`
+5. Dashboard Home updates → Team Roster + Work Feed from `/api/tasks`
 
-CTO + Codex (Backend) — REMAINING:
-8. Image generation integration
-9. Mem0 per-tenant integration (carry-forward)
-10. Chat WebSocket bridge (carry-forward)
-11. PostHog user-facing integration (carry-forward)
-12. Inngest approval workflow (durable flow)
-
-Founder + Lovable (Frontend):
-1. Content Pipeline page (reads GET /api/tasks?task_type=draft_content)
-2. Content Calendar page (reads GET /api/tasks?scheduled_for=true)
-3. Knowledge Vault page (reads GET /api/vault, edits PUT /api/vault/:key)
-4. Competitor Intelligence page (reads GET /api/competitors)
-5. Recent Activity feed (real data)
-6. Chat WebSocket UI
-7. Performance page
-
-See `docs/ACTIVE-PLAN.md` for full Phase 2 checklist with work split.
+See `docs/ACTIVE-PLAN.md` for full Phase 2 checklist.
 
 **Critical Vercel patterns (from Phase 0-1):**
 - `api/package.json` with `{"type": "commonjs"}` MUST exist (overrides root ESM)

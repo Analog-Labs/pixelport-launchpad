@@ -96,11 +96,14 @@
 - [x] 2.B5: Agent write API — `/api/agent/tasks`, `/api/agent/vault`, `/api/agent/competitors`
 - [x] 2.B6: Dashboard read API — `/api/tasks`, `/api/vault`, `/api/competitors`
 - [x] 2.B7: Content approval API — `/api/tasks/approve`, `/api/tasks/reject`
-- [ ] 2.B8: Image generation integration (OpenAI Images API via LiteLLM)
-- [ ] 2.B9: Mem0 per-tenant integration (carry-forward from 1.C4)
-- [ ] 2.B10: Chat WebSocket bridge (carry-forward from 1.I2)
-- [ ] 2.B11: PostHog user-facing integration (carry-forward from 1.C5)
-- [ ] 2.B12: Inngest approval workflow — content approval + scheduling durable flow
+- [x] 2.B8: Database migration applied to Supabase (006_phase2_schema.sql)
+- [x] 2.B9: E2E test — new tenant provisioning with Phase 2 changes (ALL PASS)
+- [x] 2.B10: Secrets management system (`~/.pixelport/secrets.env` — local, secure, Codex-accessible)
+- [ ] 2.B11: Image generation integration (OpenAI Images API via LiteLLM)
+- [ ] 2.B12: Mem0 per-tenant integration (carry-forward from 1.C4)
+- [ ] 2.B13: Chat WebSocket bridge (carry-forward from 1.I2)
+- [ ] 2.B14: PostHog user-facing integration (carry-forward from 1.C5)
+- [ ] 2.B15: Inngest approval workflow — content approval + scheduling durable flow
 
 ### Founder + Lovable Track (Frontend)
 
@@ -137,6 +140,8 @@
 - **Integration wiring pattern (from Phase 1):** CTO proposes changes to Lovable-managed frontend files, founder reviews and applies. Do NOT modify `src/` files directly without founder approval.
 - **DO droplet quota:** 1 slot available. Use `/api/debug/test-provision?cleanup=true` after each test to free the slot.
 - **Vercel build cost discipline:** Docs-only changes auto-skipped. Batch code pushes. Target <$5/day.
+- **Secrets management:** All API keys stored locally at `~/.pixelport/secrets.env`. CTO reads via `~/.pixelport/get-secret.sh VAR_NAME`. Usage logged to `~/.pixelport/usage.log`.
+- **Test tenant (Phase 2):** TestCo Phase2 — droplet `142.93.195.23` (ID `556101720`), agent_api_key `ppk-f633202f-...`
 
 ---
 
