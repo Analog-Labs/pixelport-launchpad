@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
 
@@ -9,92 +10,86 @@ const inngest = new Inngest({
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
   const tenantId = req.query.tenantId as string;
-  if (!tenantId) {
-    return res.status(400).json({ error: 'tenantId required' });
-  }
+  if (!tenantId) return res.status(400).json({ error: 'tenantId required' });
 
-  // If ?retry=true, just send the Inngest event
+  // Retry mode
   if (req.query.retry === 'true') {
     try {
-      await inngest.send({
-        name: 'pixelport/tenant.created',
-        data: { tenantId, trialMode: true },
-      });
+      await inngest.send({ name: 'pixelport/tenant.created', data: { tenantId, trialMode: true } });
       return res.status(200).json({ action: 're-triggered', tenantId });
     } catch (err) {
-      return res.status(500).json({
-        error: 'inngest.send failed',
-        detail: err instanceof Error ? err.message : String(err),
-      });
+      return res.status(500).json({ error: 'inngest.send failed', detail: err instanceof Error ? err.message : String(err) });
     }
   }
 
-  const results: Record<string, unknown> = {};
+  const steps: Record<string, unknown> = {};
+  const LITELLM_URL = process.env.LITELLM_URL!;
+  const LITELLM_MASTER_KEY = process.env.LITELLM_MASTER_KEY!;
+  const DO_API_TOKEN = process.env.DO_API_TOKEN!;
 
-  // Step 1: Check env vars
-  results.env = {
-    SUPABASE_PROJECT_URL: !!process.env.SUPABASE_PROJECT_URL,
-    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    LITELLM_URL: process.env.LITELLM_URL || 'MISSING',
-    LITELLM_MASTER_KEY: process.env.LITELLM_MASTER_KEY ? `${process.env.LITELLM_MASTER_KEY.substring(0, 8)}...` : 'MISSING',
-    DO_API_TOKEN: process.env.DO_API_TOKEN ? `${process.env.DO_API_TOKEN.substring(0, 10)}...` : 'MISSING',
-    INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY ? `${process.env.INNGEST_EVENT_KEY.substring(0, 8)}...` : 'MISSING',
-    SSH_PRIVATE_KEY: process.env.SSH_PRIVATE_KEY ? `${process.env.SSH_PRIVATE_KEY.substring(0, 20)}...` : 'MISSING',
-  };
+  const supabase = createClient(process.env.SUPABASE_PROJECT_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-  // Step 2: Check tenant in Supabase
+  // Step 1: validate-tenant
+  let tenant: any;
   try {
-    const supabase = createClient(process.env.SUPABASE_PROJECT_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-    const { data, error } = await supabase.from('tenants').select('id,slug,status,litellm_team_id').eq('id', tenantId).single();
-    results.tenant = error ? { error: error.message } : data;
+    const { data, error } = await supabase.from('tenants').select('*').eq('id', tenantId).single();
+    if (error || !data) throw new Error(`Tenant not found: ${tenantId}`);
+    if (data.status !== 'provisioning') throw new Error(`Status is ${data.status}, expected provisioning`);
+    tenant = data;
+    steps['1_validate_tenant'] = { ok: true, slug: data.slug, status: data.status };
   } catch (e) {
-    results.tenant = { error: String(e) };
+    steps['1_validate_tenant'] = { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return res.status(200).json(steps);
   }
 
-  // Step 3: Check LiteLLM health
+  // Step 2: create-litellm-team
+  let teamId: string;
   try {
-    const r = await fetch(`${process.env.LITELLM_URL}/health`, {
-      headers: { Authorization: `Bearer ${process.env.LITELLM_MASTER_KEY}` },
-      signal: AbortSignal.timeout(5000),
-    });
-    results.litellm_health = { status: r.status, ok: r.ok };
-  } catch (e) {
-    results.litellm_health = { error: e instanceof Error ? e.message : String(e) };
-  }
-
-  // Step 4: Try creating a LiteLLM team (dry run with unique alias)
-  try {
-    const slug = (results.tenant as any)?.slug || 'unknown';
-    const r = await fetch(`${process.env.LITELLM_URL}/team/new`, {
+    const r = await fetch(`${LITELLM_URL}/team/new`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.LITELLM_MASTER_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        team_alias: `pixelport-${slug}`,
-        max_budget: 20,
-        budget_duration: '30d',
-        models: ['gpt-5.2-codex', 'gemini-2.5-flash', 'gpt-4o-mini'],
-      }),
+      headers: { Authorization: `Bearer ${LITELLM_MASTER_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team_alias: `pixelport-${tenant.slug}`, max_budget: 20, budget_duration: '30d', models: ['gpt-5.2-codex', 'gemini-2.5-flash', 'gpt-4o-mini'] }),
       signal: AbortSignal.timeout(10000),
     });
-    const body = await r.text();
-    results.litellm_team_create = { status: r.status, ok: r.ok, body: body.substring(0, 500) };
+    if (!r.ok) throw new Error(`LiteLLM ${r.status}: ${await r.text()}`);
+    const body = await r.json();
+    teamId = body.team_id;
+    steps['2_create_litellm_team'] = { ok: true, team_id: teamId };
   } catch (e) {
-    results.litellm_team_create = { error: e instanceof Error ? e.message : String(e) };
+    steps['2_create_litellm_team'] = { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return res.status(200).json(steps);
   }
 
-  // Step 5: Check DO API
+  // Step 3: generate-litellm-key
+  let litellmKey: string;
+  try {
+    const r = await fetch(`${LITELLM_URL}/key/generate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${LITELLM_MASTER_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team_id: teamId, key_alias: `pixelport-${tenant.slug}-main` }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) throw new Error(`LiteLLM ${r.status}: ${await r.text()}`);
+    const body = await r.json();
+    litellmKey = body.key;
+    steps['3_generate_litellm_key'] = { ok: true, key_prefix: litellmKey.substring(0, 8) };
+  } catch (e) {
+    steps['3_generate_litellm_key'] = { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return res.status(200).json(steps);
+  }
+
+  // Step 4: create-droplet (just test the API call, don't actually create)
   try {
     const r = await fetch('https://api.digitalocean.com/v2/account', {
-      headers: { Authorization: `Bearer ${process.env.DO_API_TOKEN}` },
+      headers: { Authorization: `Bearer ${DO_API_TOKEN}` },
       signal: AbortSignal.timeout(5000),
     });
-    results.do_api = { status: r.status, ok: r.ok };
+    steps['4_do_api_check'] = { ok: r.ok, status: r.status };
   } catch (e) {
-    results.do_api = { error: e instanceof Error ? e.message : String(e) };
+    steps['4_do_api_check'] = { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 
-  return res.status(200).json(results);
+  steps['summary'] = 'All pre-droplet steps pass. The issue is likely in Inngest invocation, not the function logic.';
+
+  return res.status(200).json(steps);
 }
