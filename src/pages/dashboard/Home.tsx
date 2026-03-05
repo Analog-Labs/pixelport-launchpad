@@ -132,7 +132,7 @@ const Home = () => {
     <div className="max-w-5xl mx-auto space-y-8">
       {/* Greeting */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           {getGreeting()}, {getFirstName(user)} 👋
         </h1>
         <p className="text-muted-foreground mt-1">Here's what's happening today</p>
@@ -141,10 +141,10 @@ const Home = () => {
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {statCards.map((s) => (
-          <Card key={s.label} className="bg-card border-primary/15">
-            <CardContent className="p-5">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{s.label}</p>
-              <p className={`text-xl font-semibold mt-2 ${s.valueClass}`}>
+          <Card key={s.label} className="bg-card border-border">
+            <CardContent className="p-6">
+              <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{s.label}</p>
+              <p className={`text-3xl font-bold tabular-nums mt-2 ${s.valueClass}`}>
                 {s.pulse && (
                   <span className="inline-block w-2 h-2 rounded-full bg-primary animate-pulse mr-1.5 align-middle" />
                 )}
@@ -156,7 +156,7 @@ const Home = () => {
       </div>
 
       {/* Chief of Staff */}
-      <Card className="bg-card border-primary/15 border-l-[3px] border-l-primary">
+      <Card className="bg-card border-border border-l-[3px] border-l-primary">
         <CardContent className="p-6 flex items-start gap-5">
           <AgentAvatar />
           <div className="flex-1 min-w-0">
@@ -196,11 +196,11 @@ const Home = () => {
           {quickActions.map((a) => (
             <Card
               key={a.title}
-              className="bg-card border-primary/15 hover:border-primary/30 transition-colors cursor-pointer"
+              className="bg-card border-border hover:border-zinc-700 transition-colors cursor-pointer"
               onClick={() => navigate(a.to)}
             >
               <CardContent className="p-5">
-                <a.icon className="h-8 w-8 text-primary mb-3" />
+                <a.icon className="h-8 w-8 text-zinc-400 mb-3" />
                 <h3 className="font-medium text-foreground">{a.title}</h3>
                 <p className="text-sm text-muted-foreground mt-1">{a.sub}</p>
               </CardContent>
@@ -221,7 +221,7 @@ const Home = () => {
           </div>
           <div className="relative pl-6">
             {/* Vertical line */}
-            <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-primary/20" />
+            <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-zinc-800" />
             <div className="space-y-4">
               {activityItems.map((item, i) => (
                 <div key={i} className={`relative flex items-start gap-4 ${!item.active ? "opacity-60" : ""}`}>

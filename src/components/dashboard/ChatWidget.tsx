@@ -97,7 +97,7 @@ const ChatWidget = () => {
   // Slide-up panel (desktop only)
   return (
     <div
-      className="fixed bottom-6 right-6 z-50 w-[380px] h-[500px] rounded-2xl border border-primary/15 bg-card flex flex-col overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.4)]"
+      className="fixed bottom-6 right-6 z-50 w-[380px] h-[500px] rounded-2xl border border-border bg-card flex flex-col overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.4)]"
       style={{ animation: "slideUp 200ms ease-out" }}
     >
       <style>{`@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>

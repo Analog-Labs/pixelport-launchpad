@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_tasks: {
+        Row: {
+          agent_model: string | null
+          agent_role: string
+          approval_feedback: string | null
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          platform: string | null
+          requires_approval: boolean | null
+          scheduled_for: string | null
+          status: string
+          task_description: string
+          task_input: Json | null
+          task_output: Json | null
+          task_type: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_model?: string | null
+          agent_role: string
+          approval_feedback?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          platform?: string | null
+          requires_approval?: boolean | null
+          scheduled_for?: string | null
+          status?: string
+          task_description: string
+          task_input?: Json | null
+          task_output?: Json | null
+          task_type: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_model?: string | null
+          agent_role?: string
+          approval_feedback?: string | null
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          platform?: string | null
+          requires_approval?: boolean | null
+          scheduled_for?: string | null
+          status?: string
+          task_description?: string
+          task_input?: Json | null
+          task_output?: Json | null
+          task_type?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agents: {
         Row: {
           agent_id: string
@@ -257,6 +328,53 @@ export type Database = {
           },
         ]
       }
+      competitors: {
+        Row: {
+          analysis: Json | null
+          company_name: string
+          created_at: string | null
+          id: string
+          recent_activity: string | null
+          summary: string | null
+          tenant_id: string
+          threat_level: string | null
+          updated_at: string | null
+          website_url: string | null
+        }
+        Insert: {
+          analysis?: Json | null
+          company_name: string
+          created_at?: string | null
+          id?: string
+          recent_activity?: string | null
+          summary?: string | null
+          tenant_id: string
+          threat_level?: string | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          analysis?: Json | null
+          company_name?: string
+          created_at?: string | null
+          id?: string
+          recent_activity?: string | null
+          summary?: string | null
+          tenant_id?: string
+          threat_level?: string | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitors_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_items: {
         Row: {
           agent_id: string | null
@@ -444,6 +562,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          agent_api_key: string | null
           agentmail_inbox: string | null
           created_at: string | null
           droplet_id: string | null
@@ -462,6 +581,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          agent_api_key?: string | null
           agentmail_inbox?: string | null
           created_at?: string | null
           droplet_id?: string | null
@@ -480,6 +600,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          agent_api_key?: string | null
           agentmail_inbox?: string | null
           created_at?: string | null
           droplet_id?: string | null
@@ -498,6 +619,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      vault_sections: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          id: string
+          last_updated_by: string | null
+          section_key: string
+          section_title: string
+          status: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          last_updated_by?: string | null
+          section_key: string
+          section_title: string
+          status?: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          last_updated_by?: string | null
+          section_key?: string
+          section_title?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vault_sections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

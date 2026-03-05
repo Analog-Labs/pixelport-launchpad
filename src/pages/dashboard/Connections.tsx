@@ -95,7 +95,7 @@ const Connections = () => {
       </header>
 
       {/* Slack */}
-      <Card>
+      <Card className="border-border bg-card">
         <CardContent className="flex items-center gap-4 p-6">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#4A154B]">
             <MessageSquare className="h-6 w-6 text-white" />
@@ -103,7 +103,7 @@ const Connections = () => {
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-foreground">Slack</p>
             {slack.connected ? (
-              <div className="flex items-center gap-1.5 text-sm text-green-600">
+              <div className="flex items-center gap-1.5 text-sm text-emerald-400">
                 <CheckCircle className="h-4 w-4" />
                 <span>Connected{slack.team_name ? ` to ${slack.team_name}` : ""}</span>
               </div>
@@ -129,7 +129,7 @@ const Connections = () => {
       </Card>
 
       {/* Email */}
-      <Card>
+      <Card className="border-border bg-card">
         <CardContent className="flex items-center gap-4 p-6">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600">
             <Mail className="h-6 w-6 text-white" />
@@ -138,7 +138,7 @@ const Connections = () => {
             <p className="font-semibold text-foreground">Email</p>
             {email.connected && email.inbox ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Badge className="bg-green-600 text-white hover:bg-green-600">Active</Badge>
+                <Badge className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15 border-0">Active</Badge>
                 <span className="truncate">— {email.inbox}</span>
               </div>
             ) : (
