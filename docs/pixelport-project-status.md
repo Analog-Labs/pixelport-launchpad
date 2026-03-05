@@ -1,6 +1,6 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-03-04
+**Last Updated:** 2026-03-05
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
 **Formerly:** Growth Swarm (now first tenant / dogfood instance of PixelPort)
 **Infrastructure:** OpenClaw on DigitalOcean droplet `openclaw-prod` (ID: `552336242`)
@@ -99,7 +99,7 @@ Full product spec: `docs/pixelport-master-plan-v2.md`
 ### Canonical docs
 - **Project plan/status:** local repo `docs/pixelport-project-status.md` (this file)
 - **Product spec (v2.0):** local repo `docs/pixelport-master-plan-v2.md`
-- **CTO transition briefing:** `docs/cto-instructions-master-plan-v2-transition.md`
+- **CTO transition briefing:** `docs/archive/cto-instructions-master-plan-v2-transition.md`
 - **Lovable collaboration guide:** `docs/lovable-collaboration-guide.md`
 - **Infrastructure benchmark:** `docs/cto-founder-infra-benchmark-2026-02-27.md`
 - **OpenClaw reference:** `docs/openclaw-reference.md`
@@ -108,7 +108,7 @@ Full product spec: `docs/pixelport-master-plan-v2.md`
   - `/opt/openclaw/workspace-content/*.md`
   - `/opt/openclaw/workspace-growth/*.md`
 - `/opt/openclaw/agents/*/agent/*.md` is operational storage, NOT planning source-of-truth.
-- **Archived:** `docs/archive/` — completed Growth Swarm instruction files and v1.0 plan
+- **Archived:** `docs/archive/` — completed Phase 0/1 slice docs, Growth Swarm instruction files, v1.0 plan
 
 ---
 
@@ -317,25 +317,38 @@ Constraints (locked):
 
 ### Phase 1: Chief of Staff Alive (Weeks 3-5)
 **Goal**: Onboarding + Chief of Staff working in dashboard + Slack + email
-**Status: 🟡 Active — Codex executing Slices 5+7, Slice 6 pending CTO architecture decision
+**Status: ✅ Complete (gate passed 2026-03-05)**
 
-**CTO + Codex:**
-- [ ] 1.C1 (Slice 5): Tenant creation endpoint (`POST /api/tenants`) — 🟢 ready for Codex
-- [ ] 1.C2 (Slice 6): Chat API streaming (SSE) + message history — ⚠️ BLOCKED: OpenClaw gateway is WebSocket-only, need architecture decision for HTTP-to-WS bridge
-- [ ] 1.C3 (Slice 7): Slack OAuth flow + webhook — 🟢 ready for Codex
-- [ ] 1.C4 (Slice 8): Mem0 tenant setup — ⬜ instruction doc not yet written
-- [ ] 1.C5 (Slice 9): PostHog integration — ⬜ instruction doc not yet written
-- [ ] 1.9: AgentMail per-tenant provisioning — ✅ already part of provisioning workflow
+**CTO + Codex: ✅ ALL COMPLETE**
+- [x] 1.C1 (Slice 5): Tenant creation endpoint (`POST /api/tenants`) ✅
+- [x] 1.C2 (Slice 6): Chat API streaming (SSE) + message history ✅
+- [x] 1.C3 (Slice 7): Slack OAuth flow + webhook ✅
+- [x] 1.C6: AgentMail per-tenant provisioning (in provisioning workflow) ✅
+- [x] 1.C7 (Slice 8): Website auto-scan (`POST /api/tenants/scan`) ✅
+- [x] 1.C8 (Slice 9): Slack activation workflow (SSH + hot-reload) ✅
 
-**Founder + Lovable:**
-- [ ] 1.1-1.5: 3-step onboarding UI, agent personalization (consumes POST /api/tenants)
-- [ ] 1.6: Dashboard Home with agent status + pending approvals
-- [ ] 1.7: Chat widget (persistent sidebar) + full-page chat view
-- [ ] 1.8: Slack OAuth button (consumes GET /api/connections/slack/install)
-- [ ] 1.12-1.14: KPI negotiation, reporting config, Slack+dashboard sync
+**Founder + Lovable: ✅ ALL COMPLETE**
+- [x] 1.F1-F4: Onboarding wizard, dashboard home, chat widget, agent personalization ✅
+- [x] 1.F5: Connections page with Slack OAuth ✅
 
-**Architecture Decisions Needed:**
-- Chat integration: OpenClaw gateway is WebSocket-only (no REST API). Frontend cannot chat via Vercel serverless proxy. Options: (a) direct browser→droplet WebSocket, (b) HTTP-to-WS bridge container on droplet, (c) OpenClaw Control UI embed. CTO to decide.
+**Integration: ✅ ALL COMPLETE (I2 deferred)**
+- [x] 1.I1: Onboarding → POST /api/tenants ✅
+- [x] 1.I1b: Scan API in onboarding ✅
+- [x] 1.I3: Dashboard status polling ✅
+- [x] 1.I4: Connections page → Slack OAuth ✅
+
+**Deferred to Phase 2:**
+- 1.C4: Mem0 per-tenant integration (depends on Mem0 API key / startup program)
+- 1.I2: Chat SSE streaming (Slack is primary channel; dashboard chat ships as-is)
+- 1.C5: PostHog (redesigned as user-facing integration)
+
+**E2E tested with 2 tenants:** sanchal@analog.one (Vidacious) + sr@ziffyhomes.com. 15 bugs fixed across 4 sessions.
+
+**Architecture decisions made:**
+- Slack is PRIMARY channel for Phase 1 (dashboard chat deferred)
+- OpenClaw custom LiteLLM provider required (bypasses OPENAI_BASE_URL)
+- Website auto-scan: lightweight fetch + LLM brand extraction during onboarding
+- PostHog redesigned: user-facing integration (customers connect their PostHog)
 
 ### Phase 2: Content Pipeline + Images (Weeks 6-9)
 **Goal**: Full content production pipeline with image generation
@@ -535,6 +548,15 @@ Constraints (locked):
 | 2026-03-04 | Canvas/cron EACCES errors | Missing directories for OpenClaw runtime | Added canvas/cron/agents dirs to cloud-init + volume mounts |
 | 2026-03-04 | DO Marketplace OpenClaw image retired | Image slug=null, status=retired | Reverted to ubuntu-24-04-x64 with full Docker cloud-init |
 | 2026-03-04 | Test-provision re-triggers on status check | Default behavior re-sent Inngest event, creating duplicate runs | Added `mode=status` (read-only) and `mode=retry` (explicit) |
+| 2026-03-05 | SSH key mismatch | Vercel env var had wrong key format | Founder updated to RSA key matching DO account |
+| 2026-03-05 | `node` not on Ubuntu 24.04 host | SSH scripts used node.js | Replaced all host scripts with python3 (`5670bdd`) |
+| 2026-03-05 | OpenClaw config crash (strict validation) | Unrecognized keys in config | Stripped to minimal known keys only (`4bd886e`) |
+| 2026-03-05 | LiteLLM 401 — OpenClaw ignores OPENAI_BASE_URL | Built-in `openai` provider hardcodes api.openai.com | Custom `litellm` provider in `models.providers` with explicit `baseUrl` (`929b7ad`) |
+| 2026-03-05 | LiteLLM key_alias collision on re-provision | Same tenant slug = same alias = 422 error | Added UUID suffix: `key_alias: pixelport-${slug}-${uuid}` |
+| 2026-03-05 | LiteLLM team_alias collision on re-provision | Same tenant slug = same alias = 422 error | Added UUID suffix: `team_alias: pixelport-${slug}-${uuid}` (`44a1394`) |
+| 2026-03-05 | Gateway health check fail-open | activate-slack.ts silently continued if gateway unhealthy | Changed to throw + Inngest retry (`d100fbf`) |
+| 2026-03-05 | Debug endpoints had no auth | 5 mutating endpoints exposed without secrets | Deleted mutating endpoints, added shared-secret auth to 3 read-only (`d100fbf`) |
+| 2026-03-05 | inngest.send() silent failure | Event dispatch failure not caught | Added try/catch with explicit error logging |
 
 ---
 
@@ -560,34 +582,54 @@ Constraints (locked):
 2. LUNA keeps operating autonomously on current droplet
 3. Continue daily thread intake in `#vidacious-bot`
 4. Get founder approval on content packs → first publishes
-5. No infrastructure changes until PixelPort Phase 1 migration
-6. Growth Swarm stays on current droplet through PixelPort Phase 1 validation
+5. No infrastructure changes until PixelPort Phase 2
 
-### PixelPort (product) — Phase 1 active
+### PixelPort (product) — Phase 2 planning
 
-**Phase 0: ✅ COMPLETE (all items)**
-- ✅ LiteLLM on Railway, Supabase schema, API bridge (16 routes), Inngest provisioning workflow
-- ✅ Lovable frontend: landing page, auth, dashboard shell (9 routes)
-- ✅ Phase 0.9 dry-run PASSED: full 12-step pipeline creates tenant → droplet → OpenClaw → active in ~7 min
-- ✅ 11/13 Vercel env vars confirmed SET (AGENTMAIL_API_KEY + OPENCLAW_IMAGE optional)
+**Phase 0: ✅ COMPLETE**
+- LiteLLM on Railway, Supabase schema, API bridge (16 routes), Inngest provisioning workflow
+- Lovable frontend: landing page, auth, dashboard shell (9 routes)
+- Phase 0.9 dry-run PASSED
 
-**Phase 1 — In progress (CTO + Codex):**
-1. 🟢 Slice 5 (Tenant Creation): `POST /api/tenants` — assigned to Codex
-2. ⚠️ Slice 6 (Chat API): BLOCKED — OpenClaw is WebSocket-only, CTO designing bridge solution
-3. 🟢 Slice 7 (Slack OAuth): OAuth flow + webhook — assigned to Codex
-4. ⬜ Slice 8 (Mem0): Not yet written
-5. ⬜ Slice 9 (PostHog): Not yet written
+**Phase 1: ✅ COMPLETE (gate passed 2026-03-05)**
+- All CTO Slices 5-9 complete and reviewed
+- All frontend pages (F1-F5) complete
+- All integration wiring complete (I1-I4; I2 deferred)
+- E2E tested with 2 tenants (sanchal@analog.one + sr@ziffyhomes.com)
+- 15 bugs fixed across 4 sessions
+- Deferred: Mem0, Chat SSE, PostHog
 
-**Phase 1 — Founder (Lovable):**
-1. Onboarding widget (3-step: URL → goals → connect Slack) — consumes `POST /api/tenants`
-2. Dashboard Home with agent status — consumes `GET /api/tenants/me` + `/api/tenants/status`
-3. Connections page — consumes `GET /api/connections`
+**Phase 2: 🟡 PLANNING — Content Pipeline + Images (Weeks 6-9)**
 
-**Critical Vercel patterns (discovered during Phase 0.9):**
+CTO + Codex (Backend):
+1. Sub-agent auto-provisioning (SPARK + SCOUT per tenant)
+2. Inter-agent communication wiring
+3. Content pipeline API (create/approve/schedule/publish)
+4. Inngest approval workflow
+5. Image generation integration
+6. Mem0 per-tenant integration (carry-forward)
+7. Chat WebSocket bridge (carry-forward)
+8. PostHog user-facing integration (carry-forward)
+9. Recent Activity API (real event data)
+
+Founder + Lovable (Frontend):
+1. Content Pipeline page
+2. Content Calendar page
+3. Knowledge Vault page
+4. Competitor Intelligence page
+5. Recent Activity feed (real data)
+6. Chat WebSocket UI
+7. Performance page
+
+See `docs/ACTIVE-PLAN.md` for full Phase 2 checklist with work split.
+
+**Critical Vercel patterns (from Phase 0-1):**
 - `api/package.json` with `{"type": "commonjs"}` MUST exist (overrides root ESM)
 - Inngest client must be created inline (no local file imports that re-export)
 - All Inngest polling must use durable `step.run()` + `step.sleep()` (not setTimeout)
 - After deploy, sync Inngest with `curl -X PUT /api/inngest`
+- OpenClaw custom LiteLLM provider required (bypasses OPENAI_BASE_URL)
+- UUID suffix on LiteLLM key_alias and team_alias (prevents re-provision collisions)
 
 ---
 
@@ -597,8 +639,8 @@ Constraints (locked):
 |----------|---------|
 | `docs/pixelport-master-plan-v2.md` | Full product spec v2.0 — 52 locked decisions, architecture, build plan |
 | `docs/pixelport-project-status.md` | This file — execution status |
-| `docs/cto-instructions-master-plan-v2-transition.md` | CTO briefing on v1→v2 changes and immediate actions |
+| `docs/archive/cto-instructions-master-plan-v2-transition.md` | CTO briefing on v1→v2 changes (archived) |
 | `docs/lovable-collaboration-guide.md` | How founder + Claude work on Lovable frontend |
 | `docs/cto-founder-infra-benchmark-2026-02-27.md` | Infrastructure benchmark + competitor analysis |
 | `docs/openclaw-reference.md` | OpenClaw platform reference |
-| `docs/archive/` | Completed Growth Swarm CTO instruction files + v1.0 plan |
+| `docs/archive/` | Completed Phase 0/1 slice docs, Growth Swarm files, v1.0 plan |

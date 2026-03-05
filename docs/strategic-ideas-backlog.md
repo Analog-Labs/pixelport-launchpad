@@ -12,9 +12,9 @@
 
 **Effort:** Medium (requires a lightweight LLM call during onboarding, before the full OpenClaw instance is provisioned — could use the central LiteLLM gateway directly)
 
-**Recommended timing:** Phase 1 enhancement (after core onboarding works)
+**Recommended timing:** Phase 2 enhancement (extend auto-scan with immediate deliverable)
 
-**Status:** ⬜ Pending founder review
+**Status:** 🔄 Partially addressed — website auto-scan (Slice 8) already extracts brand profile during onboarding. Could be extended to produce a quick-win deliverable (competitor snapshot, headline suggestion) shown while provisioning completes (~6.5 min window).
 
 ---
 

@@ -1,6 +1,6 @@
 # PixelPort — Project Coordination System
 
-**Date:** 2026-03-02
+**Date:** 2026-03-05
 **Purpose:** How all agents (Founder, Claude chat, CTO Claude Code, Codex) stay in sync across async sessions
 **Source of Truth:** GitHub repo (shared by all parties)
 
@@ -110,17 +110,15 @@ pixelport/                          ← GitHub repo (Lovable monorepo)
 │   ├── pixelport-master-plan-v2.md ← Product spec (52 locked decisions)
 │   ├── lovable-collaboration-guide.md
 │   ├── openclaw-reference.md
-│   ├── cto-instructions-master-plan-v2-transition.md
-│   │
-│   ├── phase0/                     ← Phase 0 specific docs
-│   │   ├── cto-phase0-go-package.md
-│   │   ├── codex-slice-1-litellm.md
-│   │   ├── codex-slice-2-schema.md
-│   │   ├── codex-slice-3-api-bridge.md
-│   │   └── codex-slice-4-provisioning.md
+│   ├── strategic-ideas-backlog.md
 │   │
 │   └── archive/                    ← Completed phases + old session logs
-│       └── session-history.md
+│       ├── phase0/                 ← 5 completed Phase 0 slice docs
+│       ├── phase1/                 ← 8 completed Phase 1 slice docs
+│       ├── session-history.md
+│       ├── cto-instructions-master-plan-v2-transition.md
+│       ├── CODEX-QA-BRIEF.md
+│       └── codex-wi4-sync-docs-templates.md
 │
 ├── src/                            ← Lovable frontend (auto-generated)
 ├── api/                            ← CTO backend code

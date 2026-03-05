@@ -25,7 +25,7 @@ Growth Swarm is the dogfood instance running Vidacious marketing on OpenClaw (3 
 | Current phase checklist | `docs/ACTIVE-PLAN.md` |
 | Full project history + decisions | `docs/pixelport-project-status.md` |
 | Product spec (52 locked decisions) | `docs/pixelport-master-plan-v2.md` |
-| Phase-specific CTO/Codex instructions | `docs/phase0/` (or current phase folder) |
+| Archived Phase 0/1 slice docs | `docs/archive/phase0/` and `docs/archive/phase1/` |
 | How founder + Claude work on frontend | `docs/lovable-collaboration-guide.md` |
 | OpenClaw platform reference | `docs/openclaw-reference.md` |
 | Coordination system rules | `docs/project-coordination-system.md` |

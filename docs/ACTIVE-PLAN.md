@@ -8,106 +8,137 @@
 
 **Status:** Complete. Phase 0.9 dry-run PASSED (12-step Inngest pipeline, ~7 min end-to-end).
 
-All items done: landing page, auth, dashboard shell, LiteLLM, Supabase schema, API bridge (16 routes), provisioning workflow (12-step Inngest), Inngest Cloud setup, CTO QA (9 frontend fixes), Codex review (both slices pass), dry-run (7 bugs found + fixed).
-
-Branch `codex/phase0-slices-3-4` merged to `main`.
-
 ---
 
-## Current Phase: Phase 1 — Chief of Staff Alive
+## Previous Phase: Phase 1 — Chief of Staff Alive ✅
 
-**Target:** Weeks 3-5 (March 10-28, 2026)
-**Goal:** Customer onboards in 3 steps, Chief of Staff is alive in dashboard + Slack + email
+**Status:** Complete (gate passed 2026-03-05).
+**Duration:** March 3–5, 2026
 
----
+### Phase 1 Gate Assessment
 
-### Founder Track (Lovable Frontend)
-- [x] 1.F1: Onboarding widget — 3-step flow (company URL → goals → connect Slack)
+**PASSED** — with planned deferrals.
+
+**Proven end-to-end flow:**
+1. User signs up → onboarding wizard (company URL, goals, agent personalization)
+2. Website auto-scan extracts brand profile during onboarding
+3. `POST /api/tenants` triggers Inngest provisioning (~6.5 min)
+4. Droplet created → Docker CE → OpenClaw → agents configured → SOUL.md populated
+5. User connects Slack → OAuth → Inngest activates Socket Mode on droplet
+6. User DMs agent → bot responds ✅
+
+**Tested with 2 tenants:**
+- sanchal@analog.one (Vidacious) — droplet at 137.184.193.239
+- sr@ziffyhomes.com — droplet at 137.184.17.111
+
+**15 bugs fixed across 4 sessions** (see `docs/pixelport-project-status.md` §8)
+
+**Deferred to Phase 2:**
+- 1.C4: Mem0 per-tenant integration (depends on Mem0 API key / startup program)
+- 1.I2: Chat SSE streaming (Slack is primary channel; dashboard chat ships as-is)
+- 1.C5: PostHog (redesigned as user-facing integration)
+
+### Completed Items
+
+**Founder Track (Lovable Frontend)**
+- [x] 1.F1: Onboarding widget — 3-step flow
 - [x] 1.F2: Dashboard Home — agent status card, pending approvals, recent activity
-- [x] 1.F3: Chat widget (persistent sidebar) + full-page chat view (`/dashboard/chat`)
-- [x] 1.F4: Agent personalization UI — name, avatar, tone selection during onboarding
-- [x] 1.F5: Connections page — show connected integrations (Slack, email) ← COMPLETE (I4 wiring applied by founder)
+- [x] 1.F3: Chat widget (persistent sidebar) + full-page chat view
+- [x] 1.F4: Agent personalization UI
+- [x] 1.F5: Connections page
 
-### CTO Track (Backend + Infra)
-- [x] 1.C1: Tenant creation endpoint + Inngest trigger ← CODEX SLICE 5 complete (`POST /api/tenants`)
-- [x] 1.C2: Chat API streaming (SSE) + message history ← CODEX SLICE 6 complete (`POST /api/chat` SSE + `GET /api/chat/history`)
-- [x] 1.C3: Slack OAuth flow + webhook ← CODEX SLICE 7 complete (`/api/connections/slack/{install,callback,events}` + `GET /api/connections`)
-- [ ] 1.C4: Mem0 managed cloud — per-tenant scoping (user has active plan, Slice 10 planned)
-- [x] 1.C5: PostHog ← REDESIGNED: user-facing integration (customers connect their PostHog), deferred to Phase 2
-- [x] 1.C6: AgentMail per-tenant inbox ← already in provisioning workflow
-- [x] 1.C7: Website auto-scan during onboarding ← CODEX SLICE 8 complete (`POST /api/tenants/scan` + SOUL knowledge injection)
-- [x] 1.C8: Slack activation workflow ← CODEX SLICE 9 complete + CTO reviewed (ALL PASS). Env vars set: `SLACK_APP_TOKEN`, `SSH_PRIVATE_KEY`. Ready for live E2E test.
+**CTO Track (Backend + Infra)**
+- [x] 1.C1: Tenant creation endpoint (Codex Slice 5)
+- [x] 1.C2: Chat API streaming SSE + message history (Codex Slice 6)
+- [x] 1.C3: Slack OAuth flow + webhook (Codex Slice 7)
+- [x] 1.C6: AgentMail per-tenant inbox (in provisioning workflow)
+- [x] 1.C7: Website auto-scan (Codex Slice 8)
+- [x] 1.C8: Slack activation workflow (Codex Slice 9)
+
+**Integration (CTO + Founder)**
+- [x] 1.I1: Onboarding → POST /api/tenants
+- [x] 1.I1b: Scan API in onboarding
+- [x] 1.I3: Dashboard status polling
+- [x] 1.I4: Connections page → Slack OAuth
+
+---
+
+## Current Phase: Phase 2 — Content Pipeline + Images
+
+**Target:** Weeks 6–9 (March 10 – April 4, 2026)
+**Goal:** Sub-agents alive, content pipeline end-to-end, dashboard pages populated with real data
+
+---
+
+### Carry-Forward from Phase 1
+
+| Item | Owner | Notes |
+|------|-------|-------|
+| Mem0 per-tenant integration | CTO + Codex | Depends on Mem0 API key / startup program approval |
+| Chat WebSocket/SSE bridge | CTO + Codex | Dashboard chat → agent via droplet gateway |
+| PostHog user-facing integration | CTO + Codex | Customers connect their own PostHog |
+
+---
+
+### CTO + Codex Track (Backend)
+
+- [ ] 2.B1: Sub-agent auto-provisioning — SPARK + SCOUT per tenant (OpenClaw config)
+- [ ] 2.B2: Inter-agent communication wiring (allowlist mesh, delegation contracts)
+- [ ] 2.B3: Content pipeline API — create, approve, schedule, publish endpoints
+- [ ] 2.B4: Inngest approval workflow — content approval + scheduling durable flow
+- [ ] 2.B5: Image generation integration (OpenAI Images API via LiteLLM)
+- [ ] 2.B6: Mem0 per-tenant integration (carry-forward from 1.C4)
+- [ ] 2.B7: Chat WebSocket bridge (carry-forward from 1.I2)
+- [ ] 2.B8: PostHog user-facing integration (carry-forward from 1.C5)
+- [ ] 2.B9: Recent Activity API — real event data for dashboard feed
+
+### Founder + Lovable Track (Frontend)
+
+- [ ] 2.F1: Content Pipeline page — draft/approve/schedule/publish workflow UI
+- [ ] 2.F2: Content Calendar page — calendar view of scheduled content
+- [ ] 2.F3: Knowledge Vault page — brand docs, competitor intel, ICP data
+- [ ] 2.F4: Competitor Intelligence page — competitive landscape dashboard
+- [ ] 2.F5: Recent Activity feed — real data (replace static placeholder)
+- [ ] 2.F6: Chat WebSocket UI — real-time agent chat (when 2.B7 is ready)
+- [ ] 2.F7: Performance page — KPI tracking + agent metrics
 
 ### Integration (CTO + Founder)
-- [x] 1.I1: Wire onboarding widget → POST /api/tenants (create + provision) ← COMPLETE (Lovable + CTO review)
-- [x] 1.I1b: Wire scan API into onboarding → POST /api/tenants/scan during Step 1 ← COMPLETE (founder applied, CTO reviewed ✅)
-- [ ] 1.I2: Wire chat widget → POST /api/chat (streaming) — DEFERRED to Phase 2 (Slack is primary channel)
-- [x] 1.I3: Wire dashboard home → GET /api/tenants/status (real provisioning polling) ← COMPLETE (founder applied, CTO reviewed ✅)
-- [x] 1.I4: Wire connections page → Slack OAuth install + status ← COMPLETE (founder applied, CTO reviewed ✅)
+
+- [ ] 2.I1: Wire Content Pipeline page → content API endpoints
+- [ ] 2.I2: Wire Knowledge Vault → tenant knowledge store
+- [ ] 2.I3: Wire Chat widget → WebSocket bridge
+- [ ] 2.I4: Wire Recent Activity → real event feed
+- [ ] 2.I5: Wire Performance page → PostHog / metrics API
 
 ---
-
-### Dashboard Route Structure (Locked)
-```
-/dashboard               → Home (stat cards, agent status, quick actions)
-/dashboard/content       → Content Pipeline
-/dashboard/calendar      → Content Calendar
-/dashboard/performance   → Performance + KPI tracking
-/dashboard/vault         → Knowledge Vault
-/dashboard/competitors   → Competitor Intelligence
-/dashboard/connections   → Integration management
-/dashboard/settings      → Agent config, API keys, budget, team
-/dashboard/chat          → Full-page agent chat
-```
 
 ### Blockers
+
 | Blocker | Who's Waiting | Who Can Unblock |
-|---------|--------------|-----------------|
-| ~~Slack App Socket Mode setup~~ | ~~Slice 9 testing~~ | ✅ DONE (2026-03-04) |
-| ~~SSH key pair for droplet access~~ | ~~Slice 9 testing~~ | ✅ DONE (2026-03-04) |
-| ~~Frontend integration wiring (I1b, I3, I4)~~ | ~~E2E smoke test~~ | ✅ DONE (2026-03-05) — I2 deferred |
-| ~~E2E smoke test (Vidacious)~~ | ~~Phase 1 gate~~ | ✅ DONE (2026-03-05) — DM @Pixel → bot responds |
-| **E2E test (new tenant)** | Phase 1 gate | CTO runs full flow with fresh tenant (signup → scan → provision → Slack → DM) |
+|---------|---------------|-----------------|
+| Mem0 API key / startup program | 2.B6 | Founder applies to Mem0 |
+| Content pipeline API design | 2.F1, 2.I1 | CTO designs API contract |
+| Sub-agent provisioning templates | 2.B3+ | CTO designs SPARK/SCOUT templates |
 
 ### Notes
-- **Phase 0 → Phase 1 transition (2026-03-03):** CTO reviewed all Codex code (PASS), merged branch to main, created Phase 1 Codex slice docs.
-- **Phase 0.9 dry-run PASSED (2026-03-04):** 12-step Inngest pipeline completes in ~7 min. 7 bugs found and fixed (OpenClaw config schema, gateway binding, container permissions, Inngest polling, ESM/CJS bundler crash).
-- **F1-F4 complete (2026-03-03 evening):** Founder built onboarding wizard, dashboard home (pre/post modes), chat widget (slide-up + full-page), agent personalization. All merged to main. Frontend runs on localStorage + simulated data — needs backend wiring.
-- **Frontend data contract locked:** Onboarding payload fields: `company_name`, `company_url`, `goals[]`, `agent_name`, `agent_tone` (casual|professional|bold), `agent_avatar_url` (6 avatar IDs). See `src/lib/avatars.ts` for avatar map.
-- **Codex Slices 5-7 COMPLETE:** All reviewed by CTO, all pass. Merged to main.
-- **Codex Slices 8-9 COMPLETE + CTO REVIEWED (ALL PASS):** Slice 8 = website auto-scan (`POST /api/tenants/scan`), Slice 9 = Slack activation (6-step Inngest workflow via SSH). All env vars set.
-- **Codex Slice 10 planned:** Mem0 integration — lower priority, depends on Mem0 API key.
-- **Architecture decisions (2026-03-04):** Slack is PRIMARY channel for Phase 1. Dashboard chat ships as-is (WS bridge deferred to Phase 2). PostHog redesigned as user-facing integration (deferred to Phase 2). Website scan: lightweight fetch + LLM extraction.
+
+- **Phase 1 → Phase 2 transition (2026-03-05):** CTO closed Phase 1 gate, archived 16 completed slice/instruction files, updated all status docs.
+- **Integration wiring pattern (from Phase 1):** CTO proposes changes to Lovable-managed frontend files, founder reviews and applies. Do NOT modify `src/` files directly without founder approval.
 - **DO droplet quota:** 1 slot available. Use `/api/debug/test-provision?cleanup=true` after each test to free the slot.
-- Auth decision change: Supabase Auth replaces Clerk (2026-03-03).
-- Codex is a full project participant: reads full project context, provides feedback to CTO, updates session docs after every work session.
-- **Integration wiring (I1-I4):** CTO proposes changes to Lovable-managed frontend files, founder reviews and applies. Do NOT modify `src/` files directly without founder approval.
-- **Frontend integration proposals READY (2026-03-05):** All 4 proposals written in `docs/phase1/frontend-integration-proposals.md`. Includes exact code snippets, API contracts, and implementation order. Founder can hand directly to Lovable.
-- **Frontend wiring APPLIED + CTO REVIEWED (2026-03-05):** Founder applied I1b, I3, I4 in Lovable. CTO reviewed all 3: ALL PASS. I2 (Chat SSE) deferred to Phase 2. Ready for E2E smoke test.
-- **E2E WORKING (2026-03-05 session 3):** 4 bugs fixed (SSH key, python3, config schema, LiteLLM 401). Bot responds to DMs. Post-E2E stabilization: gateway health gate, debug endpoint security, backfill script, SOP update (Codex as QA resource). Key decision: custom `litellm` provider required because OpenClaw bypasses `OPENAI_BASE_URL` env var.
+- **Vercel build cost discipline:** Docs-only changes auto-skipped. Batch code pushes. Target <$5/day.
 
 ---
 
-## Founder Tasks (Required for Phase 1 Completion)
+## What Comes After Phase 2
 
-1. ~~**Slack App ("Pixel") Socket Mode setup:**~~ ✅ DONE (2026-03-04)
-2. ~~**SSH key + Vercel env vars:**~~ ✅ DONE (2026-03-04)
-3. ~~**Apply frontend integration wiring:**~~ ✅ DONE (2026-03-05)
-   - [x] **Priority 1:** Scan wiring in `Onboarding.tsx` — CTO reviewed ✅
-   - [x] **Priority 2:** Connections page in `Connections.tsx` — CTO reviewed ✅
-   - [x] **Priority 3:** Dashboard status polling in `Home.tsx` — CTO reviewed ✅
-   - [ ] **Priority 4:** Chat SSE streaming — DEFERRED to Phase 2
+**Phase 3: Social Publishing + Video (Weeks 10–12)**
+- X + LinkedIn API integration (read + assisted publish)
+- Video generation integration
+- Scheduling engine + performance tracking + weekly reports
 
----
-
-## What Comes After Phase 1
-
-**Phase 2: Content Pipeline + Images (Weeks 6-9)**
-- Sub-agent auto-provisioning, inter-agent comms
-- Content pipeline UI, approval workflow (Inngest)
-- Platform-native content + image generation
-- Dashboard chat WebSocket bridge (deferred from Phase 1)
-- PostHog user-facing integration
-- Competitor intel dashboard, calendar, Knowledge Vault page
+**Phase 4: Dashboard Polish + Trust (Weeks 13–16)**
+- Performance page, agent detail page
+- API keys management, budget controls, brand voice enforcement
+- Audit log, team management + RBAC, Stripe billing
 
 See `docs/pixelport-master-plan-v2.md` Section 15 for full phase details.
