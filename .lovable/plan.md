@@ -1,27 +1,31 @@
 
 
-## Plan: Competitor Intelligence Page
+## Plan: Content Calendar Page
 
-Replace `src/pages/dashboard/Competitors.tsx` with a full page wired to `GET /api/competitors`.
+Replace `src/pages/dashboard/CalendarPage.tsx` with a full monthly calendar view wired to the tasks API.
 
-### Single file change: `src/pages/dashboard/Competitors.tsx`
+### Single file change: `src/pages/dashboard/CalendarPage.tsx`
 
-**Imports:** `useState, useEffect` from React; `Search, Loader2` from lucide-react; `useAuth`; `Skeleton`; `getAgentName`; `toast` from sonner.
+**Note:** The file is `CalendarPage.tsx` (not `Calendar.tsx`), already routed at `/dashboard/calendar`.
 
-**State:** `competitors` (array), `loading` (bool).
+**Imports:** `useState, useEffect, useMemo` from React; `ChevronLeft, ChevronRight, CalendarDays` from lucide-react; `useAuth`; `Button, Skeleton`; `getAgentName`; `toast` from sonner; `format, startOfMonth, endOfMonth, startOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths` from date-fns.
 
-**Data fetching:** `useEffect` calls `GET /api/competitors` with Bearer token. Fails gracefully → empty array.
+**State:** `tasks` (array), `loading` (bool), `currentMonth` (Date), `selectedDate` (string | null).
 
-**Card grid:** `grid grid-cols-1 md:grid-cols-2 gap-4`. Each card: `border border-zinc-800 bg-zinc-900 rounded-lg p-5 space-y-3`.
+**Data fetching:** `useEffect` calls `GET /api/tasks?scheduled_for=true&sort=scheduled_for&order=asc&limit=100` with Bearer token. Fails gracefully.
 
-**Card contents:**
-- Header row: company_name (text-base font-semibold) + website link (text-xs text-zinc-500 hover:text-amber-400, shows hostname only) + threat badge
-- Summary paragraph (text-sm text-zinc-300)
-- Recent activity section (conditional, border-t border-zinc-800)
+**Calendar generation:** Build 42-day grid (6 weeks) using date-fns. Start from Monday of the week containing the 1st of `currentMonth`.
 
-**Threat level badges:** high → red, medium → amber, low → emerald. Same `bg-{color}-500/15 text-{color}-400` pattern.
+**Month navigation:** Prev/Next buttons using `subMonths`/`addMonths`. Header shows `format(currentMonth, "MMMM yyyy")`.
 
-**Empty state:** Search icon + "{agentName} is identifying your competitors..." centered message.
+**DayCell (inline):** `min-h-[80px] p-2 border-r border-b border-zinc-800 cursor-pointer hover:bg-zinc-800/50`. Day number styling: current month → `text-zinc-400`, other month → `text-zinc-600`, today → `text-amber-400 font-bold`, selected → `bg-zinc-800`. Shows up to 2 colored dots (LinkedIn=blue, X=zinc-400, other=amber-500) plus "+N more" if needed.
 
-**Routing:** Already at `/dashboard/competitors` — no change needed.
+**Selected day detail panel:** Shows below the calendar when a date with tasks is clicked. Lists each task with platform dot, description, and time.
+
+**Platform dot colors:** linkedin → `bg-blue-500`, twitter/x → `bg-zinc-400`, other → `bg-amber-500`.
+
+**Empty state:** CalendarDays icon + "{agentName} is building your content calendar..."
+
+### Files changed
+Only `src/pages/dashboard/CalendarPage.tsx`
 
