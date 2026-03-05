@@ -1,54 +1,37 @@
 
 
-## Plan: Global Theme + Typography Upgrade
+## Plan: Sidebar Navigation Redesign
 
-Purely visual changes across 6 files. No functionality or API changes.
+Single file change: `src/components/dashboard/AppSidebar.tsx`
 
-### 1. `src/index.css` — Update CSS variables
+### Changes
 
-- `--background`: change to zinc-950 (`240 6% 4%` → maps to #09090b)
-- `--card`: change to zinc-900 (`240 6% 10%` → #18181b)
-- `--popover`: match card (zinc-900)
-- `--border`: change to zinc-800 (`240 4% 16%` → #27272a)
-- `--input`: match border (zinc-800)
-- `--secondary`: zinc-800 (`240 4% 16%`)
-- `--muted`: zinc-800 area
-- `--muted-foreground`: zinc-400 (`240 5% 65%`)
-- `--surface`: zinc-900 area
-- `--sidebar-background`: slightly darker than card
-- `--sidebar-border`: match border
-- Keep `--primary` (amber) and `--ring` unchanged
+**1. Update nav items array**
+- Remove Performance, Chat entries
+- Rename "Competitor Intel" → "Competitors", "Content Calendar" → "Calendar"
+- Replace icons: `Calendar` → `CalendarDays`, `Brain` → `BookOpen`, `Link` → `Plug`
+- Split into `primaryNav` (6 items) and `secondaryNav` (Settings only)
 
-### 2. `src/pages/dashboard/Home.tsx` — Card + typography cleanup
+**2. Update active item styling**
+- Remove: `border-l-2 border-l-primary bg-primary/[0.08] [&>svg]:text-primary`
+- Replace with: `bg-zinc-800 text-white font-medium`
+- Hover state: `hover:bg-zinc-800/50 hover:text-zinc-100`
+- Base text: `text-zinc-400`
 
-- Stat cards: remove `border-primary/15`, use `border-zinc-800 bg-zinc-900`; stat values become `text-3xl font-bold tabular-nums`; labels become `text-xs font-medium text-zinc-500`
-- Chief of Staff card: keep `border-l-primary` accent, change base border to `border-zinc-800 bg-zinc-900`
-- Quick action cards: remove `border-primary/15 hover:border-primary/30`, use `border-zinc-800 bg-zinc-900 hover:border-zinc-700`; icon color from `text-primary` to `text-zinc-400` (amber only for active states)
-- Greeting h1: `text-2xl font-bold tracking-tight` (remove `sm:text-3xl`)
-- Activity timeline line: `bg-zinc-800` instead of `bg-primary/20`
+**3. Add divider between primary and secondary nav**
+- `border-t border-zinc-800 my-2` separator between the two groups
 
-### 3. `src/pages/dashboard/Connections.tsx` — Card styling
+**4. Replace footer with agent status indicator**
+- Keep user info section but simplify
+- Add agent status row: read `tenantStatus` from localStorage (`pixelport_tenant_status`)
+- Show agent name from localStorage (`pixelport_agent_name`) or default "Chief of Staff"
+- Green dot (`bg-emerald-500`) if active, amber dot (`bg-amber-500`) if provisioning
+- Style: `text-xs text-zinc-500`
+- Keep sign out button
 
-- Both cards: add `border-zinc-800 bg-zinc-900` classes
-- Connected status: `text-emerald-400` instead of `text-green-600`
-- Email active badge: `bg-emerald-500/15 text-emerald-400` pattern
+**5. Remove amber tinting**
+- Avatar fallback: `bg-zinc-800 text-zinc-300` instead of `bg-primary/20 text-primary`
+- Sign out hover: `hover:bg-zinc-800/50` instead of `hover:bg-[hsl(0_0%_100%/0.04)]`
 
-### 4. `src/pages/dashboard/Chat.tsx` — Subtle border updates
-
-- Header/input borders: already using `border-border` (will inherit from CSS var change)
-- No explicit changes needed beyond what CSS vars handle
-
-### 5. `src/components/dashboard/ChatWidget.tsx` — Card border update
-
-- Widget panel: change `border-primary/15` to `border-zinc-800`
-- Already uses `bg-card` which will pick up new zinc-900 value
-
-### 6. `src/components/dashboard/AppSidebar.tsx` — Border update
-
-- Sidebar border: change `border-[hsl(0_0%_100%/0.06)]` to `border-zinc-800`
-- Background `bg-[hsl(240_33%_4%)]` will be close to new `--sidebar-background`; can simplify to `bg-sidebar`
-- Footer border: same treatment
-
-### Files changed (6 total)
-All changes are class name and CSS variable swaps. Zero logic changes.
+### No other files changed
 
