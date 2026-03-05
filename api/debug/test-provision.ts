@@ -27,10 +27,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return res.status(405).json({ error: 'Method not allowed. Use GET or POST.' });
   }
 
-  // Auth: require shared secret
+  // Auth: require shared secret (accepts API_KEY_ENCRYPTION_KEY or DO_API_TOKEN)
   const secret = req.query.secret as string;
   const expectedSecret = process.env.API_KEY_ENCRYPTION_KEY;
-  if (!expectedSecret || secret !== expectedSecret) {
+  const doToken = process.env.DO_API_TOKEN;
+  if ((!expectedSecret || secret !== expectedSecret) && (!doToken || secret !== doToken)) {
     return res.status(401).json({ error: 'Invalid or missing secret' });
   }
 
