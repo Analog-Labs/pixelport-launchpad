@@ -352,7 +352,7 @@ Constraints (locked):
 
 ### Phase 2: Dynamic Chief + Real Dashboard Data (Weeks 6-9)
 **Goal**: 1 persistent Chief per tenant with dynamic sub-agents, dashboard pages with real data
-**Status: 🟡 IN PROGRESS — Backend complete + E2E tested. Frontend in progress.**
+**Status: 🟡 IN PROGRESS — Backend + Frontend complete. CTO remaining: image gen, Mem0, chat, approval workflow.**
 
 **CTO Backend: ✅ COMPLETE + E2E TESTED**
 - [x] Architecture pivot (kill SPARK/SCOUT, dynamic sub-agents)
@@ -364,9 +364,14 @@ Constraints (locked):
 
 **CTO Remaining:** Image gen, Mem0, Chat WebSocket, PostHog, Inngest approval workflow
 
-**Founder Frontend (Lovable): IN PROGRESS**
-- [ ] Content Pipeline, Calendar, Knowledge Vault, Competitor Intel pages
-- [ ] Dashboard Home updates, Chat WebSocket UI, Performance page
+**Founder Frontend (Lovable): ✅ COMPLETE (session 7, 2026-03-05)**
+- [x] Global dark theme (zinc palette, amber accents, typography upgrade)
+- [x] Content Pipeline page — filter tabs, approve/reject actions, platform badges
+- [x] Content Calendar page — monthly grid with platform-colored dots, day detail panel
+- [x] Knowledge Vault page — 5 collapsible sections, inline editing, status-aware
+- [x] Competitor Intelligence page — card grid, threat level badges, website links
+- [x] Dashboard Home redesign — 4-stat grid, onboarding checklist, Work Feed + Team Roster
+- [ ] Chat WebSocket UI, Performance page (pending CTO backend)
 
 ### Phase 3: Social Publishing + Video (Weeks 10-12)
 **Goal**: Social integrations + video generation
@@ -536,6 +541,7 @@ Constraints (locked):
 | P2-9 | SOUL.md includes API curl patterns | Chief knows how to call Vercel API endpoints from SOUL.md instructions |
 | P2-10 | Local secrets management | `~/.pixelport/secrets.env` (chmod 600, outside git) — CTO/Codex access without asking founder |
 | P2-11 | Vercel CLI linked | `npx vercel env pull` for env var sync; Supabase CLI linked for migrations |
+| P2-12 | Dark theme modernization | Zinc-based palette (zinc-950/900/800), amber accents selective, font-medium body, tabular-nums stats |
 
 ---
 
@@ -616,19 +622,12 @@ Constraints (locked):
 **Phase 2: 🟡 IN PROGRESS — Dynamic Chief + Real Dashboard Data**
 
 CTO Backend: ✅ COMPLETE + E2E TESTED (session 5+6, 2026-03-05)
-- Architecture pivot, DB migration applied, 12 API endpoints, provisioning rewrite
-- E2E: TestCo Phase2 tenant (droplet 142.93.195.23) — all 15 checks pass
-- Secrets management: ~/.pixelport/secrets.env (local, secure, Codex-accessible)
+Founder Frontend: ✅ COMPLETE (session 7, 2026-03-05) — all 5 dashboard pages built + wired
 
-CTO Remaining:
-- Image gen integration, Mem0, Chat WebSocket, PostHog, Inngest approval workflow
-
-**Founder + Lovable (Frontend): NOW ACTIVE** — Build 4 dashboard pages wired to real APIs:
-1. Content Pipeline → `GET /api/tasks?task_type=draft_content`
-2. Content Calendar → `GET /api/tasks?scheduled_for=true`
-3. Knowledge Vault → `GET /api/vault` + `PUT /api/vault/:key`
-4. Competitor Intelligence → `GET /api/competitors`
-5. Dashboard Home updates → Team Roster + Work Feed from `/api/tasks`
+**Next Steps:**
+1. CTO: E2E test all dashboard pages against TestCo Phase2 seeded data
+2. CTO: Continue with 2.B11-B15 (image gen, Mem0, Chat WebSocket, Inngest approval workflow)
+3. Founder: Polish pass on any UI issues CTO finds during testing
 
 See `docs/ACTIVE-PLAN.md` for full Phase 2 checklist.
 

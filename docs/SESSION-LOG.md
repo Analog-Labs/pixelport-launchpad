@@ -7,31 +7,59 @@
 
 ## Last Session
 
-- **Date:** 2026-03-05 (session 6)
-- **Who worked:** CTO (Claude Code) + Founder
+- **Date:** 2026-03-05 (session 7)
+- **Who worked:** Founder + Claude (Chat) via Lovable
 - **What was done:**
-  - **Secrets management system** — Created `~/.pixelport/secrets.env` (local, chmod 600, outside git) with all 21 env vars. Pulled 13 values from Vercel CLI (`npx vercel env pull`). Helper script `get-secret.sh` + usage log at `~/.pixelport/usage.log`. CTO and Codex can now access keys without asking founder.
-  - **Database migration applied** — `006_phase2_schema.sql` applied via `npx supabase db push`. 3 new tables + agent_api_key column verified.
-  - **E2E test: Phase 2 provisioning — ALL PASS** ✅
-    - Test tenant: "TestCo Phase2" (droplet `142.93.195.23`, ID `556101720`)
-    - Only 1 agent record created (`main` / Chief of Staff) — no SPARK/SCOUT ✅
-    - Only `workspace-main/` on droplet — no workspace-content/growth ✅
-    - `agent_api_key` generated (`ppk-f633202f-...`) and stored in DB ✅
-    - `PIXELPORT_API_KEY` present in droplet `.env` ✅
-    - OpenClaw config: 1 agent, `maxSpawnDepth: 2`, `maxChildrenPerAgent: 5`, `sessions.visibility: all`, `agentToAgent.enabled: true` ✅
-    - 5 vault sections seeded (all `pending` status) ✅
-    - SOUL.md has sub-agent + API curl instructions (11 references) ✅
-    - Agent write APIs tested: `POST /api/agent/tasks`, `PUT /api/agent/vault/company_profile`, `POST /api/agent/competitors` — all work ✅
-    - Dashboard read APIs verified: tasks + competitors returned from DB ✅
+  - **Global UI Upgrade — Dark Theme Modernization**
+    - Updated CSS variables to zinc-based palette (zinc-950 canvas, zinc-900 surfaces, zinc-800 borders)
+    - Amber accent now used selectively (CTAs, active states, Chief of Staff card only)
+    - Typography upgraded: font-medium body text, tabular-nums stat values, tracking-tight titles
+    - Applied across 5 files: index.css, Home.tsx, Connections.tsx, ChatWidget.tsx, AppSidebar.tsx
+  - **Sidebar Navigation Redesign (AppSidebar.tsx)**
+    - 6 primary nav items + 1 secondary (Settings), routes match dashboard structure
+    - Active state: bg-zinc-800 text-white (no more amber left-border)
+    - Agent status indicator in footer (green/amber dot + agent name from localStorage)
+  - **Dashboard Home Redesign (Home.tsx)**
+    - 4-stat grid (Agent Status, Pending Approvals, Running Tasks, Monthly Cost)
+    - Onboarding checklist (4 steps, fetches Slack status from GET /api/connections)
+    - Chief of Staff card with status badge
+    - Two-column layout: Work Feed (GET /api/tasks) + Team Roster (running tasks)
+    - Quick Actions row
+  - **Post-Action Guidance (Connections.tsx)**
+    - Setup progress banner when integrations incomplete
+    - "What happens next?" guidance after Slack connects (3 bullet items + Open Slack button)
+  - **Knowledge Vault Page (Vault.tsx) — NEW**
+    - 5 collapsible sections wired to GET /api/vault
+    - Inline editing with PUT /api/vault/:key + save/cancel
+    - Status-aware: pending/populating/ready states with agent name
+  - **Content Pipeline Page (Content.tsx) — NEW**
+    - Filter tabs (All/Pending/Approved/Published)
+    - Content cards with platform badges, status chips, relative timestamps
+    - Approve/Reject actions wired to POST /api/tasks/approve and /api/tasks/reject
+  - **Competitor Intelligence Page (Competitors.tsx) — NEW**
+    - Card grid wired to GET /api/competitors
+    - Threat level badges (high=red, medium=amber, low=emerald)
+    - Website links, summaries, recent activity sections
+  - **Content Calendar Page (CalendarPage.tsx) — NEW**
+    - Monthly grid with platform-colored dots, wired to GET /api/tasks?scheduled_for=true
+    - Day selection detail panel, month navigation
+    - 42-day grid generated with date-fns
 - **What's next:**
-  - Founder: Build 4 Lovable dashboard pages wired to real APIs
-  - CTO: Image gen integration, Mem0, Chat WebSocket, Inngest approval workflow
-- **Blockers:** None.
-- **Decisions made:**
-  - Local secrets store at `~/.pixelport/` — CTO reads via helper, Codex via grep/cat
-  - Supabase CLI linked to project for future migrations
+  - CTO: E2E test all dashboard pages against TestCo Phase2 seeded data
+  - CTO: Verify all API responses render correctly in the new pages
+  - CTO: Continue with 2.B11-B15 (image gen, Mem0, chat WebSocket, Inngest approval workflow)
+  - Founder: Polish pass on any UI issues CTO finds during testing
+- **Blockers:** None — all frontend wired, all backend deployed.
 
 ---
+
+### 2026-03-05 (session 6)
+- **Who worked:** CTO (Claude Code) + Founder
+- **What was done:**
+  - **Secrets management system** — `~/.pixelport/secrets.env` (local, chmod 600, outside git), 21 env vars, helper script + usage log
+  - **Database migration applied** — `006_phase2_schema.sql` via `npx supabase db push`. 3 new tables + agent_api_key column
+  - **E2E test: Phase 2 provisioning — ALL PASS** ✅ — TestCo Phase2 (droplet `142.93.195.23`), 1 agent only, 5 vault sections, all APIs verified
+- **Decisions:** Local secrets store at `~/.pixelport/`, Supabase CLI linked
 
 ### 2026-03-05 (session 5)
 - **Who worked:** CTO (Claude Code) + Founder

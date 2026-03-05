@@ -107,20 +107,20 @@
 
 ### Founder + Lovable Track (Frontend)
 
-- [ ] 2.F1: Content Pipeline page — reads `GET /api/tasks?task_type=draft_content`
-- [ ] 2.F2: Content Calendar page — reads `GET /api/tasks?scheduled_for=true`
-- [ ] 2.F3: Knowledge Vault page — reads `GET /api/vault`, edits via `PUT /api/vault/:key`
-- [ ] 2.F4: Competitor Intelligence page — reads `GET /api/competitors`
-- [ ] 2.F5: Dashboard Home updates — Team Roster + Work Feed from `/api/tasks`
-- [ ] 2.F6: Chat WebSocket UI — real-time agent chat (when 2.B10 is ready)
+- [x] 2.F1: Content Pipeline page — reads `GET /api/tasks?task_type=draft_content`, approve/reject actions
+- [x] 2.F2: Content Calendar page — monthly grid wired to `GET /api/tasks?scheduled_for=true`
+- [x] 2.F3: Knowledge Vault page — 5 collapsible sections, inline editing via `PUT /api/vault/:key`
+- [x] 2.F4: Competitor Intelligence page — card grid wired to `GET /api/competitors`
+- [x] 2.F5: Dashboard Home updates — 4-stat grid, onboarding checklist, Work Feed + Team Roster, Quick Actions
+- [ ] 2.F6: Chat WebSocket UI — real-time agent chat (when 2.B13 is ready)
 - [ ] 2.F7: Performance page — KPI tracking + agent metrics
 
 ### Integration (CTO + Founder)
 
-- [ ] 2.I1: Wire Content Pipeline page → tasks API
-- [ ] 2.I2: Wire Knowledge Vault → vault API
-- [ ] 2.I3: Wire Competitor Intelligence → competitors API
-- [ ] 2.I4: Wire Dashboard Home → tasks API (work feed + team roster)
+- [x] 2.I1: Wire Content Pipeline page → tasks API
+- [x] 2.I2: Wire Knowledge Vault → vault API
+- [x] 2.I3: Wire Competitor Intelligence → competitors API
+- [x] 2.I4: Wire Dashboard Home → tasks API (work feed + team roster)
 - [ ] 2.I5: Wire Chat widget → WebSocket bridge
 
 ---
@@ -133,6 +133,8 @@
 
 ### Notes
 
+- **Frontend track complete (2026-03-05, session 7):** Founder built all 5 dashboard pages + global dark theme in Lovable. All pages wired to real APIs. E2E verification pending CTO test.
+- **APIs consumed by frontend:** Dashboard Home: `GET /api/connections`, `GET /api/tasks?limit=10`, `GET /api/tenants/status`. Content Pipeline: `GET /api/tasks?task_type=draft_content`, `POST /api/tasks/approve`, `POST /api/tasks/reject`. Calendar: `GET /api/tasks?scheduled_for=true&sort=scheduled_for&order=asc`. Vault: `GET /api/vault`, `PUT /api/vault/:key`. Competitors: `GET /api/competitors`. Connections: `GET /api/connections`.
 - **Architecture pivot (2026-03-05):** Founder locked decision to kill permanent sub-agents. Chief uses OpenClaw native `sessions_spawn` for dynamic sub-agents. Simplifies provisioning, reduces idle LLM cost.
 - **Agent API key pattern:** Per-tenant `agent_api_key` (prefix `ppk-`) stored in tenants table, injected as `PIXELPORT_API_KEY` in droplet `.env`. Chief authenticates via `X-Agent-Key` header.
 - **Dashboard data flow:** Chief → `/api/agent/*` (writes) → Supabase → `/api/tasks/*`, `/api/vault/*`, `/api/competitors/*` (reads) → Lovable dashboard
