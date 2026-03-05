@@ -200,6 +200,22 @@ ALL agents must follow this rule:
 - Reports results back to CTO for verification
 - Does NOT make architectural decisions
 
+**Codex as QA/Debug Resource:**
+- QA audits: code review against specs, risk identification (P1/P2 classification)
+- Debugging slices: investigate errors, trace config issues, validate OpenClaw integration
+- Architecture review: identify drift between docs/templates and runtime, flag inconsistencies
+- Instruction pack format: Context → Scope → Tasks → Verification → Rollback
+
+**When to use Codex for QA:**
+- After completing a feature or fix — send code for audit before shipping
+- When debugging complex integration issues (OpenClaw config, LiteLLM routing, SSH scripts)
+- When docs/templates may be stale and need validation against runtime behavior
+
+**When NOT to use Codex:**
+- For architectural decisions (those require founder approval)
+- For frontend work (that's Lovable + Claude chat)
+- For real-time interactive debugging (use CTO Claude Code directly)
+
 ---
 
 ## Communication Flow
@@ -208,7 +224,8 @@ ALL agents must follow this rule:
 Founder ←→ Claude (chat)     : Brainstorm, plan, generate instructions
 Founder  → CTO (paste docs)  : Hand off instruction files
 CTO      → Codex (delegate)  : Send slice-specific tasks
-Codex    → CTO (report)      : Results and completion status
+CTO      → Codex (QA)        : Send code for audit, get P1/P2 risk report
+Codex    → CTO (report)      : Results, completion status, and QA findings
 CTO      → Founder (report)  : Status updates via SESSION-LOG.md
 Everyone → GitHub repo        : Single source of truth
 ```

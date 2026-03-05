@@ -7,7 +7,13 @@ import { createClient } from '@supabase/supabase-js';
  * Diagnostic endpoint to check tenant + Slack connection status.
  * NOT for production use — remove after debugging.
  */
-export default async function handler(_req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
+  const secret = typeof req.query.secret === 'string' ? req.query.secret : '';
+  const expected = process.env.API_KEY_ENCRYPTION_KEY;
+  if (!expected || secret !== expected) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const url = process.env.SUPABASE_PROJECT_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

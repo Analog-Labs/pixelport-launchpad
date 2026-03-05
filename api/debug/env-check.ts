@@ -6,7 +6,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * Lists which required environment variables are set (without revealing values).
  * NOT for production use — remove after debugging.
  */
-export default async function handler(_req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
+  const secret = typeof req.query.secret === 'string' ? req.query.secret : '';
+  const expected = process.env.API_KEY_ENCRYPTION_KEY;
+  if (!expected || secret !== expected) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const vars = [
     'SUPABASE_PROJECT_URL',
     'SUPABASE_SERVICE_ROLE_KEY',

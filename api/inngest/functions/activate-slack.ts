@@ -255,16 +255,22 @@ export const activateSlack = inngest.createFunction(
       await step.sleep('wait-hot-reload', '15s');
     }
 
-    await step.run('verify-gateway-health', async () => {
+    const gatewayHealth = await step.run('verify-gateway-health', async () => {
       try {
         const response = await fetch(`http://${tenant.droplet_ip}:18789/`, {
           signal: AbortSignal.timeout(5000),
         });
         return { healthy: response.ok, status: response.status };
       } catch (error) {
-        return { healthy: false, warning: error instanceof Error ? error.message : 'Gateway check failed' };
+        return { healthy: false, error: error instanceof Error ? error.message : 'Gateway check failed' };
       }
     });
+
+    if (!gatewayHealth.healthy) {
+      throw new Error(
+        `Gateway unhealthy on ${tenant.droplet_ip} (status: ${gatewayHealth.status ?? 'unreachable'}). Inngest will retry.`
+      );
+    }
 
     await step.run('mark-slack-active', async () => {
       const { error } = await supabase
