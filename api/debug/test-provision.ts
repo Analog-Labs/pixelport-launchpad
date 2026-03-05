@@ -108,6 +108,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
+    // Retry mode with explicit tenantId — re-trigger provisioning for any tenant
+    const tenantId = req.query.tenantId as string;
+    if (mode === 'retry' && tenantId) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('id, slug, status, droplet_id, droplet_ip, created_at')
+        .eq('id', tenantId)
+        .single();
+
+      if (!tenant) {
+        return res.status(404).json({ error: `Tenant ${tenantId} not found` });
+      }
+
+      await inngest.send({
+        name: 'pixelport/tenant.created',
+        data: {
+          tenantId: tenant.id,
+          trialMode: true,
+        },
+      });
+
+      return res.status(200).json({
+        action: 're-triggered',
+        message: `Re-sent provisioning event for "${tenant.slug}" (status: ${tenant.status}).`,
+        tenant,
+        monitor: 'Check Inngest dashboard at https://app.inngest.com for function execution.',
+      });
+    }
+
     // Check for existing test tenants
     const { data: existingTest } = await supabase
       .from('tenants')

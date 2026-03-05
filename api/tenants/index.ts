@@ -172,13 +172,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(500).json({ error: 'Failed to create tenant' });
     }
 
-    await inngest.send({
-      name: 'pixelport/tenant.created',
-      data: {
-        tenantId: newTenant.id,
-        trialMode: true,
-      },
-    });
+    try {
+      await inngest.send({
+        name: 'pixelport/tenant.created',
+        data: {
+          tenantId: newTenant.id,
+          trialMode: true,
+        },
+      });
+    } catch (inngestError) {
+      console.error('Failed to send Inngest provisioning event:', inngestError);
+      // Tenant is created but provisioning won't start — return 201 with warning
+      const { gateway_token, ...safeTenant } = newTenant;
+      return res.status(201).json({
+        tenant: safeTenant,
+        created: true,
+        warning: 'Tenant created but provisioning event failed to send. Use retry endpoint.',
+      });
+    }
 
     const { gateway_token, ...safeTenant } = newTenant;
     return res.status(201).json({ tenant: safeTenant, created: true });
