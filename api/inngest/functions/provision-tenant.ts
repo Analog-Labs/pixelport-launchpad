@@ -114,7 +114,7 @@ export const provisionTenant = inngest.createFunction(
         },
         body: JSON.stringify({
           team_id: litellmTeam.team_id,
-          key_alias: `pixelport-${tenant.slug}-main`,
+          key_alias: `pixelport-${tenant.slug}-${randomUUID().slice(0, 8)}`,
         }),
       });
 
