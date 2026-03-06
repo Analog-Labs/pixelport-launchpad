@@ -55,12 +55,35 @@ const Home = () => {
   const [slackConnected, setSlackConnected] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
+  const [bootstrapRequested, setBootstrapRequested] = useState(false);
+
+  const fetchTasks = async (accessToken: string, isCancelled?: () => boolean) => {
+    try {
+      const res = await fetch("/api/tasks?limit=10&sort=updated_at&order=desc", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok && !isCancelled?.()) {
+        const data = await res.json();
+        setTasks(data.tasks || []);
+      }
+    } catch {
+      /* fail gracefully */
+    } finally {
+      if (!isCancelled?.()) {
+        setTasksLoading(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (tenant?.status) {
       setTenantStatus(tenant.status);
     }
   }, [tenant?.status]);
+
+  useEffect(() => {
+    setBootstrapRequested(false);
+  }, [tenant?.id]);
 
   // Status polling (existing)
   useEffect(() => {
@@ -109,19 +132,56 @@ const Home = () => {
   // Fetch tasks
   useEffect(() => {
     if (!session?.access_token) return;
+    let cancelled = false;
+    const isCancelled = () => cancelled;
+
+    void fetchTasks(session.access_token, isCancelled);
+    const interval = setInterval(() => {
+      void fetchTasks(session.access_token, isCancelled);
+    }, 10000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [session?.access_token]);
+
+  useEffect(() => {
+    if (!session?.access_token || !tenant) return;
+    if (tenantStatus !== "active" || tasksLoading || tasks.length > 0 || bootstrapRequested) return;
+
+    let cancelled = false;
+
     (async () => {
+      setBootstrapRequested(true);
       try {
-        const res = await fetch("/api/tasks?limit=10&sort=updated_at&order=desc", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+        const res = await fetch("/api/tenants/bootstrap", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
         });
-        if (res.ok) {
-          const data = await res.json();
-          setTasks(data.tasks || []);
+
+        if (!res.ok && res.status !== 409) {
+          console.error("Failed to trigger onboarding bootstrap:", await res.text());
+          return;
         }
-      } catch { /* fail gracefully */ }
-      setTasksLoading(false);
+
+        if (!cancelled) {
+          window.setTimeout(() => {
+            void fetchTasks(session.access_token);
+          }, 3000);
+        }
+      } catch (error) {
+        console.error("Bootstrap trigger error:", error);
+      }
     })();
-  }, [session]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bootstrapRequested, session?.access_token, tasks.length, tasksLoading, tenant, tenantStatus]);
 
   // Onboarding checklist logic
   const checklistItems = [

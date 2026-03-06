@@ -202,7 +202,6 @@
 |---------|---------------|-----------------|
 | PostHog Personal API Key + Project ID | E2E test of PostHog integration | Founder provides from PostHog dashboard |
 | Mem0 API key | Mem0 endpoint activation | Founder signs up at mem0.ai + adds key to Vercel env |
-| Supabase Auth URL config still falls back to `http://localhost:3000` | Google login on frontend | Founder/CTO updates Supabase Authentication -> URL Configuration |
 | X Developer App credentials | X integration (Session 11) | Founder registers at developer.x.com |
 | LinkedIn App credentials | LinkedIn integration (Session 11) | Founder registers at developer.linkedin.com |
 | Google OAuth credentials | GA4 integration (Session 12) | Founder configures at Google Cloud Console |
@@ -211,9 +210,11 @@
 
 ### Notes
 
-- **Auth redirect hardening (2026-03-06, session 11):** Frontend auth now uses a shared canonical app URL helper and Supabase PKCE flow. Repo code no longer relies on arbitrary browser origins or hash-fragment tokens, but Supabase Auth dashboard settings still need to point at the production domain for Google login to complete.
+- **Auth redirect hardening (2026-03-06, session 11):** Frontend auth now uses a shared canonical app URL helper and Supabase PKCE flow. Repo code no longer relies on arbitrary browser origins or hash-fragment tokens, and the live Supabase Auth URL configuration was updated to allow the production callback flow.
 - **Tenant state fix (2026-03-06, session 11):** Dashboard/onboarding gating no longer trusts stale `pixelport_*` localStorage across users. Frontend now fetches the real tenant via `/api/tenants/me`, clears tenant state on sign-out/account switch, and only shows provisioning placeholders when a real tenant is actually provisioning.
 - **Onboarding testability fix (2026-03-06, session 11):** Duplicate company names are now allowed across different accounts by auto-generating a unique tenant slug for infra. Slack connect is hidden/disabled until provisioning is complete, so onboarding no longer suggests pre-provisioning integrations.
+- **Auto-bootstrap fix (2026-03-06, session 11):** OpenClaw onboarding research now starts through `POST /hooks/agent` during provisioning. Added `POST /api/tenants/bootstrap` as a replay endpoint for already-active tenants, and the dashboard home page now requests bootstrap once when an active tenant has no real backend work yet.
+- **Architecture issue documented (2026-03-06, session 11):** `api/chat.ts` still targets the nonexistent REST path `POST /openclaw/chat`. Dashboard chat remains a separate WebSocket bridge task; do not treat the current REST chat route as production-ready.
 
 ---
 

@@ -25,13 +25,20 @@
   - Updated `api/tenants/index.ts` so duplicate company names no longer block testing across multiple accounts. Tenant slugs remain unique for infra, but onboarding now auto-suffixes the slug when the same company name is reused.
   - Updated onboarding Step 3 to remove the premature Slack prompt. The flow now focuses on launching/provisioning first.
   - Updated `src/pages/dashboard/Connections.tsx` so Slack connect is disabled until tenant provisioning is complete (`tenant.status === active`).
+  - Audited the live `Vidacious` tenant after onboarding completed: tenant status reached `active`, a real droplet was created (`159.89.95.83`), OpenClaw was healthy on port `18789`, and the Chief agent row was created with model `gpt-5.2-codex` (fallbacks available via LiteLLM).
+  - Verified the dashboard "Recent Activity" feed was still not backend-driven for the new tenant: `agent_tasks`, `competitors`, and `sessions_log` were empty, so the app was either showing placeholders or nothing despite provisioning having completed.
+  - Identified the real gap: provisioning stopped after `mark-active`, and no first-run bootstrap was ever sent to the Chief. Also confirmed `api/chat.ts` still targets `POST /openclaw/chat`, which is invalid for OpenClaw `2026.2.24` because the gateway is WebSocket-first and does not expose that REST chat route.
+  - Added `api/lib/onboarding-bootstrap.ts` with a shared bootstrap prompt builder and a hook-based trigger using OpenClaw `POST /hooks/agent`.
+  - Updated `api/inngest/functions/provision-tenant.ts` to enable OpenClaw hooks in the generated tenant config, tighten the SOUL instructions so the Chief writes real task/vault data during onboarding research, and automatically dispatch the initial bootstrap after the tenant is marked `active`.
+  - Added `POST /api/tenants/bootstrap` so already-active tenants can replay onboarding bootstrap without recreating the account. The endpoint blocks duplicate replays unless `force=true` is passed and existing agent output is absent.
+  - Updated `src/pages/dashboard/Home.tsx` to poll `/api/tasks` and automatically request onboarding bootstrap once for active tenants that still have no backend work recorded. This gives already-active tenants a recovery path after deploy and lets the Recent Activity feed update when the Chief starts writing tasks.
   - Ran `npx tsc --noEmit` — clean.
 - **What's next:**
-  - Retest Google login and complete onboarding with a fresh account/browser session so `/api/tenants` creates the first real tenant row for the new user.
-  - Verify repeated onboarding tests work for `Vidacious.ai` across multiple accounts and each account receives a unique tenant slug.
-  - Confirm Slack connect stays unavailable until the tenant reaches `active`.
+  - Deploy and verify the new hook-based bootstrap on a fresh tenant and on the existing `Vidacious` test tenant via `POST /api/tenants/bootstrap`.
+  - Confirm the Chief now creates real `agent_tasks`, vault updates, and competitor records shortly after provisioning so the dashboard feed is backed by database writes.
+  - Decide when to replace or retire the invalid `api/chat.ts` REST bridge. It is still incompatible with OpenClaw `2026.2.24` and remains a separate architecture task.
   - CTO: Continue Phase 3 Session 11 work (X + LinkedIn adapters + social publishing) once auth is unblocked.
-- **Blockers:** None in repo for this bug. Remaining validation is a fresh live signup/onboarding pass.
+- **Blockers:** No repo blocker for onboarding bootstrap. Live validation still depends on deploy/push before the new hook-based trigger can be tested in production.
 
 ---
 

@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
+import { buildOnboardingBootstrapMessage, triggerOnboardingBootstrap } from '../../lib/onboarding-bootstrap';
 
 // Inline client creation — importing from a local file that re-exports inngest
 // crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
@@ -432,6 +433,32 @@ export const provisionTenant = inngest.createFunction(
       }
     });
 
+    const bootstrapResult = await step.run('trigger-initial-bootstrap', async () => {
+      try {
+        return await triggerOnboardingBootstrap({
+          gatewayUrl,
+          gatewayToken: droplet.gatewayToken,
+          message: buildOnboardingBootstrapMessage({
+            tenantName: tenant.name,
+            onboardingData: tenant.onboarding_data,
+          }),
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          status: 500,
+          body: error instanceof Error ? error.message : 'Unknown bootstrap error',
+        };
+      }
+    });
+
+    if (!bootstrapResult.ok) {
+      console.warn(
+        `Initial onboarding bootstrap did not start for tenant ${tenantId} ` +
+        `(HTTP ${bootstrapResult.status}): ${bootstrapResult.body}`
+      );
+    }
+
     return {
       success: true,
       tenantId,
@@ -440,6 +467,8 @@ export const provisionTenant = inngest.createFunction(
       litellmTeamId: litellmTeam.team_id,
       litellmKeyAlias: litellmKey.key_name || `pixelport-${tenant.slug}-main`,
       agentmailInbox,
+      bootstrapAccepted: bootstrapResult.ok,
+      bootstrapStatus: bootstrapResult.status,
       trialMode: !!trialMode,
       requestedSize: droplet.requestedSize,
       requestedRegion: droplet.requestedRegion,
@@ -549,6 +578,14 @@ function buildOpenClawConfig(params: {
       controlUi: {
         dangerouslyAllowHostHeaderOriginFallback: true,
       },
+    },
+    hooks: {
+      enabled: true,
+      token: params.gatewayToken,
+      path: '/hooks',
+      allowedAgentIds: ['main'],
+      defaultSessionKey: 'hook:onboarding-bootstrap',
+      allowedSessionKeyPrefixes: ['hook:'],
     },
     tools: {
       sessions: {
@@ -699,6 +736,10 @@ When you first start (or when the vault has sections in "pending" status), autom
 6. **Content Ideas** — Generate 5-10 initial content ideas based on the research above.
 
 For each research task, spawn a sub-agent, then store results via the API.
+The dashboard must reflect that work in real time:
+- Create or update task records for major research runs so Recent Activity is backed by real data.
+- Set vault sections to \`populating\` while you work and \`ready\` when finished.
+- Create a strategy/report task summarizing the initial onboarding findings even if some questions remain open.
 
 ## API Integration
 You have access to the PixelPort API to read and write data. Use these endpoints to store your work so the dashboard stays up-to-date.
