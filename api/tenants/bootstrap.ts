@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
+import { repairBootstrapHooksOnDroplet } from '../lib/bootstrap-hooks-repair';
 import { buildOnboardingBootstrapMessage, triggerOnboardingBootstrap } from '../lib/onboarding-bootstrap';
 import { supabase } from '../lib/supabase';
 
@@ -62,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    const result = await triggerOnboardingBootstrap({
+    let result = await triggerOnboardingBootstrap({
       gatewayUrl: `http://${tenant.droplet_ip}:18789`,
       gatewayToken: tenant.gateway_token,
       message: buildOnboardingBootstrapMessage({
@@ -70,6 +71,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         onboardingData: tenant.onboarding_data,
       }),
     });
+
+    let hooksRepaired = false;
+
+    // Older droplets were provisioned before hooks existed in openclaw.json.
+    // Repair them in place so bootstrap replay can recover those tenants.
+    if (!result.ok && result.status === 405) {
+      try {
+        await repairBootstrapHooksOnDroplet(tenant.droplet_ip, tenant.gateway_token);
+        hooksRepaired = true;
+
+        result = await triggerOnboardingBootstrap({
+          gatewayUrl: `http://${tenant.droplet_ip}:18789`,
+          gatewayToken: tenant.gateway_token,
+          message: buildOnboardingBootstrapMessage({
+            tenantName: tenant.name,
+            onboardingData: tenant.onboarding_data,
+          }),
+        });
+      } catch (repairError) {
+        return res.status(502).json({
+          error: 'Gateway rejected onboarding bootstrap and hooks repair failed',
+          gateway_status: result.status,
+          details: result.body,
+          repair_error: repairError instanceof Error ? repairError.message : 'Unknown repair error',
+        });
+      }
+    }
 
     if (!result.ok) {
       return res.status(502).json({
@@ -83,6 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       accepted: true,
       gateway_status: result.status,
       existing_output_present: hasExistingAgentOutput,
+      hooks_repaired: hooksRepaired,
     });
   } catch (error) {
     return errorResponse(res, error);

@@ -7,6 +7,30 @@
 
 ## Last Session
 
+- **Date:** 2026-03-06 (session 14)
+- **Who worked:** Codex
+- **What was done:**
+  - Restored the local Playwright MCP browser path by clearing the stuck Chrome session that held the dedicated `ms-playwright/mcp-chrome` profile open, then resumed live production validation in the visible browser.
+  - Re-validated the protected dashboard hard-load fix on production: `/dashboard/content` and `/dashboard/connections` now stay on the requested route after auth settles.
+  - Re-validated the live `Vidacious` tenant and confirmed the remaining onboarding gap was not the redirect fix or the old hook-token crash. The tenant was `active`, but `POST /api/tenants/bootstrap` still failed because the existing droplet's `openclaw.json` had no `hooks` block at all.
+  - Verified the runtime behavior directly on the `Vidacious` droplet (`159.89.95.83`) over SSH. Once hooks were added, `POST /hooks/agent` with the derived hook token returned `202`, confirming the caller path is valid for OpenClaw `2026.2.24` when hooks are actually configured.
+  - Identified a second runtime compatibility bug from live gateway logs: accepted hook runs failed first with `rs_* not found` on the `openai-responses` transport, and then with `UnsupportedParamsError: ['store']` on the `openai-completions` transport until LiteLLM is told to drop unsupported params.
+  - Confirmed the correct LiteLLM transport at runtime by calling the tenant's LiteLLM proxy directly on the droplet: `POST /v1/chat/completions` with model `gpt-5.2-codex` returned `200 OK`.
+  - Updated `api/lib/onboarding-bootstrap.ts` to generate a `2026.2.24`-compatible hooks block via `buildBootstrapHooksConfig()`.
+  - Added `api/lib/droplet-ssh.ts` and `api/lib/bootstrap-hooks-repair.ts`, then updated `api/tenants/bootstrap.ts` so active tenants created before hooks support can self-heal in place over SSH when the first bootstrap attempt returns `405`.
+  - Updated `api/inngest/functions/provision-tenant.ts` so fresh droplets write the older-compatible hooks config shape, stop using the invalid `group:all` tool allowlist, and switch the LiteLLM provider transport from `openai-responses` to `openai-completions`.
+  - Updated `infra/litellm/config.yaml` to set `litellm_settings.drop_params: true`, which is required because OpenClaw `2026.2.24` still injects unsupported params like `store` into the LiteLLM proxy requests.
+  - Used the live `Vidacious` droplet as a canary during diagnosis. Manual host-side backups were created on the droplet before each config mutation (`openclaw.json.bak-bootstrap-*`, `openclaw.json.bak-canary-*`, `openclaw.json.bak-chatapi-*`).
+  - Ran `npx tsc --noEmit` twice after the code changes — clean both times.
+- **What's next:**
+  - Deploy the Vercel changes so `POST /api/tenants/bootstrap` can repair older active droplets automatically.
+  - Redeploy the Railway LiteLLM service from `infra/litellm/config.yaml` so `drop_params: true` is live; without that, OpenClaw `2026.2.24` still fails accepted hook runs with `UnsupportedParamsError: ['store']`.
+  - Re-run bootstrap replay on the existing `Vidacious` tenant and confirm real backend output starts appearing (`agent_tasks`, vault updates, competitors).
+  - Re-check Vault markdown rendering on a tenant that has `ready` vault sections once bootstrap output is flowing again.
+- **Blockers:** End-to-end onboarding bootstrap is still blocked in live production until the updated LiteLLM Railway config is redeployed. The repo changes and the Vercel-side repair path are ready.
+
+---
+
 - **Date:** 2026-03-06 (session 13)
 - **Who worked:** Codex
 - **What was done:**

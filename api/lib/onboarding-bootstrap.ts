@@ -18,6 +18,22 @@ export function deriveHooksToken(gatewayToken: string): string {
   return `hk-${digest}`;
 }
 
+export function buildBootstrapHooksConfig(gatewayToken: string): Record<string, unknown> {
+  return {
+    enabled: true,
+    token: deriveHooksToken(gatewayToken),
+    path: '/hooks',
+    mappings: [
+      {
+        match: { path: 'onboarding-bootstrap' },
+        action: 'agent',
+        agentId: 'main',
+        deliver: true,
+      },
+    ],
+  };
+}
+
 function normalizeText(value: unknown): string | null {
   if (typeof value !== 'string') {
     return null;

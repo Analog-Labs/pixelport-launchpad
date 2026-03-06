@@ -2,8 +2,8 @@ import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
 import {
+  buildBootstrapHooksConfig,
   buildOnboardingBootstrapMessage,
-  deriveHooksToken,
   triggerOnboardingBootstrap,
 } from '../../lib/onboarding-bootstrap';
 
@@ -572,8 +572,6 @@ function buildOpenClawConfig(params: {
   litellmUrl: string;
   agentName: string;
 }): Record<string, unknown> {
-  const hooksToken = deriveHooksToken(params.gatewayToken);
-
   return {
     gateway: {
       auth: {
@@ -585,14 +583,7 @@ function buildOpenClawConfig(params: {
         dangerouslyAllowHostHeaderOriginFallback: true,
       },
     },
-    hooks: {
-      enabled: true,
-      token: hooksToken,
-      path: '/hooks',
-      allowedAgentIds: ['main'],
-      defaultSessionKey: 'hook:onboarding-bootstrap',
-      allowedSessionKeyPrefixes: ['hook:'],
-    },
+    hooks: buildBootstrapHooksConfig(params.gatewayToken),
     tools: {
       sessions: {
         visibility: 'all',
@@ -622,7 +613,7 @@ function buildOpenClawConfig(params: {
             allowAgents: ['*'],
           },
           tools: {
-            allow: ['group:all', 'group:sessions', 'group:runtime'],
+            profile: 'full',
           },
         },
       ],
@@ -633,13 +624,13 @@ function buildOpenClawConfig(params: {
         litellm: {
           baseUrl: `${params.litellmUrl}/v1`,
           apiKey: '${OPENAI_API_KEY}',
-          api: 'openai-responses',
+          api: 'openai-completions',
           authHeader: true,
           models: [
             {
               id: 'gpt-5.2-codex',
               name: 'GPT 5.2 Codex',
-              api: 'openai-responses',
+              api: 'openai-completions',
               reasoning: false,
               input: ['text'],
               cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -649,7 +640,7 @@ function buildOpenClawConfig(params: {
             {
               id: 'gpt-4o-mini',
               name: 'GPT 4o Mini',
-              api: 'openai-responses',
+              api: 'openai-completions',
               reasoning: false,
               input: ['text'],
               cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -659,7 +650,7 @@ function buildOpenClawConfig(params: {
             {
               id: 'gemini-2.5-flash',
               name: 'Gemini 2.5 Flash',
-              api: 'openai-responses',
+              api: 'openai-completions',
               reasoning: false,
               input: ['text'],
               cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },

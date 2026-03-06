@@ -28,6 +28,7 @@ model_list:
 
 litellm_settings:
   # Enable detailed spend tracking per team/key
+  drop_params: true # OpenClaw 2026.2.24 still sends unsupported params like store
   max_budget: 1000 # Global safety cap (USD)
   budget_duration: "30d"
 
