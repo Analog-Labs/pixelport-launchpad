@@ -19,13 +19,14 @@ interface EmailInfo {
 }
 
 const Connections = () => {
-  const { session } = useAuth();
+  const { session, tenant } = useAuth();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [slack, setSlack] = useState<SlackInfo>({ connected: false });
   const [email, setEmail] = useState<EmailInfo>({ connected: false, inbox: null });
   const [connecting, setConnecting] = useState(false);
+  const provisioningComplete = tenant?.status === "active";
 
   // Fetch integration status
   useEffect(() => {
@@ -102,7 +103,11 @@ const Connections = () => {
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">Setup in progress</p>
-            <p className="text-xs text-muted-foreground">Connect your tools to get the most out of your AI Chief of Staff.</p>
+            <p className="text-xs text-muted-foreground">
+              {provisioningComplete
+                ? "Connect your tools to get the most out of your AI Chief of Staff."
+                : "Provisioning must finish before Slack can be connected."}
+            </p>
           </div>
         </div>
       )}
@@ -128,18 +133,28 @@ const Connections = () => {
               )}
             </div>
             {!slack.connected && (
-              <Button onClick={handleConnectSlack} disabled={connecting}>
+              <Button onClick={handleConnectSlack} disabled={connecting || !provisioningComplete}>
                 {connecting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Connecting…
                   </>
+                ) : !provisioningComplete ? (
+                  "Available After Provisioning"
                 ) : (
                   "Connect Slack"
                 )}
               </Button>
             )}
           </div>
+
+          {!slack.connected && !provisioningComplete && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-sm text-muted-foreground">
+                Slack activation depends on the tenant droplet and gateway being online first. Finish provisioning, then connect Slack here.
+              </p>
+            </div>
+          )}
 
           {slack.connected && (
             <div className="mt-4 pt-4 border-t border-border">

@@ -47,6 +47,16 @@ function generateSlug(name: string): string {
     .slice(0, 50);
 }
 
+function withSlugSuffix(baseSlug: string, sequence: number): string {
+  if (sequence <= 1) {
+    return baseSlug;
+  }
+
+  const suffix = `-${sequence}`;
+  const trimmedBase = baseSlug.slice(0, Math.max(1, 50 - suffix.length)).replace(/-+$/g, '');
+  return `${trimmedBase}${suffix}`;
+}
+
 function resolveTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -135,41 +145,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       completed_at: new Date().toISOString(),
     };
 
-    const { data: newTenant, error: insertError } = await supabase
-      .from('tenants')
-      .insert({
-        supabase_user_id: user.id,
-        name: normalizedCompanyName,
-        slug,
-        plan: 'trial',
-        status: 'provisioning',
-        onboarding_data: onboardingData,
-        settings: {
-          trial_budget_usd: 20,
-          timezone: resolveTimezone(),
-        },
-      })
-      .select('*')
-      .single();
+    let newTenant: Record<string, any> | null = null;
+    let insertError: { code?: string; message?: string } | null = null;
 
-    if (insertError) {
-      if (insertError.code === '23505') {
-        const { data: racedTenant } = await supabase
-          .from('tenants')
-          .select('*')
-          .eq('supabase_user_id', user.id)
-          .maybeSingle();
+    for (let attempt = 1; attempt <= 10; attempt += 1) {
+      const candidateSlug = withSlugSuffix(slug, attempt);
 
-        if (racedTenant) {
-          const { gateway_token, ...safeRacedTenant } = racedTenant;
-          return res.status(200).json({ tenant: safeRacedTenant, created: false });
-        }
+      const result = await supabase
+        .from('tenants')
+        .insert({
+          supabase_user_id: user.id,
+          name: normalizedCompanyName,
+          slug: candidateSlug,
+          plan: 'trial',
+          status: 'provisioning',
+          onboarding_data: onboardingData,
+          settings: {
+            trial_budget_usd: 20,
+            timezone: resolveTimezone(),
+          },
+        })
+        .select('*')
+        .single();
 
-        return res.status(409).json({ error: 'A tenant with this company name already exists. Please try another name.' });
+      newTenant = result.data;
+      insertError = result.error;
+
+      if (!insertError && newTenant) {
+        break;
       }
 
+      if (insertError?.code !== '23505') {
+        break;
+      }
+
+      const { data: racedTenant } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('supabase_user_id', user.id)
+        .maybeSingle();
+
+      if (racedTenant) {
+        const { gateway_token, ...safeRacedTenant } = racedTenant;
+        return res.status(200).json({ tenant: safeRacedTenant, created: false });
+      }
+    }
+
+    if (insertError || !newTenant) {
       console.error('Tenant creation error:', insertError);
-      return res.status(500).json({ error: 'Failed to create tenant' });
+      return res.status(500).json({
+        error: 'Failed to create tenant workspace. Please retry.',
+      });
     }
 
     try {

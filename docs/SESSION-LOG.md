@@ -22,10 +22,14 @@
   - Updated `src/components/ProtectedRoute.tsx` and `src/pages/Onboarding.tsx` so onboarding/dashboard access is based on actual tenant existence, not browser-local flags.
   - Updated `src/pages/Onboarding.tsx` to mark onboarding complete only after `/api/tenants` succeeds, and surface an error instead of silently navigating to a fake dashboard.
   - Updated `src/pages/dashboard/Home.tsx` and `src/components/dashboard/AppSidebar.tsx` to prefer real tenant status over stale local storage. Placeholder "Recent Activity" items now show only while the tenant is genuinely provisioning.
+  - Updated `api/tenants/index.ts` so duplicate company names no longer block testing across multiple accounts. Tenant slugs remain unique for infra, but onboarding now auto-suffixes the slug when the same company name is reused.
+  - Updated onboarding Step 3 to remove the premature Slack prompt. The flow now focuses on launching/provisioning first.
+  - Updated `src/pages/dashboard/Connections.tsx` so Slack connect is disabled until tenant provisioning is complete (`tenant.status === active`).
   - Ran `npx tsc --noEmit` — clean.
 - **What's next:**
-  - Founder/CTO: Update Supabase `Authentication -> URL Configuration` so `Site URL` and `Allowed Redirect URLs` use the production domain instead of `http://localhost:3000`.
   - Retest Google login and complete onboarding with a fresh account/browser session so `/api/tenants` creates the first real tenant row for the new user.
+  - Verify repeated onboarding tests work for `Vidacious.ai` across multiple accounts and each account receives a unique tenant slug.
+  - Confirm Slack connect stays unavailable until the tenant reaches `active`.
   - CTO: Continue Phase 3 Session 11 work (X + LinkedIn adapters + social publishing) once auth is unblocked.
 - **Blockers:** None in repo for this bug. Remaining validation is a fresh live signup/onboarding pass.
 

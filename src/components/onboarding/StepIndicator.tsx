@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 
-const steps = ["Company Info", "Your Agent", "Connect Tools"];
+const steps = ["Company Info", "Your Agent", "Launch"];
 
 interface StepIndicatorProps {
   currentStep: number; // 1-based
