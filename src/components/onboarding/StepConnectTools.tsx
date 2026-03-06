@@ -32,7 +32,7 @@ const StepConnectTools = ({ agentName, error, onBack, onLaunch }: Props) => {
       </div>
 
       <p className="text-xs text-muted-foreground text-center">
-        Tool connections appear later in Dashboard -> Connections once the tenant is active.
+        Tool connections appear later in Dashboard &gt; Connections once the tenant is active.
       </p>
 
       {/* What happens next */}
