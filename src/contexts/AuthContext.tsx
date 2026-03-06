@@ -49,8 +49,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [tenant, setTenant] = useState<TenantProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [tenantLoading, setTenantLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
+
+  const applySessionState = (nextSession: Session | null) => {
+    setSession(nextSession);
+    setUser(nextSession?.user ?? null);
+    setAuthInitialized(true);
+    setLoading(false);
+
+    if (!nextSession?.user) {
+      setTenant(null);
+      setTenantLoading(false);
+      clearPixelportSessionState();
+      return;
+    }
+
+    setTenantLoading(true);
+  };
 
   const refreshTenant = async () => {
+    if (!authInitialized) {
+      return;
+    }
+
     if (!session?.access_token || !session.user) {
       setTenant(null);
       setTenantLoading(false);
@@ -96,35 +117,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up listener BEFORE getSession per Supabase best practices
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-
-        if (!session?.user) {
-          setTenant(null);
-          setTenantLoading(false);
-          clearPixelportSessionState();
-        }
+        applySessionState(session);
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-
-      if (!session?.user) {
-        setTenant(null);
-        setTenantLoading(false);
-      }
+      applySessionState(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
+    if (!authInitialized) {
+      return;
+    }
+
     void refreshTenant();
-  }, [session?.access_token, session?.user?.id]);
+  }, [authInitialized, session?.access_token, session?.user?.id]);
 
   const signOut = async () => {
     await supabase.auth.signOut();

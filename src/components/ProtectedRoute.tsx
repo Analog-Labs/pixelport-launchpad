@@ -1,9 +1,12 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import PixelPortLogo from "@/components/PixelPortLogo";
+import { getRequestedDashboardPath } from "@/lib/dashboard-redirect";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, tenant, loading, tenantLoading } = useAuth();
+  const location = useLocation();
+  const requestedPath = getRequestedDashboardPath(location.pathname, location.search, location.hash);
 
   if (loading || tenantLoading) {
     return (
@@ -17,11 +20,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: requestedPath }} />;
   }
 
   if (!tenant) {
-    return <Navigate to="/onboarding" replace />;
+    return <Navigate to="/onboarding" replace state={{ from: requestedPath }} />;
   }
 
   return <>{children}</>;

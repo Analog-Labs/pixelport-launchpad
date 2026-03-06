@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Navigate, useNavigate, Link } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import PixelPortLogo from "@/components/PixelPortLogo";
 import StepIndicator from "@/components/onboarding/StepIndicator";
 import StepCompanyInfo from "@/components/onboarding/StepCompanyInfo";
 import StepAgentSetup from "@/components/onboarding/StepAgentSetup";
 import StepConnectTools from "@/components/onboarding/StepConnectTools";
+import { getPostAuthRedirectPath } from "@/lib/dashboard-redirect";
 
 interface OnboardingData {
   company_name: string;
@@ -34,6 +35,7 @@ const Onboarding = () => {
     refreshTenant,
   } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(1);
   const [launching, setLaunching] = useState(false);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
@@ -51,6 +53,7 @@ const Onboarding = () => {
     agent_tone: "professional",
     agent_avatar: "amber-l",
   });
+  const redirectPath = getPostAuthRedirectPath(location.state);
 
   // Step transition animation
   const changeStep = (next: number) => {
@@ -134,7 +137,7 @@ const Onboarding = () => {
         new Promise((resolve) => setTimeout(resolve, 4000)),
       ]);
 
-      navigate("/dashboard", { replace: true });
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       console.error("Tenant creation error:", err);
       setLaunching(false);
@@ -146,7 +149,7 @@ const Onboarding = () => {
 
   if (authLoading || tenantLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (tenant) return <Navigate to="/dashboard" replace />;
+  if (tenant) return <Navigate to={redirectPath} replace />;
 
   // Launching state
   if (launching) {

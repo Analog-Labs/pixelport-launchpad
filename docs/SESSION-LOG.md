@@ -7,6 +7,61 @@
 
 ## Last Session
 
+- **Date:** 2026-03-06 (session 13)
+- **Who worked:** Codex
+- **What was done:**
+  - Implemented the QA hotfix bundle for three scoped issues: fresh onboarding provisioning, protected dashboard deep links, and Vault markdown rendering.
+  - Fixed the OpenClaw provisioning config bug by deriving a distinct hooks token from `gateway_token` instead of reusing the same token for both `gateway.auth.token` and `hooks.token`.
+  - Updated `api/lib/onboarding-bootstrap.ts` so hook-triggered onboarding bootstrap authenticates with the derived hooks token, and updated `api/inngest/functions/provision-tenant.ts` so new tenant droplets write the distinct hook token into `openclaw.json`.
+  - Kept the existing tenant schema unchanged. No migration was added; hook auth now derives deterministically from `gateway_token`.
+  - Updated `api/tenants/bootstrap.ts` so replaying onboarding bootstrap for already-active tenants also uses the derived hooks token.
+  - Fixed the protected-route deep-link regression by tightening auth initialization in `src/contexts/AuthContext.tsx`, preventing the app from concluding "no tenant" before Supabase session hydration finishes.
+  - Updated `src/components/ProtectedRoute.tsx` to preserve the originally requested `/dashboard...` route in redirect state for both `/login` and `/onboarding`.
+  - Updated `src/pages/Login.tsx`, `src/pages/Signup.tsx`, and `src/pages/Onboarding.tsx` to honor the preserved dashboard destination instead of always normalizing back to `/dashboard`.
+  - Added `src/lib/dashboard-redirect.ts` to centralize safe `/dashboard...` redirect parsing and destination resolution.
+  - Added `react-markdown`, enabled Tailwind Typography in `tailwind.config.ts`, and updated `src/pages/dashboard/Vault.tsx` so ready Vault sections render formatted markdown while edit mode still uses raw markdown text.
+  - Left dashboard chat unchanged and documented it as still simulated/out of scope for this hotfix bundle.
+  - Ran `npx tsc --noEmit` — clean.
+- **What's next:**
+  - Deploy the hotfix bundle and rerun the fresh onboarding production audit to confirm new droplets reach `active` without the `hooks.token must not match gateway auth token` crash-loop.
+  - Re-validate protected hard loads for `/dashboard/content` and `/dashboard/connections` with both active and provisioning tenants.
+  - Re-validate Vault markdown formatting on ready sections after deploy.
+  - Keep chat on the separate backlog until the real dashboard bridge is designed and implemented.
+- **Blockers:** No code blocker remains for the scoped hotfix bundle. Live validation still depends on deploy/push before production behavior can be confirmed.
+
+---
+
+- **Date:** 2026-03-06 (session 12)
+- **Who worked:** Codex
+- **What was done:**
+  - Ran a production QA audit against `https://pixelport-launchpad.vercel.app` covering signed-out route guards, fresh onboarding, and seeded active-dashboard flows.
+  - Verified signed-out `/dashboard` and `/onboarding` both redirect to `/login`, and confirmed Google OAuth reachability from the live login page.
+  - Attempted a real self-serve signup flow and hit Supabase auth rate limiting (`429 email rate limit exceeded`) after client-side validation succeeded.
+  - Created a fresh confirmed QA auth user to continue the onboarding audit without depending on email confirmation throughput.
+  - Completed onboarding for `QA Audit Co` with agent name `Nova`, confirmed `POST /api/tenants/scan` returned `200`, and confirmed `POST /api/tenants` returned `201` before redirecting into `/dashboard`.
+  - Verified the fresh tenant never progressed beyond `provisioning` and that the dashboard stayed on placeholder activity with no tasks, vault rows, competitors, or sessions.
+  - Queried the fresh tenant backend state and SSH'd to the new droplet (`137.184.56.124`), confirming `openclaw-gateway` was crash-looping and port `18789` was never healthy.
+  - Captured the gateway failure root cause from live container logs: OpenClaw rejects the generated config because `hooks.token` matches `gateway.auth.token`. Also observed repeated `EACCES` failures while the container tried to persist doctor/plugin auto-enable changes.
+  - Correlated the crash-loop with `api/inngest/functions/provision-tenant.ts`, where `buildOpenClawConfig()` currently writes `params.gatewayToken` to both the gateway auth token and the hooks token.
+  - Logged into the seeded `TestCo Phase2` fixture and validated dashboard pages via in-app navigation: Home, Content Pipeline, Calendar, Competitors, Knowledge Vault, Connections, Settings, and Chat all rendered.
+  - Reproduced a protected-route regression on hard loads: direct navigation to `/dashboard/content` and `/dashboard/connections` briefly resolves to `/onboarding` and then falls back to `/dashboard` home instead of preserving the requested child route.
+  - Confirmed the chat widget and full-page chat are still fully simulated UI surfaces with no `/api/chat` traffic after sending messages.
+  - Confirmed the Knowledge Vault still renders raw markdown instead of formatted content.
+  - Confirmed the fresh tenant Connections page correctly disables Slack until provisioning completes when reached through internal navigation.
+  - Saved screenshots, auth-state captures, and page/network evidence under `output/playwright/dashboard-onboarding-qa-2026-03-06/`.
+  - Wrote the full debugging report to `docs/qa/dashboard-onboarding-debug-audit-2026-03-06.md`.
+- **What's next:**
+  - Fix provisioning so `hooks.token` is distinct from `gateway.auth.token`, then re-run the fresh onboarding audit on production.
+  - Fix protected child-route hard loads so authenticated deep links stay on the requested route instead of flashing `/onboarding` and falling back to `/dashboard`.
+  - Decide whether dashboard chat should stay visibly disabled until the real backend bridge exists, or be wired to the real transport before the next publish.
+  - Render Knowledge Vault markdown properly instead of showing raw markdown syntax.
+  - Decide whether the active QA fixture should have a real AgentMail inbox and whether Supabase auth rate limits need adjustment for repeat signup testing.
+- **Blockers:** Fresh onboarding remains blocked in production until the OpenClaw config bug is fixed. The new tenant created during this audit (`QA Audit Co`) is still stuck in `provisioning`.
+
+---
+
+### 2026-03-06 (session 11)
+
 - **Date:** 2026-03-06 (session 11)
 - **Who worked:** Codex
 - **What was done:**

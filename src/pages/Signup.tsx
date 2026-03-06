@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAppUrl, getAuthRedirectUrl } from "@/lib/app-url";
+import { getPostAuthRedirectPath } from "@/lib/dashboard-redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 
 const Signup = () => {
   const { user, loading: authLoading } = useAuth();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -18,9 +20,10 @@ const Signup = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const redirectPath = getPostAuthRedirectPath(location.state);
 
   if (authLoading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) return <Navigate to={redirectPath} replace />;
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();

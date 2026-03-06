@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { getAgentName } from "@/lib/avatars";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 interface VaultSection {
   id: string;
@@ -163,9 +164,15 @@ const Vault = () => {
 
                   {section.status === "ready" && !isEditing && (
                     <div>
-                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                        {section.content || "No content yet."}
-                      </p>
+                      {section.content ? (
+                        <div className="prose prose-invert prose-sm max-w-none text-muted-foreground prose-headings:text-foreground prose-strong:text-foreground prose-li:text-muted-foreground prose-p:text-muted-foreground prose-a:text-primary">
+                          <ReactMarkdown>{section.content}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          No content yet.
+                        </p>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"

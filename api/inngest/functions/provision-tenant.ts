@@ -1,7 +1,11 @@
 import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
-import { buildOnboardingBootstrapMessage, triggerOnboardingBootstrap } from '../../lib/onboarding-bootstrap';
+import {
+  buildOnboardingBootstrapMessage,
+  deriveHooksToken,
+  triggerOnboardingBootstrap,
+} from '../../lib/onboarding-bootstrap';
 
 // Inline client creation — importing from a local file that re-exports inngest
 // crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
@@ -568,6 +572,8 @@ function buildOpenClawConfig(params: {
   litellmUrl: string;
   agentName: string;
 }): Record<string, unknown> {
+  const hooksToken = deriveHooksToken(params.gatewayToken);
+
   return {
     gateway: {
       auth: {
@@ -581,7 +587,7 @@ function buildOpenClawConfig(params: {
     },
     hooks: {
       enabled: true,
-      token: params.gatewayToken,
+      token: hooksToken,
       path: '/hooks',
       allowedAgentIds: ['main'],
       defaultSessionKey: 'hook:onboarding-bootstrap',

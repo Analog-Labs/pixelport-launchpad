@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+
 const GATEWAY_HOOKS_PATH = '/hooks/agent';
 
 type JsonRecord = Record<string, unknown>;
@@ -7,6 +9,14 @@ export type BootstrapTriggerResult = {
   status: number;
   body: string;
 };
+
+export function deriveHooksToken(gatewayToken: string): string {
+  const digest = createHash('sha256')
+    .update(`${gatewayToken}:hooks`)
+    .digest('hex');
+
+  return `hk-${digest}`;
+}
 
 function normalizeText(value: unknown): string | null {
   if (typeof value !== 'string') {
@@ -88,7 +98,7 @@ export async function triggerOnboardingBootstrap(params: {
   const response = await fetch(`${params.gatewayUrl}${GATEWAY_HOOKS_PATH}`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${params.gatewayToken}`,
+      Authorization: `Bearer ${deriveHooksToken(params.gatewayToken)}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
