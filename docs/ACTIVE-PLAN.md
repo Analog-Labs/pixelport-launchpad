@@ -79,11 +79,11 @@
 
 ### Carry-Forward from Phase 1
 
-| Item | Owner | Notes |
-|------|-------|-------|
-| Mem0 per-tenant integration | CTO + Codex | Depends on Mem0 API key / startup program approval |
-| Chat WebSocket/SSE bridge | CTO + Codex | Dashboard chat → agent via droplet gateway |
-| PostHog user-facing integration | CTO + Codex | Customers connect their own PostHog |
+| Item | Owner | Status |
+|------|-------|--------|
+| Mem0 per-tenant integration | CTO + Codex | ✅ Endpoint built (session 9). Needs MEM0_API_KEY to activate. |
+| Chat WebSocket/SSE bridge | CTO + Codex | Deferred to Phase 3 (Slack is primary channel) |
+| PostHog user-facing integration | CTO + Codex | ✅ Redesigned as tenant integration (session 10). Old `api/analytics/track.ts` deleted. New: `api/lib/integrations/adapters/posthog.ts` + generic framework. |
 
 ---
 
@@ -99,11 +99,11 @@
 - [x] 2.B8: Database migration applied to Supabase (006_phase2_schema.sql)
 - [x] 2.B9: E2E test — new tenant provisioning with Phase 2 changes (ALL PASS)
 - [x] 2.B10: Secrets management system (`~/.pixelport/secrets.env` — local, secure, Codex-accessible)
-- [ ] 2.B11: Image generation integration (OpenAI Images API via LiteLLM)
-- [ ] 2.B12: Mem0 per-tenant integration (carry-forward from 1.C4)
-- [ ] 2.B13: Chat WebSocket bridge (carry-forward from 1.I2)
-- [ ] 2.B14: PostHog user-facing integration (carry-forward from 1.C5)
-- [ ] 2.B15: Inngest approval workflow — content approval + scheduling durable flow
+- [x] 2.B11: Image generation integration — `/api/agent/generate-image` (OpenAI DALL-E 3 / gpt-image-1, extensible)
+- [x] 2.B12: Mem0 per-tenant integration — `/api/agent/memory` (GET/POST/DELETE, tenant-scoped via user_id)
+- [ ] 2.B13: Chat WebSocket bridge (carry-forward from 1.I2) — deferred to Phase 3
+- [x] 2.B14: PostHog server-side tracking — ~~`/api/analytics/track`~~ → Redesigned as tenant integration in Phase 3 (session 10)
+- [ ] 2.B15: Inngest approval workflow — deferred to Phase 3 (scheduling engine)
 
 ### Founder + Lovable Track (Frontend)
 
@@ -129,11 +129,16 @@
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
-| Mem0 API key / startup program | 2.B9 | Founder applies to Mem0 |
+| Mem0 API key | Mem0 endpoint activation | Founder signs up at mem0.ai + adds key to Vercel env |
+| PostHog API key | PostHog endpoint activation | Founder signs up at posthog.com + adds key to Vercel env |
 
 ### Notes
 
-- **Frontend track complete (2026-03-05, session 7):** Founder built all 5 dashboard pages + global dark theme in Lovable. All pages wired to real APIs. E2E verification pending CTO test.
+- **Frontend track complete (2026-03-05, session 7):** Founder built all 5 dashboard pages + global dark theme in Lovable. All pages wired to real APIs.
+- **Phase 2 deferred items built (session 9):** Image gen, Mem0, PostHog endpoints all built. Awaiting API keys for Mem0 + PostHog activation.
+- **Codex MCP integration (session 8):** Codex CLI v0.111.0 integrated via MCP. GPT-5.4 xhigh reasoning. Dual QA pattern established.
+- **Codex MCP diagnostic (2026-03-05, session 10):** Native `codex` MCP is being used by Claude Code and completed at least one QA run successfully. `codex-cli` still responds to `ping` but its `review` and `codex` commands fail immediately, so prefer native `codex` MCP for QA until that wrapper is fixed.
+- **Project root moved (session 9):** Claude Code project root moved from `growth-swarm/` to `pixelport-launchpad/` (git repo). Enables worktree isolation for Codex parallel tasks.
 - **APIs consumed by frontend:** Dashboard Home: `GET /api/connections`, `GET /api/tasks?limit=10`, `GET /api/tenants/status`. Content Pipeline: `GET /api/tasks?task_type=draft_content`, `POST /api/tasks/approve`, `POST /api/tasks/reject`. Calendar: `GET /api/tasks?scheduled_for=true&sort=scheduled_for&order=asc`. Vault: `GET /api/vault`, `PUT /api/vault/:key`. Competitors: `GET /api/competitors`. Connections: `GET /api/connections`.
 - **Architecture pivot (2026-03-05):** Founder locked decision to kill permanent sub-agents. Chief uses OpenClaw native `sessions_spawn` for dynamic sub-agents. Simplifies provisioning, reduces idle LLM cost.
 - **Agent API key pattern:** Per-tenant `agent_api_key` (prefix `ppk-`) stored in tenants table, injected as `PIXELPORT_API_KEY` in droplet `.env`. Chief authenticates via `X-Agent-Key` header.
@@ -147,12 +152,63 @@
 
 ---
 
-## What Comes After Phase 2
+## Current Phase: Phase 3 — Integration Framework + Social Publishing
 
-**Phase 3: Social Publishing + Video (Weeks 10–12)**
-- X + LinkedIn API integration (read + assisted publish)
-- Video generation integration
-- Scheduling engine + performance tracking + weekly reports
+**Target:** March 2026 (Sessions 10–12+)
+**Goal:** Generic integration framework, first 4 integrations (PostHog, GA4, X, LinkedIn), social publishing + metrics
+
+**Full plan:** `.claude/plans/synthetic-inventing-cocoa.md`
+
+### Session 10: Integration Framework — COMPLETE ✅
+
+- [x] 3.F1: Delete `api/analytics/track.ts` (replaced by tenant PostHog integration)
+- [x] 3.F2: Database migration `007_integrations_framework.sql` — applied to Supabase
+- [x] 3.F3: Shared utilities — `crypto.ts`, `oauth-state.ts`, `registry.ts`, `token-manager.ts`
+- [x] 3.F4: Generic OAuth endpoints — `install.ts`, `callback.ts`, `disconnect.ts`
+- [x] 3.F5: API key connection endpoint — `connect.ts` (with extra fields support)
+- [x] 3.F6: Updated `GET /api/connections` — queries both tables + includes registry catalog
+- [x] 3.F7: Agent proxy — `POST /api/agent/integrations` (dynamic adapter dispatch)
+- [x] 3.F8: Agent capabilities — `GET /api/agent/capabilities`
+- [x] 3.F9: Inngest `activate-integration.ts` (generic token validation + activation)
+- [x] 3.F10: PostHog adapter (`adapters/posthog.ts`) — 4 actions (traffic, funnels, events, HogQL)
+- [x] 3.F11: 2 Codex QA rounds — all high/medium findings fixed
+- [x] 3.F12: TypeScript compiles clean
+
+### Session 11: X + LinkedIn Adapters + Social Publishing — PENDING
+
+- [ ] 3.S1: X adapter (`adapters/x.ts`) — mentions, engagement, post, followers
+- [ ] 3.S2: LinkedIn adapter (`adapters/linkedin.ts`) — page analytics, post, followers
+- [ ] 3.S3: Social publishing migration (`008_phase3_social.sql`)
+- [ ] 3.S4: Publishing endpoints (`api/agent/publish.ts`, `api/social/posts.ts`, etc.)
+- [ ] 3.S5: Inngest scheduled publishing function
+- [ ] 3.S6: E2E test with real OAuth flow
+
+### Session 12: GA4 + Metrics/Reporting — PENDING
+
+- [ ] 3.M1: GA4 adapter (`adapters/ga4.ts`) — traffic, pageviews, referrals, conversions
+- [ ] 3.M2: Metrics endpoints (`api/agent/metrics-snapshot.ts`, `api/social/metrics.ts`)
+- [ ] 3.M3: Weekly report Inngest cron + endpoint
+- [ ] 3.M4: SOUL.md template update for integration awareness
+
+### Founder Track (Parallel)
+
+- [ ] 3.FE1: Rebuild Connections page as dynamic grid (reads from registry API)
+- [ ] 3.FE2: Build Social Publishing page + Calendar enhancements
+- [ ] 3.FE3: Build Performance page with charts
+
+### Blockers
+
+| Blocker | Who's Waiting | Who Can Unblock |
+|---------|---------------|-----------------|
+| PostHog Personal API Key + Project ID | E2E test of PostHog integration | Founder provides from PostHog dashboard |
+| Mem0 API key | Mem0 endpoint activation | Founder signs up at mem0.ai + adds key to Vercel env |
+| X Developer App credentials | X integration (Session 11) | Founder registers at developer.x.com |
+| LinkedIn App credentials | LinkedIn integration (Session 11) | Founder registers at developer.linkedin.com |
+| Google OAuth credentials | GA4 integration (Session 12) | Founder configures at Google Cloud Console |
+
+---
+
+## What Comes After Phase 3
 
 **Phase 4: Dashboard Polish + Trust (Weeks 13–16)**
 - Performance page, agent detail page

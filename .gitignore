@@ -30,3 +30,10 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Supabase CLI temp files
+supabase/.temp/
+
+# Claude Code local config
+.claude/
+.mcp.json

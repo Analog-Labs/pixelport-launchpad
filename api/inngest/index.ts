@@ -2,6 +2,7 @@ import { serve } from 'inngest/express';
 import { Inngest } from 'inngest';
 import { provisionTenant } from './functions/provision-tenant';
 import { activateSlack } from './functions/activate-slack';
+import { activateIntegration } from './functions/activate-integration';
 
 // Inline client creation — importing from a local file that re-exports inngest
 // crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
@@ -12,5 +13,5 @@ const inngest = new Inngest({
 
 export default serve({
   client: inngest,
-  functions: [provisionTenant, activateSlack],
+  functions: [provisionTenant, activateSlack, activateIntegration],
 });

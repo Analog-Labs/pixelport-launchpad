@@ -14,8 +14,8 @@ Growth Swarm is the dogfood instance running Vidacious marketing on OpenClaw (3 
 ## Who Does What
 | Role | Scope | Does NOT |
 |------|-------|----------|
-| **Founder + Claude (chat)** | Build new frontend features (Lovable), product decisions, instruction docs | Write backend code directly |
-| **CTO (Claude Code)** | Backend, infra, API routes, integrations. Also fixes bugs in `src/` found during QA (after founder approval). | Build new frontend features |
+| **Founder + Codex (chat)** | Build new frontend features (Lovable), product decisions, instruction docs | Write backend code directly |
+| **CTO (Codex)** | Backend, infra, API routes, integrations. Also fixes bugs in `src/` found during QA (after founder approval). | Build new frontend features |
 | **Codex** | Execute CTO instructions. Has full project context. Updates SESSION-LOG + ACTIVE-PLAN after every session. Actively provides feedback and observations to CTO. | Make architectural decisions unilaterally |
 
 ## Where to Find Things
@@ -26,7 +26,7 @@ Growth Swarm is the dogfood instance running Vidacious marketing on OpenClaw (3 
 | Full project history + decisions | `docs/pixelport-project-status.md` |
 | Product spec (52 locked decisions) | `docs/pixelport-master-plan-v2.md` |
 | Archived Phase 0/1 slice docs | `docs/archive/phase0/` and `docs/archive/phase1/` |
-| How founder + Claude work on frontend | `docs/lovable-collaboration-guide.md` |
+| How founder + Codex work on frontend | `docs/lovable-collaboration-guide.md` |
 | OpenClaw platform reference | `docs/openclaw-reference.md` |
 | Coordination system rules | `docs/project-coordination-system.md` |
 
@@ -42,7 +42,7 @@ Memory: Mem0 managed cloud | Analytics: PostHog | Email: AgentMail | Payments: S
 CTO ↔ Codex: Codex CLI v0.111.0 + MCP (`codex-cli` + `codex` in `.mcp.json`), GPT-5.4 xhigh reasoning
 
 ## Codex Integration
-CTO (Claude Code) orchestrates Codex as developer/executor. Two MCP servers in `.mcp.json` + Task tool for parallel work.
+CTO (Codex) orchestrates Codex as developer/executor. Two MCP servers in `.mcp.json` + Task tool for parallel work.
 - **Advisory:** `codex-cli` MCP → code review, architecture analysis
 - **Implementation:** Task tool + worktree + `codex exec` → isolated parallel tasks
 - **Model:** Always `gpt-5.4` with `xhigh` reasoning. No exceptions.
@@ -51,7 +51,7 @@ CTO (Claude Code) orchestrates Codex as developer/executor. Two MCP servers in `
 
 ## Operating Rules
 - Source of truth = GitHub repo. If it's not committed, it doesn't exist.
-- CLAUDE.md stays under 100 lines. Details go in referenced docs.
+- AGENTS.md stays under 100 lines. Details go in referenced docs.
 - Growth Swarm stays in maintenance mode. Modify only if needed for validation.
 - Docker images: always pin explicit version tags (never `:latest`).
 - Founder is non-technical. All questions and decisions must be presented in plain, everyday language with clear options. No jargon without explanation.

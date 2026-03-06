@@ -7,7 +7,94 @@
 
 ## Last Session
 
-- **Date:** 2026-03-05 (session 7)
+- **Date:** 2026-03-05 (session 10)
+- **Who worked:** CTO (Claude Code) + Codex (QA via native MCP)
+- **What was done:**
+  - **Phase 3: Integration Framework — COMPLETE**
+    - Researched PostHog (OAuth, MCP, Query API), competitor landscape (Tensol.ai YC W26), all major marketing integrations
+    - Key finding: OpenClaw 2026.2.24 does NOT support MCP natively (config silently ignored). Vercel API proxy pattern confirmed.
+    - Created comprehensive plan: 16 integrations across 3 tiers, generic framework, adapter pattern
+  - **Framework built (all new files):**
+    - `supabase/migrations/007_integrations_framework.sql` — generic integrations table (RLS, triggers, check constraints). Applied to Supabase.
+    - `api/lib/integrations/crypto.ts` — centralized AES-256-CBC encrypt/decrypt (replaced 3 duplicated copies)
+    - `api/lib/integrations/oauth-state.ts` — HMAC state gen/verify with PKCE support + timing-safe comparison
+    - `api/lib/integrations/registry.ts` — integration catalog (8 services: X, LinkedIn, PostHog, GA4, HubSpot, Google Ads, SEMrush, Search Console)
+    - `api/lib/integrations/token-manager.ts` — lazy OAuth token refresh with 5-min grace window
+    - `api/connections/[service]/install.ts` — generic OAuth initiation (PKCE for X)
+    - `api/connections/[service]/callback.ts` — generic OAuth callback (stores as 'connected', Inngest activates)
+    - `api/connections/[service]/disconnect.ts` — disconnect integration
+    - `api/connections/api-key/connect.ts` — API key storage with extra fields support
+    - `api/agent/integrations.ts` — agent proxy (Chief → service adapter → third-party API)
+    - `api/agent/capabilities.ts` — agent integration awareness (connected services + actions)
+    - `api/inngest/functions/activate-integration.ts` — generic activation (validates token per service)
+    - `api/lib/integrations/adapters/posthog.ts` — PostHog adapter (read_traffic, read_funnels, read_events, query_insights)
+  - **Updated existing files:**
+    - `api/connections/index.ts` — queries both slack_connections + integrations tables, returns registry catalog
+    - `api/inngest/index.ts` — registered activateIntegration function
+  - **Deleted:** `api/analytics/track.ts` (internal PostHog tracking — replaced by tenant integration)
+  - **2 Codex QA rounds (native MCP):**
+    - Round 1: Found PKCE unsigned, missing RLS, activation timing → all fixed
+    - Round 2: Found PostHog host/project_id not collected, wrong EventsNode schema, API key activation timing, masked errors → all fixed
+  - **TypeScript compiles clean** after all fixes
+- **What's next:**
+  - Founder: Test PostHog integration (provide Personal API Key + Project ID)
+  - Founder: Provide Mem0 API key
+  - CTO: Session 11 — X + LinkedIn adapters + social publishing endpoints
+  - CTO: Session 12 — GA4 adapter + metrics/reporting
+  - Founder: Rebuild Connections page as dynamic grid (reads from registry)
+- **Blockers:** PostHog Personal API Key + Project ID needed for E2E test. Mem0 API key still pending.
+
+---
+
+### 2026-03-05 (session 10a — Codex MCP diagnostic)
+- **Who worked:** Codex
+- **What was done:** Verified native `codex` MCP works from Claude Code (1 QA run in 8m 53s). `codex-cli` MCP `review`/`codex` commands fail immediately — prefer native `codex` MCP.
+
+---
+
+### 2026-03-05 (session 9)
+- **Date:** 2026-03-05 (session 9)
+- **Who worked:** CTO (Claude Code)
+- **What was done:**
+  - **3 Phase 2 deferred endpoints built:**
+    - `api/agent/generate-image.ts` — Image gen endpoint (OpenAI DALL-E 3 / gpt-image-1, extensible to FLUX/Imagen)
+    - `api/agent/memory.ts` — Mem0 per-tenant memory (GET/POST/DELETE, tenant-scoped via user_id mapping)
+    - `api/analytics/track.ts` — PostHog server-side event tracking (agent + dashboard auth, fire-and-forget capture)
+  - **Project root migration:** Moved Claude Code project root from `/Users/sanchal/growth-swarm/` (NOT a git repo) to `/Users/sanchal/pixelport-launchpad/` (git repo). Fixes worktree isolation for Codex parallel tasks.
+    - CLAUDE.md updated with Codex integration section
+    - .mcp.json copied to pixelport-launchpad
+    - .gitignore updated (added .claude/ and .mcp.json)
+    - MEMORY.md copied to new project path
+  - **Stale docs updated:** ACTIVE-PLAN.md, SESSION-LOG.md synced to current state
+- **What's next:**
+  - Founder: Sign up for Mem0 + PostHog, add API keys to Vercel env vars
+  - CTO: Prepare QA fix instructions for 10 frontend bugs (session 7 QA)
+  - CTO: Plan Phase 3 API contracts (X + LinkedIn integration)
+  - CTO: Verify worktree + Codex integration works from new project root
+- **Blockers:** MEM0_API_KEY and POSTHOG_API_KEY needed for endpoint activation.
+
+---
+
+### 2026-03-05 (session 8)
+- **Who worked:** CTO (Claude Code) + Founder
+- **What was done:**
+  - **Codex MCP integration — COMPLETE**
+    - Installed Codex CLI v0.111.0 at `~/.npm-global/bin/codex` (user-local npm prefix)
+    - Created `.mcp.json` with 2 MCP servers (`codex-cli` + `codex`)
+    - Added `OPENAI_API_KEY` export to `.zshrc`
+    - Global config: `~/.codex/config.toml` → `gpt-5.4`, `xhigh` reasoning
+  - **Smoke tests — ALL PASS:**
+    - Advisory: Codex reviewed Home.tsx, found 5 issues (2 High, 3 Medium)
+    - Implementation: Task+worktree+codex added TypeScript interface, clean diff
+    - Worktree created, reviewed, discarded successfully
+  - **QA of Lovable frontend (session 7 pages):**
+    - 10 bugs found: 3 Medium (no res.ok checks, token-in-URL), 7 Low (hardcoded values, raw markdown)
+  - **Doc updates:** CLAUDE.md + MEMORY.md updated with Codex integration details
+- **Key decisions:** Codex always uses GPT-5.4 with xhigh reasoning, dual QA pattern (CTO + Codex)
+
+---
+
+### 2026-03-05 (session 7)
 - **Who worked:** Founder + Claude (Chat) via Lovable
 - **What was done:**
   - **Global UI Upgrade — Dark Theme Modernization**
