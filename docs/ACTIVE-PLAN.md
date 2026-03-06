@@ -202,9 +202,16 @@
 |---------|---------------|-----------------|
 | PostHog Personal API Key + Project ID | E2E test of PostHog integration | Founder provides from PostHog dashboard |
 | Mem0 API key | Mem0 endpoint activation | Founder signs up at mem0.ai + adds key to Vercel env |
+| Supabase Auth URL config still falls back to `http://localhost:3000` | Google login on frontend | Founder/CTO updates Supabase Authentication -> URL Configuration |
 | X Developer App credentials | X integration (Session 11) | Founder registers at developer.x.com |
 | LinkedIn App credentials | LinkedIn integration (Session 11) | Founder registers at developer.linkedin.com |
 | Google OAuth credentials | GA4 integration (Session 12) | Founder configures at Google Cloud Console |
+
+---
+
+### Notes
+
+- **Auth redirect hardening (2026-03-06, session 11):** Frontend auth now uses a shared canonical app URL helper and Supabase PKCE flow. Repo code no longer relies on arbitrary browser origins or hash-fragment tokens, but Supabase Auth dashboard settings still need to point at the production domain for Google login to complete.
 
 ---
 

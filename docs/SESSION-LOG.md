@@ -7,6 +7,25 @@
 
 ## Last Session
 
+- **Date:** 2026-03-06 (session 11)
+- **Who worked:** Codex
+- **What was done:**
+  - Debugged Google OAuth redirect failure reported from the frontend login flow.
+  - Reproduced the live login initiation from `https://pixelport-launchpad.vercel.app/login` and confirmed the app was already sending `redirect_to=https://pixelport-launchpad.vercel.app/dashboard`.
+  - Identified the actual failure point as Supabase Auth URL configuration falling back to `http://localhost:3000` when the callback redirect is not accepted.
+  - Added `src/lib/app-url.ts` so auth flows use a canonical app URL. Localhost now falls back to the production app URL unless `VITE_APP_URL` is explicitly set.
+  - Updated `src/pages/Login.tsx` and `src/pages/Signup.tsx` to use the shared auth redirect helper. Email signup confirmation now uses the same canonical app URL logic.
+  - Updated `src/integrations/supabase/client.ts` to use explicit session detection and PKCE flow so auth tokens are no longer returned in the browser hash fragment.
+  - Ran `npx tsc --noEmit` — clean.
+- **What's next:**
+  - Founder/CTO: Update Supabase `Authentication -> URL Configuration` so `Site URL` and `Allowed Redirect URLs` use the production domain instead of `http://localhost:3000`.
+  - Retest Google login after the Supabase dashboard setting is fixed.
+  - CTO: Continue Phase 3 Session 11 work (X + LinkedIn adapters + social publishing) once auth is unblocked.
+- **Blockers:** Supabase Auth dashboard is still configured to fall back to `http://localhost:3000` on rejected OAuth callbacks. Repo code alone cannot change that setting.
+
+---
+
+### 2026-03-05 (session 10)
 - **Date:** 2026-03-05 (session 10)
 - **Who worked:** CTO (Claude Code) + Codex (QA via native MCP)
 - **What was done:**
