@@ -5,11 +5,12 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   agentName: string;
+  error?: string;
   onBack: () => void;
   onLaunch: () => void;
 }
 
-const StepConnectTools = ({ agentName, onBack, onLaunch }: Props) => {
+const StepConnectTools = ({ agentName, error, onBack, onLaunch }: Props) => {
   const [slackClicked, setSlackClicked] = useState(false);
   const { toast } = useToast();
 
@@ -93,6 +94,10 @@ const StepConnectTools = ({ agentName, onBack, onLaunch }: Props) => {
           🚀 Launch My Agent
         </Button>
       </div>
+
+      {error && (
+        <p className="text-sm text-destructive">{error}</p>
+      )}
     </div>
   );
 };

@@ -25,7 +25,14 @@ const LOADING_MESSAGES = [
 ];
 
 const Onboarding = () => {
-  const { user, session, loading: authLoading } = useAuth();
+  const {
+    user,
+    session,
+    tenant,
+    loading: authLoading,
+    tenantLoading,
+    refreshTenant,
+  } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [launching, setLaunching] = useState(false);
@@ -33,6 +40,7 @@ const Onboarding = () => {
   const [fadeIn, setFadeIn] = useState(true);
   const [scanResults, setScanResults] = useState<Record<string, any> | null>(null);
   const [scanError, setScanError] = useState(false);
+  const [launchError, setLaunchError] = useState("");
 
   const [data, setData] = useState<OnboardingData>({
     company_name: "",
@@ -87,6 +95,8 @@ const Onboarding = () => {
   };
 
   const handleLaunch = async () => {
+    setLaunchError("");
+
     const payload = {
       company_name: data.company_name.trim(),
       company_url: data.company_url.trim() || null,
@@ -97,54 +107,46 @@ const Onboarding = () => {
       scan_results: scanResults,
     };
 
-    localStorage.setItem("pixelport_onboarded", "true");
-    localStorage.setItem("pixelport_agent_name", payload.agent_name);
-    localStorage.setItem("pixelport_agent_avatar", payload.agent_avatar_url);
-    localStorage.setItem("pixelport_company_name", payload.company_name || "");
-    localStorage.setItem("pixelport_company_url", payload.company_url || "");
-    localStorage.setItem("pixelport_agent_tone", payload.agent_tone);
-
     setLaunching(true);
 
-    const apiCall = (async () => {
-      try {
-        const token = session?.access_token;
-        if (token) {
-          const res = await fetch("/api/tenants", {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          });
-          const result = await res.json();
-          if (result.tenant?.id) {
-            localStorage.setItem("pixelport_tenant_id", result.tenant.id);
-            localStorage.setItem("pixelport_tenant_status", result.tenant.status);
-          }
-          if (!res.ok) {
-            console.error("Tenant creation failed:", result);
-          }
-        }
-      } catch (err) {
-        console.error("Tenant creation error:", err);
+    try {
+      const token = session?.access_token;
+      if (!token) {
+        throw new Error("Your session expired. Please sign in again.");
       }
-    })();
 
-    await Promise.all([
-      apiCall,
-      new Promise(resolve => setTimeout(resolve, 4000)),
-    ]);
+      const res = await fetch("/api/tenants", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
 
-    navigate("/dashboard", { replace: true });
+      if (!res.ok) {
+        throw new Error(result.error || "Failed to create your workspace.");
+      }
+
+      await Promise.all([
+        refreshTenant(),
+        new Promise((resolve) => setTimeout(resolve, 4000)),
+      ]);
+
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      console.error("Tenant creation error:", err);
+      setLaunching(false);
+      setLaunchError(err instanceof Error ? err.message : "Failed to create your workspace.");
+    }
   };
 
   const patch = (p: Partial<OnboardingData>) => setData((d) => ({ ...d, ...p }));
 
-  if (authLoading) return null;
+  if (authLoading || tenantLoading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (localStorage.getItem("pixelport_onboarded")) return <Navigate to="/dashboard" replace />;
+  if (tenant) return <Navigate to="/dashboard" replace />;
 
   // Launching state
   if (launching) {
@@ -216,6 +218,7 @@ const Onboarding = () => {
           {step === 3 && (
             <StepConnectTools
               agentName={data.agent_name}
+              error={launchError}
               onBack={() => changeStep(2)}
               onLaunch={handleLaunch}
             />

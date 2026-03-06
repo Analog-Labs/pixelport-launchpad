@@ -16,12 +16,18 @@
   - Added `src/lib/app-url.ts` so auth flows use a canonical app URL. Localhost now falls back to the production app URL unless `VITE_APP_URL` is explicitly set.
   - Updated `src/pages/Login.tsx` and `src/pages/Signup.tsx` to use the shared auth redirect helper. Email signup confirmation now uses the same canonical app URL logic.
   - Updated `src/integrations/supabase/client.ts` to use explicit session detection and PKCE flow so auth tokens are no longer returned in the browser hash fragment.
+  - Verified a separate provisioning UI bug for `s-r@ziffyhomes.com`: the account existed in Supabase Auth but had no tenant row, droplet, agent, tasks, vault, or competitor data.
+  - Root cause: frontend route gating and dashboard state trusted stale `pixelport_*` localStorage from prior sessions/users, so a new user could land on a fake "Provisioning" dashboard without ever creating a tenant.
+  - Added `src/lib/pixelport-storage.ts` and updated `src/contexts/AuthContext.tsx` to fetch the real tenant via `/api/tenants/me`, hydrate local storage only from real tenant data, and clear stale state on sign-out or account switch.
+  - Updated `src/components/ProtectedRoute.tsx` and `src/pages/Onboarding.tsx` so onboarding/dashboard access is based on actual tenant existence, not browser-local flags.
+  - Updated `src/pages/Onboarding.tsx` to mark onboarding complete only after `/api/tenants` succeeds, and surface an error instead of silently navigating to a fake dashboard.
+  - Updated `src/pages/dashboard/Home.tsx` and `src/components/dashboard/AppSidebar.tsx` to prefer real tenant status over stale local storage. Placeholder "Recent Activity" items now show only while the tenant is genuinely provisioning.
   - Ran `npx tsc --noEmit` — clean.
 - **What's next:**
   - Founder/CTO: Update Supabase `Authentication -> URL Configuration` so `Site URL` and `Allowed Redirect URLs` use the production domain instead of `http://localhost:3000`.
-  - Retest Google login after the Supabase dashboard setting is fixed.
+  - Retest Google login and complete onboarding with a fresh account/browser session so `/api/tenants` creates the first real tenant row for the new user.
   - CTO: Continue Phase 3 Session 11 work (X + LinkedIn adapters + social publishing) once auth is unblocked.
-- **Blockers:** Supabase Auth dashboard is still configured to fall back to `http://localhost:3000` on rejected OAuth callbacks. Repo code alone cannot change that setting.
+- **Blockers:** None in repo for this bug. Remaining validation is a fresh live signup/onboarding pass.
 
 ---
 

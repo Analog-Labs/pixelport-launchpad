@@ -37,24 +37,34 @@ const AgentAvatar = ({ size = "h-12 w-12", textSize = "text-lg" }: { size?: stri
 };
 
 const Home = () => {
-  const { user, session } = useAuth();
+  const { user, session, tenant } = useAuth();
   const navigate = useNavigate();
-  const isOnboarded = localStorage.getItem("pixelport_onboarded") === "true";
-  const agentName = getAgentName();
-  const companyUrl = localStorage.getItem("pixelport_company_url") || "";
+  const onboardingData = tenant?.onboarding_data ?? {};
+  const isOnboarded = !!tenant;
+  const agentName =
+    (typeof onboardingData.agent_name === "string" && onboardingData.agent_name) ||
+    getAgentName();
+  const companyUrl =
+    (typeof onboardingData.company_url === "string" && onboardingData.company_url) ||
+    localStorage.getItem("pixelport_company_url") ||
+    "";
 
   const [tenantStatus, setTenantStatus] = useState<string>(
-    localStorage.getItem("pixelport_tenant_status") || "provisioning"
+    tenant?.status || localStorage.getItem("pixelport_tenant_status") || "provisioning"
   );
   const [slackConnected, setSlackConnected] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
 
-  const agentActive = tenantStatus === "active";
+  useEffect(() => {
+    if (tenant?.status) {
+      setTenantStatus(tenant.status);
+    }
+  }, [tenant?.status]);
 
   // Status polling (existing)
   useEffect(() => {
-    if (!isOnboarded) return;
+    if (!isOnboarded || !tenant) return;
     let cancelled = false;
 
     const checkStatus = async () => {
@@ -143,7 +153,7 @@ const Home = () => {
         time: new Date(t.updated_at || t.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         active: t.status === "running" || t.status === "pending",
       }))
-    : isOnboarded
+    : isOnboarded && tenantStatus === "provisioning"
     ? [
         { text: `Scanning ${companyUrl || "your website"}...`, time: "Just now", active: true },
         { text: "Analyzing competitor landscape", time: "Just now", active: true },

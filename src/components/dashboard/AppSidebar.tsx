@@ -41,13 +41,17 @@ function getAgentStatus(): { name: string; status: string } {
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { user, signOut } = useAuth();
+  const { user, tenant, signOut } = useAuth();
   const navigate = useNavigate();
 
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || null;
   const email = user?.email;
   const initials = getInitials(displayName, email);
-  const agent = getAgentStatus();
+  const storedAgent = getAgentStatus();
+  const agentName =
+    (typeof tenant?.onboarding_data?.agent_name === "string" && tenant.onboarding_data.agent_name) ||
+    storedAgent.name;
+  const agentStatus = tenant?.status || storedAgent.status;
 
   const handleSignOut = async () => {
     await signOut();
@@ -108,11 +112,11 @@ export function AppSidebar() {
         <div className="flex items-center gap-2.5 px-3 py-2.5">
           <span
             className={`h-2 w-2 shrink-0 rounded-full ${
-              agent.status === "active" ? "bg-emerald-500" : "bg-amber-500"
+              agentStatus === "active" ? "bg-emerald-500" : "bg-amber-500"
             }`}
           />
           {!collapsed && (
-            <span className="text-xs text-zinc-500 truncate">{agent.name}</span>
+            <span className="text-xs text-zinc-500 truncate">{agentName}</span>
           )}
         </div>
 
