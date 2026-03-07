@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { repairBootstrapHooksOnDroplet } from '../lib/bootstrap-hooks-repair';
-import { getBootstrapState, persistBootstrapState } from '../lib/bootstrap-state';
+import { getBootstrapState, loadBootstrapSnapshot, transitionBootstrapState } from '../lib/bootstrap-state';
 import { buildOnboardingBootstrapMessage, triggerOnboardingBootstrap } from '../lib/onboarding-bootstrap';
 import { supabase } from '../lib/supabase';
 
@@ -32,8 +32,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   try {
     const { tenant } = await authenticateRequest(req);
     const force = req.body?.force === true;
-    let onboardingData = tenant.onboarding_data;
-    let bootstrapState = getBootstrapState(onboardingData);
+    let bootstrapSnapshot = await loadBootstrapSnapshot({
+      tenantId: tenant.id,
+      fallbackOnboardingData: tenant.onboarding_data,
+    });
+    let onboardingData = bootstrapSnapshot.onboardingData;
+    let bootstrapState = bootstrapSnapshot.state;
 
     if (tenant.status !== 'active') {
       return res.status(409).json({
@@ -58,15 +62,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       agentUpdatedVaultCount > 0;
 
     if (hasExistingAgentOutput && bootstrapState.status !== 'completed') {
-      onboardingData = await persistBootstrapState({
+      const transition = await transitionBootstrapState({
         tenantId: tenant.id,
-        onboardingData,
+        fallbackOnboardingData: onboardingData,
+        allowedCurrentStatuses: ['not_started', 'dispatching', 'accepted', 'failed'],
         update: {
           status: 'completed',
           source: bootstrapState.source ?? 'provisioning',
         },
       });
-      bootstrapState = getBootstrapState(onboardingData);
+      bootstrapSnapshot = transition.snapshot;
+      onboardingData = bootstrapSnapshot.onboardingData;
+      bootstrapState = bootstrapSnapshot.state;
     }
 
     if (!force && (bootstrapState.status === 'dispatching' || bootstrapState.status === 'accepted')) {
@@ -93,14 +100,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     const bootstrapSource = force ? 'manual_force' : 'dashboard_replay';
 
-    onboardingData = await persistBootstrapState({
+    const dispatchTransition = await transitionBootstrapState({
       tenantId: tenant.id,
-      onboardingData,
+      fallbackOnboardingData: onboardingData,
+      allowedCurrentStatuses: force ? undefined : ['not_started', 'failed'],
+      preserveCurrentState: !force,
       update: {
         status: 'dispatching',
         source: bootstrapSource,
       },
     });
+    bootstrapSnapshot = dispatchTransition.snapshot;
+    onboardingData = bootstrapSnapshot.onboardingData;
+    bootstrapState = bootstrapSnapshot.state;
+
+    if (!dispatchTransition.changed) {
+      const inProgress = bootstrapState.status === 'dispatching' || bootstrapState.status === 'accepted';
+      return res.status(409).json({
+        error: inProgress
+          ? 'Bootstrap is already in progress.'
+          : 'Bootstrap already appears to have run. Pass force=true to replay it.',
+        reason: inProgress ? 'bootstrap_in_progress' : 'bootstrap_already_completed',
+        bootstrap_status: bootstrapState.status,
+        task_count: taskCount,
+        competitor_count: competitorCount,
+        agent_updated_vault_count: agentUpdatedVaultCount,
+      });
+    }
 
     let result = await triggerOnboardingBootstrap({
       gatewayUrl: `http://${tenant.droplet_ip}:18789`,
@@ -129,60 +155,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           }),
         });
       } catch (repairError) {
-        onboardingData = await persistBootstrapState({
+        const transition = await transitionBootstrapState({
           tenantId: tenant.id,
-          onboardingData,
+          fallbackOnboardingData: onboardingData,
+          allowedCurrentStatuses: ['dispatching', 'accepted'],
           update: {
             status: 'failed',
             source: bootstrapSource,
             lastError: repairError instanceof Error ? repairError.message : 'Unknown repair error',
           },
         });
+        bootstrapSnapshot = transition.snapshot;
+        onboardingData = bootstrapSnapshot.onboardingData;
 
         return res.status(502).json({
           error: 'Gateway rejected onboarding bootstrap and hooks repair failed',
           gateway_status: result.status,
           details: result.body,
-          bootstrap_status: getBootstrapState(onboardingData).status,
+          bootstrap_status: bootstrapSnapshot.state.status,
           repair_error: repairError instanceof Error ? repairError.message : 'Unknown repair error',
         });
       }
     }
 
     if (!result.ok) {
-      onboardingData = await persistBootstrapState({
+      const transition = await transitionBootstrapState({
         tenantId: tenant.id,
-        onboardingData,
+        fallbackOnboardingData: onboardingData,
+        allowedCurrentStatuses: ['dispatching', 'accepted'],
         update: {
           status: 'failed',
           source: bootstrapSource,
           lastError: result.body,
         },
       });
+      bootstrapSnapshot = transition.snapshot;
+      onboardingData = bootstrapSnapshot.onboardingData;
 
       return res.status(502).json({
         error: 'Gateway rejected onboarding bootstrap',
         gateway_status: result.status,
         details: result.body,
-        bootstrap_status: getBootstrapState(onboardingData).status,
+        bootstrap_status: bootstrapSnapshot.state.status,
       });
     }
 
-    onboardingData = await persistBootstrapState({
+    const transition = await transitionBootstrapState({
       tenantId: tenant.id,
-      onboardingData,
+      fallbackOnboardingData: onboardingData,
+      allowedCurrentStatuses: ['dispatching', 'accepted'],
       update: {
         status: 'accepted',
         source: bootstrapSource,
       },
     });
+    bootstrapSnapshot = transition.snapshot;
+    onboardingData = bootstrapSnapshot.onboardingData;
 
     return res.status(202).json({
       accepted: true,
       gateway_status: result.status,
       existing_output_present: hasExistingAgentOutput,
       hooks_repaired: hooksRepaired,
-      bootstrap_status: getBootstrapState(onboardingData).status,
+      bootstrap_status: bootstrapSnapshot.state.status,
     });
   } catch (error) {
     return errorResponse(res, error);

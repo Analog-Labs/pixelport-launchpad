@@ -17,6 +17,12 @@ export type BootstrapState = {
   last_error: string | null;
 };
 
+export type BootstrapSnapshot = {
+  onboardingData: JsonRecord;
+  state: BootstrapState;
+  updatedAt: string;
+};
+
 type BootstrapStateUpdate = {
   status: Exclude<BootstrapStatus, 'not_started'>;
   source?: BootstrapSource;
@@ -102,43 +108,131 @@ export function buildOnboardingDataWithBootstrapState(
   return nextOnboardingData;
 }
 
-export async function persistBootstrapState(params: {
-  tenantId: string;
-  onboardingData: JsonRecord | null | undefined;
-  update: BootstrapStateUpdate;
-}): Promise<JsonRecord> {
-  const nextOnboardingData = buildOnboardingDataWithBootstrapState(params.onboardingData, params.update);
+function buildSnapshot(onboardingData: JsonRecord | null | undefined, updatedAt: string): BootstrapSnapshot {
+  return {
+    onboardingData: cloneOnboardingData(onboardingData),
+    state: getBootstrapState(onboardingData),
+    updatedAt,
+  };
+}
 
+export async function loadBootstrapSnapshot(params: {
+  tenantId: string;
+  fallbackOnboardingData?: JsonRecord | null | undefined;
+}): Promise<BootstrapSnapshot> {
   const { data, error } = await supabase
     .from('tenants')
-    .update({ onboarding_data: nextOnboardingData })
+    .select('onboarding_data, updated_at')
     .eq('id', params.tenantId)
-    .select('onboarding_data')
     .single();
+
+  if (error || !data?.updated_at) {
+    throw new Error(`Failed to load bootstrap state: ${error?.message ?? 'Tenant not found'}`);
+  }
+
+  const onboardingData = (data.onboarding_data as JsonRecord | null | undefined) ?? params.fallbackOnboardingData ?? {};
+  return buildSnapshot(onboardingData, data.updated_at);
+}
+
+async function updateBootstrapSnapshotIfUnchanged(params: {
+  tenantId: string;
+  expectedUpdatedAt: string;
+  onboardingData: JsonRecord;
+}): Promise<BootstrapSnapshot | null> {
+  const { data, error } = await supabase
+    .from('tenants')
+    .update({ onboarding_data: params.onboardingData })
+    .eq('id', params.tenantId)
+    .eq('updated_at', params.expectedUpdatedAt)
+    .select('onboarding_data, updated_at')
+    .maybeSingle();
 
   if (error) {
     throw new Error(`Failed to persist bootstrap state: ${error.message}`);
   }
 
-  return cloneOnboardingData((data?.onboarding_data as JsonRecord | null | undefined) ?? nextOnboardingData);
+  if (!data?.updated_at) {
+    return null;
+  }
+
+  return buildSnapshot(data.onboarding_data as JsonRecord | null | undefined, data.updated_at);
+}
+
+function shouldPreserveCurrentState(current: BootstrapStatus, next: BootstrapStateUpdate['status']): boolean {
+  if (current === 'completed' && next !== 'completed') {
+    return true;
+  }
+
+  if ((current === 'dispatching' || current === 'accepted') && next === 'dispatching') {
+    return true;
+  }
+
+  return false;
+}
+
+export async function transitionBootstrapState(params: {
+  tenantId: string;
+  update: BootstrapStateUpdate;
+  allowedCurrentStatuses?: BootstrapStatus[];
+  fallbackOnboardingData?: JsonRecord | null | undefined;
+  maxAttempts?: number;
+  preserveCurrentState?: boolean;
+}): Promise<{ snapshot: BootstrapSnapshot; changed: boolean }> {
+  const maxAttempts = params.maxAttempts ?? 3;
+  const preserveCurrentState = params.preserveCurrentState ?? true;
+  let snapshot = await loadBootstrapSnapshot({
+    tenantId: params.tenantId,
+    fallbackOnboardingData: params.fallbackOnboardingData,
+  });
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    if (params.allowedCurrentStatuses && !params.allowedCurrentStatuses.includes(snapshot.state.status)) {
+      return { snapshot, changed: false };
+    }
+
+    if (preserveCurrentState && shouldPreserveCurrentState(snapshot.state.status, params.update.status)) {
+      return { snapshot, changed: false };
+    }
+
+    const nextOnboardingData = buildOnboardingDataWithBootstrapState(snapshot.onboardingData, params.update);
+    const nextSnapshot = await updateBootstrapSnapshotIfUnchanged({
+      tenantId: params.tenantId,
+      expectedUpdatedAt: snapshot.updatedAt,
+      onboardingData: nextOnboardingData,
+    });
+
+    if (nextSnapshot) {
+      return { snapshot: nextSnapshot, changed: true };
+    }
+
+    snapshot = await loadBootstrapSnapshot({ tenantId: params.tenantId });
+  }
+
+  return { snapshot, changed: false };
+}
+
+export async function persistBootstrapState(params: {
+  tenantId: string;
+  onboardingData: JsonRecord | null | undefined;
+  update: BootstrapStateUpdate;
+}): Promise<JsonRecord> {
+  const { snapshot } = await transitionBootstrapState({
+    tenantId: params.tenantId,
+    fallbackOnboardingData: params.onboardingData,
+    update: params.update,
+  });
+
+  return snapshot.onboardingData;
 }
 
 export async function markBootstrapCompletedIfInProgress(params: {
   tenantId: string;
-  onboardingData: JsonRecord | null | undefined;
 }): Promise<void> {
-  const state = getBootstrapState(params.onboardingData);
-
-  if (state.status !== 'dispatching' && state.status !== 'accepted') {
-    return;
-  }
-
-  await persistBootstrapState({
+  await transitionBootstrapState({
     tenantId: params.tenantId,
-    onboardingData: params.onboardingData,
+    allowedCurrentStatuses: ['dispatching', 'accepted'],
     update: {
       status: 'completed',
-      source: state.source ?? 'provisioning',
     },
   });
 }

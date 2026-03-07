@@ -7,6 +7,23 @@
 
 ## Last Session
 
+- **Date:** 2026-03-07 (session 28)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then finished the QA-driven hardening pass for the duplicate-bootstrap hotfix before any deploy/push.
+  - Closed the race condition left in session 27 by upgrading `api/lib/bootstrap-state.ts` from unconditional state writes to optimistic compare-and-set transitions keyed on `tenants.updated_at`. Bootstrap transitions now reload fresh tenant state, retry on contention, and only persist when the expected row version still matches.
+  - Made bootstrap lifecycle transitions monotonic by default: once bootstrap reaches `completed`, later stale `accepted` / `failed` writes no longer overwrite it. The same helper now preserves an already in-progress bootstrap from being reset back to `dispatching` by a concurrent non-forced replay.
+  - Kept the explicit manual replay escape hatch intact: `force=true` on `POST /api/tenants/bootstrap` now bypasses the monotonic guard intentionally so a real forced replay can still reset state back to `dispatching`.
+  - Updated `api/tenants/bootstrap.ts` to use the new compare-and-set helper for every lifecycle transition (`completed`, `dispatching`, `failed`, `accepted`), so concurrent replay requests can no longer both dispatch bootstrap after reading the same stale state snapshot.
+  - Simplified the agent write handlers in `api/agent/tasks.ts`, `api/agent/competitors.ts`, and `api/agent/vault/[key].ts` so they now mark bootstrap `completed` using a fresh backend read instead of the auth-time tenant snapshot. This removes the stale-snapshot regression path flagged in QA.
+  - Added additive `has_agent_output` to `GET /api/tenants/status` and updated `src/pages/dashboard/Home.tsx` to honor it. Home now avoids even a wasted legacy replay call when competitors or agent-written vault data already exist but task rows have not landed yet.
+  - Ran `npx tsc --noEmit` after the second-round patch — clean.
+- **What's next:**
+  - Commit the second-round bootstrap hardening patch and either run one more explicit QA pass or push immediately if founder accepts the patch on the basis of the fixed findings plus clean compile.
+  - After deploy, validate one fresh tenant on production and confirm: no second bootstrap accept, no duplicate competitor names, and expected `409` replay behavior for `bootstrap_in_progress` and `bootstrap_already_completed`.
+  - Keep Supabase signup throttling as a separate concern unless founder reprioritizes it.
+- **Blockers:** No new blocker in the code path. The remaining dependency is rollout validation on the deployed hotfix.
+
 - **Date:** 2026-03-07 (session 27)
 - **Who worked:** Codex
 - **What was done:**

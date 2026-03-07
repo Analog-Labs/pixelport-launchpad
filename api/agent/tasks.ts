@@ -92,7 +92,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     try {
       await markBootstrapCompletedIfInProgress({
         tenantId: tenant.id,
-        onboardingData: tenant.onboarding_data,
       });
     } catch (bootstrapError) {
       console.warn('Task write succeeded but failed to mark bootstrap completed:', bootstrapError);

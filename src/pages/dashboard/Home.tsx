@@ -77,6 +77,7 @@ const Home = () => {
   const [tasks, setTasks] = useState<any[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [bootstrapRequested, setBootstrapRequested] = useState(false);
+  const [hasAgentOutput, setHasAgentOutput] = useState(false);
   const [bootstrapStatus, setBootstrapStatus] = useState<BootstrapStatus>(
     getBootstrapStatusFromOnboardingData(onboardingData as Record<string, unknown>)
   );
@@ -107,11 +108,18 @@ const Home = () => {
 
   useEffect(() => {
     setBootstrapRequested(false);
+    setHasAgentOutput(false);
   }, [tenant?.id]);
 
   useEffect(() => {
     setBootstrapStatus(getBootstrapStatusFromOnboardingData(tenant?.onboarding_data ?? null));
   }, [tenant?.id, tenant?.onboarding_data]);
+
+  useEffect(() => {
+    if (tasks.length > 0) {
+      setHasAgentOutput(true);
+    }
+  }, [tasks.length]);
 
   // Status polling (existing)
   useEffect(() => {
@@ -129,6 +137,7 @@ const Home = () => {
           const data = await res.json();
           setTenantStatus(data.status);
           setBootstrapStatus(normalizeBootstrapStatus(data.bootstrap_status));
+          setHasAgentOutput(data.has_agent_output === true);
           localStorage.setItem("pixelport_tenant_status", data.status);
         }
       } catch { /* retry next interval */ }
@@ -175,7 +184,7 @@ const Home = () => {
 
   useEffect(() => {
     if (!session?.access_token || !tenant) return;
-    if (tenantStatus !== "active" || tasksLoading || tasks.length > 0 || bootstrapRequested) return;
+    if (tenantStatus !== "active" || tasksLoading || tasks.length > 0 || hasAgentOutput || bootstrapRequested) return;
     if (bootstrapStatus !== "not_started" && bootstrapStatus !== "failed") return;
 
     let cancelled = false;
@@ -231,7 +240,7 @@ const Home = () => {
     return () => {
       cancelled = true;
     };
-  }, [bootstrapRequested, bootstrapStatus, session?.access_token, tasks.length, tasksLoading, tenant, tenantStatus]);
+  }, [bootstrapRequested, bootstrapStatus, hasAgentOutput, session?.access_token, tasks.length, tasksLoading, tenant, tenantStatus]);
 
   // Onboarding checklist logic
   const checklistItems = [
