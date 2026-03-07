@@ -51,8 +51,8 @@ if (!LITELLM_URL || !LITELLM_MASTER_KEY || !DO_API_TOKEN) {
   throw new Error('Missing one or more required env vars: LITELLM_URL, LITELLM_MASTER_KEY, DO_API_TOKEN');
 }
 
-const OPENCLAW_BASE_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.2.24';
-const OPENCLAW_RUNTIME_IMAGE = process.env.OPENCLAW_RUNTIME_IMAGE || 'pixelport-openclaw:2026.2.24-chromium';
+const OPENCLAW_BASE_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.3.2';
+const OPENCLAW_RUNTIME_IMAGE = process.env.OPENCLAW_RUNTIME_IMAGE || 'pixelport-openclaw:2026.3.2-chromium';
 const DEFAULT_DROPLET_IMAGE = 'ubuntu-24-04-x64';
 const DEFAULT_DROPLET_SIZE = 's-1vcpu-2gb';
 const DEFAULT_REGION = 'nyc1';
@@ -496,6 +496,18 @@ function buildCloudInit(params: {
   agentApiKey: string;
   onboardingData: Json;
 }): string {
+  const agentName = (params.onboardingData.agent_name as string) || 'Luna';
+  const openclawConfigWithAcp = JSON.stringify(
+    buildOpenClawConfig({ ...params, agentName, disableAcpDispatch: true }),
+    null,
+    2
+  );
+  const openclawConfigWithoutAcp = JSON.stringify(
+    buildOpenClawConfig({ ...params, agentName, disableAcpDispatch: false }),
+    null,
+    2
+  );
+
   return `#!/bin/bash
 set -euo pipefail
 
@@ -535,10 +547,16 @@ OPENCLAW_DOCKERFILE
 docker pull ${params.openclawBaseImage}
 docker build -t ${params.openclawRuntimeImage} /opt/openclaw/image
 
-# 3. Write agent configuration
-cat > /opt/openclaw/openclaw.json << 'OPENCLAW_CONFIG'
-${JSON.stringify(buildOpenClawConfig({ ...params, agentName: (params.onboardingData.agent_name as string) || 'Luna' }), null, 2)}
+# 3. Write agent configuration candidates
+cat > /opt/openclaw/openclaw.with-acp.json << 'OPENCLAW_CONFIG'
+${openclawConfigWithAcp}
 OPENCLAW_CONFIG
+
+cat > /opt/openclaw/openclaw.no-acp.json << 'OPENCLAW_CONFIG_NO_ACP'
+${openclawConfigWithoutAcp}
+OPENCLAW_CONFIG_NO_ACP
+
+cp /opt/openclaw/openclaw.with-acp.json /opt/openclaw/openclaw.json
 
 # 4. Write agent persona
 cat > /opt/openclaw/workspace-main/SOUL.md << 'SOUL_MD'
@@ -558,7 +576,43 @@ ENV_FILE
 # 6. Set ownership (OpenClaw container runs as node:1000)
 chown -R 1000:1000 /opt/openclaw
 
-# 7. Run the OpenClaw gateway container
+# 7. Validate OpenClaw config before starting the gateway
+validate_openclaw_config() {
+  local output_path="$1"
+
+  docker run --rm \\
+    --env-file /opt/openclaw/.env \\
+    -v /opt/openclaw/openclaw.json:/home/node/.openclaw/openclaw.json \\
+    -v /opt/openclaw/workspace-main:/home/node/.openclaw/workspace-main \\
+    -v /opt/openclaw/canvas:/home/node/.openclaw/canvas \\
+    -v /opt/openclaw/cron:/home/node/.openclaw/cron \\
+    -v /opt/openclaw/agents:/home/node/.openclaw/agents \\
+    ${params.openclawRuntimeImage} \\
+    openclaw.mjs config validate --json 2>&1 | tee "$output_path"
+}
+
+if validate_openclaw_config /opt/openclaw/config-validate.with-acp.json; then
+  cp /opt/openclaw/config-validate.with-acp.json /opt/openclaw/config-validate.json
+else
+  if grep -Eiq 'acp([^a-zA-Z0-9_]|$)|acp\\.dispatch|dispatch\\.enabled' /opt/openclaw/config-validate.with-acp.json; then
+    echo "ACP dispatch config was rejected by validate; retrying without ACP hardening" >&2
+    cp /opt/openclaw/openclaw.no-acp.json /opt/openclaw/openclaw.json
+
+    if validate_openclaw_config /opt/openclaw/config-validate.no-acp.json; then
+      cp /opt/openclaw/config-validate.no-acp.json /opt/openclaw/config-validate.json
+    else
+      cp /opt/openclaw/config-validate.no-acp.json /opt/openclaw/config-validate.json
+      echo "OpenClaw config validation failed even after removing ACP dispatch" >&2
+      exit 1
+    fi
+  else
+    cp /opt/openclaw/config-validate.with-acp.json /opt/openclaw/config-validate.json
+    echo "OpenClaw config validation failed before startup" >&2
+    exit 1
+  fi
+fi
+
+# 8. Run the OpenClaw gateway container
 # Use --network host because OpenClaw binds to 127.0.0.1 inside the
 # container — host networking makes it accessible on the droplet's public IP.
 docker rm -f openclaw-gateway >/dev/null 2>&1 || true
@@ -600,6 +654,7 @@ function buildOpenClawConfig(params: {
   litellmUrl: string;
   agentName: string;
   geminiApiKey: string;
+  disableAcpDispatch: boolean;
 }): Record<string, unknown> {
   const webToolsConfig = params.geminiApiKey
     ? {
@@ -626,6 +681,15 @@ function buildOpenClawConfig(params: {
         dangerouslyAllowHostHeaderOriginFallback: true,
       },
     },
+    ...(params.disableAcpDispatch
+      ? {
+          acp: {
+            dispatch: {
+              enabled: false,
+            },
+          },
+        }
+      : {}),
     hooks: buildBootstrapHooksConfig(params.gatewayToken),
     tools: {
       ...webToolsConfig,
@@ -781,6 +845,8 @@ The dashboard must reflect that work in real time:
 - Create or update task records for major research runs so Recent Activity is backed by real data.
 - Set vault sections to \`populating\` while you work and \`ready\` when finished.
 - Create a strategy/report task summarizing the initial onboarding findings even if some questions remain open.
+- Use only these task_type values when writing tasks: \`draft_content\`, \`research\`, \`competitor_analysis\`, \`strategy\`, \`report\`.
+- Use only these task statuses: \`pending\`, \`running\`, \`completed\`, \`failed\`, \`cancelled\`. Never use \`in_progress\`.
 
 ## API Integration
 You have access to the PixelPort API to read and write data. Use these endpoints to store your work so the dashboard stays up-to-date.
@@ -803,6 +869,32 @@ curl -s -X PUT -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
   ${apiBaseUrl}/api/agent/vault/company_profile
 
 # --- TASK OPERATIONS ---
+
+# Research task (use task_type=research for company profile, brand voice, ICP, and product research)
+curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "agent_role": "Market Research Analyst",
+    "task_type": "research",
+    "task_description": "Research company profile and positioning",
+    "task_output": {"status": "started"},
+    "status": "running",
+    "requires_approval": false
+  }' \\
+  ${apiBaseUrl}/api/agent/tasks
+
+# Competitor research task (use task_type=competitor_analysis)
+curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "agent_role": "Market Research Analyst",
+    "task_type": "competitor_analysis",
+    "task_description": "Analyze key competitors and create profiles",
+    "task_output": {"status": "started"},
+    "status": "running",
+    "requires_approval": false
+  }' \\
+  ${apiBaseUrl}/api/agent/tasks
 
 # Create a task (e.g., content draft that needs approval)
 curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
@@ -868,5 +960,6 @@ curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
 - Keep the human informed of important developments.
 - Store ALL work via the API so the dashboard reflects real progress.
 - When a vault section is being populated, set status to "populating". When done, set to "ready".
+- Use \`task_type: "research"\` for most onboarding research work, \`task_type: "competitor_analysis"\` for competitor-specific work, \`task_type: "report"\` for the final onboarding summary, and \`task_type: "draft_content"\` for content ideas that need approval.
 `;
 }

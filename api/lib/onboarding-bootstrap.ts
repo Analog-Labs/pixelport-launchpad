@@ -98,6 +98,7 @@ export function buildOnboardingBootstrapMessage(params: {
     '3. Update the vault with concrete findings, add competitor profiles when you have evidence, and create at least one completed strategy or report task summarizing your initial findings.',
     '4. If you generate content ideas, save them as draft_content tasks that require approval.',
     '5. If any information is missing, record what you learned and what you still need from the human instead of waiting silently.',
+    '6. Valid task_type values are exactly: draft_content, research, competitor_analysis, strategy, report. If you need a running status, use "running" instead of "in_progress".',
     '',
     'Keep your final reply short. The important part is writing the work back into the PixelPort APIs.',
   ];

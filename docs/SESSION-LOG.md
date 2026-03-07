@@ -7,6 +7,113 @@
 
 ## Last Session
 
+- **Date:** 2026-03-07 (session 24)
+- **Who worked:** Codex
+- **What was done:**
+  - Confirmed from the official OpenClaw upstream release that the latest stable runtime is `v2026.3.2`, then upgraded the fresh-tenant OpenClaw pins in provisioning and the browser-enabled runtime image build from `2026.2.24` to `2026.3.2`.
+  - Hardened fresh-tenant provisioning for the upgrade:
+    - added a pre-start `openclaw.mjs config validate --json` step via `docker run --rm` before the gateway container starts
+    - generated both ACP-disabled and no-ACP config variants, with automatic fallback only if validation errors clearly point at the new ACP keys
+    - kept the existing hooks mapping and `/health` readiness gate unchanged
+  - Updated runtime-aligned repo references for the canary path:
+    - `infra/openclaw-browser/Dockerfile`
+    - `infra/provisioning/cloud-init.yaml`
+    - `infra/provisioning/openclaw-template.json`
+    - `infra/litellm/config.yaml`
+  - Ran a first fresh-tenant canary on `2026.3.2` and found a real integration regression in the onboarding bootstrap contract:
+    - the agent wrote unsupported task types like `research_company_profile`
+    - `POST /api/agent/tasks` rejected those writes with `400 Invalid task_type`
+  - Fixed that regression in repo code and redeployed:
+    - persisted `scan_results` into tenant `onboarding_data`
+    - tightened the bootstrap prompt and generated `SOUL.md` so onboarding work uses only valid `task_type` / status values
+    - normalized legacy task aliases in `api/agent/tasks.ts` so `research_*`, `strategy_report`, and `in_progress` do not break dashboard-backed writes
+  - Ran a second fresh-tenant canary end to end on the upgraded runtime:
+    - tenant `94e08d19-db84-4c18-8815-2b946176460b`
+    - droplet `134.209.79.13` (ID `556577257`)
+    - cloud-init completed
+    - config validation passed, including the ACP-disabled config
+    - gateway reached `active`
+    - onboarding bootstrap was accepted
+    - Supabase received real rows: `9` task rows, `5` vault sections `ready`, `5` competitor rows
+    - authenticated dashboard APIs for the canary user returned those real rows, so the dashboard is reading backend truth rather than placeholders for this tenant
+  - Verified the explicit `tools.profile: "full"` diagnostic on the final canary:
+    - shell tool succeeded
+    - file-read tool succeeded
+    - browser tool failed twice with `Can't reach the OpenClaw browser control service (timed out after 15000ms)`
+  - Manually probed `GET /health`, `/healthz`, `/ready`, and `/readyz` on the canary droplet with bearer auth and confirmed all four return `200`, but each serves the OpenClaw HTML control UI rather than a dedicated JSON/plain readiness payload.
+- **What's next:**
+  - Keep `2026.3.2` at canary scope only until the tenant browser-control timeout is understood or explicitly accepted.
+  - If browser tooling matters for the next release gate, investigate the OpenClaw browser control service failure on fresh tenant droplets before broad rollout.
+  - If browser tooling remains de-prioritized, founder can decide whether the core provisioning/runtime win is sufficient to make `2026.3.2` the broad default anyway.
+- **Blockers:**
+  - Broad rollout is not recommended yet because the upgraded runtime still fails the browser-tool smoke on fresh tenant droplets even though core provisioning, bootstrap, backend writes, and truthful dashboard reads now pass.
+
+- **Date:** 2026-03-07 (session 23)
+- **Who worked:** Codex
+- **What was done:**
+  - Traced the actual Codex desktop MCP registry source to `~/.codex/config.toml`; the repo-local `.mcp.json` alone was not enough for this app session.
+  - Registered both `github` and `digitalocean` in the global Codex MCP config and corrected the broken GitHub endpoint assumption from `https://api.github.com/mcp` to GitHub's real MCP offering.
+  - Installed the official GitHub MCP Server binary `v0.32.0` to `~/.codex/bin/github-mcp-server`.
+  - Added `tools/mcp/github-mcp.sh`, which authenticates through the already-signed-in GitHub CLI (`gh auth token`) and launches the GitHub MCP server over stdio without storing a PAT in repo config.
+  - Updated both `~/.codex/config.toml` and repo `.mcp.json` so GitHub and DigitalOcean now use the local stdio wrapper pattern.
+  - Verified both wrapper scripts start cleanly:
+    - GitHub MCP server reports running on stdio and fetched token scopes from the local GitHub CLI auth session.
+    - DigitalOcean MCP server reports running on stdio with the local `DO_API_TOKEN` secret.
+  - Ran a fresh isolated `codex exec` smoke test after the config changes and confirmed both MCPs are usable in a newly started Codex agent:
+    - GitHub MCP `get_me` returned authenticated user `sanchalr`
+    - DigitalOcean MCP `droplet-list` returned live droplet `555041719` as `active` in `sgp1`
+  - Confirmed the three PixelPort-specific Codex skills remain installed and usable; no changes were needed there.
+- **What's next:**
+  - Prefer the new local GitHub MCP wrapper over the previous remote HTTP attempt on this machine.
+  - If a future session still does not see the servers, restart the Codex desktop app so it reloads the updated global MCP registry.
+- **Blockers:** No blocker remains for the scoped request. GitHub MCP, DigitalOcean MCP, and the three PixelPort skills are all usable from newly started Codex agents on this machine.
+
+- **Date:** 2026-03-07 (session 22)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md` per session protocol before running the requested MCP-only checks.
+  - Queried the GitHub MCP server successfully with `get_me` and confirmed the authenticated GitHub user is `sanchalr` (`https://github.com/sanchalr`).
+  - Queried the DigitalOcean MCP server successfully with `droplet-list` (`PerPage: 1`) and confirmed live droplet data is available in this session.
+  - Captured one minimal live droplet fact for verification: droplet `555041719` (`openclaw223onubuntu-s-1vcpu-2gb-sgp1-01`) is `active` in region `sgp1`.
+- **What's next:**
+  - Use the GitHub MCP server for repo inspection tasks as needed now that authenticated access is confirmed in this session.
+  - Use the DigitalOcean MCP server for small live infra checks when requested.
+- **Blockers:** No blocker for the scoped MCP verification. Both GitHub and DigitalOcean MCP servers responded successfully in this session.
+
+- **Date:** 2026-03-07 (session 21)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md` per session protocol before running any checks.
+  - Probed the GitHub MCP server directly via the Codex MCP resource APIs.
+  - Confirmed the GitHub MCP server is currently attached but unusable in this session because startup fails with: `Environment variable GITHUB_PERSONAL_ACCESS_TOKEN for MCP server 'github' is not set`.
+  - Queried the DigitalOcean MCP server successfully and verified live account data is available, including account email `sanchal@analog.one`, status `active`, and droplet limit `10`.
+- **What's next:**
+  - Add or expose `GITHUB_PERSONAL_ACCESS_TOKEN` to the active Codex MCP session if GitHub MCP access is required.
+  - Re-run the GitHub MCP check after the token is available.
+- **Blockers:**
+  - GitHub MCP is unavailable until `GITHUB_PERSONAL_ACCESS_TOKEN` is set for the active MCP server startup path.
+
+- **Date:** 2026-03-07 (session 20)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then verified the new Codex tooling state instead of assuming the prior config work was live.
+  - Confirmed the repo-local MCP config at `.mcp.json` contains `github` and `digitalocean` server entries.
+  - Verified the three new PixelPort skills are installed and readable at `~/.codex/skills/`:
+    - `pixelport-fresh-tenant-canary`
+    - `pixelport-openclaw-upgrade`
+    - `pixelport-release-smoke`
+  - Confirmed the files those skills point to still exist (`docs/SESSION-LOG.md`, `docs/ACTIVE-PLAN.md`, `docs/openclaw-reference.md`, `api/inngest/functions/provision-tenant.ts`), so the skill workflows are usable in practice.
+  - Confirmed the DigitalOcean MCP wrapper script launches cleanly and starts `@digitalocean/mcp` over stdio using the locally stored `DO_API_TOKEN`.
+  - Confirmed the active Codex MCP registry in this session does **not** currently expose `github` or `digitalocean`: both `list_mcp_resources` and `codex mcp list/get` only surfaced `playwright`, and explicit lookups for `github` / `digitalocean` returned "unknown server" / "not found".
+  - Probed the configured GitHub MCP URL (`https://api.github.com/mcp`) directly and received `404 Not Found` on both HTTP and JSON-RPC-style requests, so GitHub MCP remains unverified and not usable from the current session.
+- **What's next:**
+  - Decide whether to register `github` and `digitalocean` in Codex's active MCP registry directly (for example via `codex mcp add`) or resolve why the repo-local `.mcp.json` is not being loaded by the desktop session.
+  - If GitHub MCP is still desired, verify the correct GitHub MCP endpoint/auth flow before relying on the current `.mcp.json` URL.
+  - Re-test MCP availability in a fresh Codex session only after the registry/auth path is corrected.
+- **Blockers:**
+  - The three new skills are usable, but GitHub MCP and DigitalOcean MCP are **not** usable from the current Codex model session because those servers are not attached to the active MCP registry here.
+  - GitHub MCP may also have an endpoint/auth configuration issue beyond the session-loading issue; the current URL probe returned `404`.
+
 - **Date:** 2026-03-07 (session 19)
 - **Who worked:** Codex
 - **What was done:**

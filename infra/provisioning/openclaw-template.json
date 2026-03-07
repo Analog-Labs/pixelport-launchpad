@@ -11,6 +11,12 @@
       "dangerouslyAllowHostHeaderOriginFallback": true
     }
   },
+  "acp": {
+    "_comment": "Disable ACP dispatch for fresh tenant canaries on OpenClaw 2026.3.2. Provisioning falls back to a config without this block if validate rejects it.",
+    "dispatch": {
+      "enabled": false
+    }
+  },
   "hooks": {
     "_comment": "Runtime uses buildBootstrapHooksConfig() to derive a separate hook token from the gateway token."
   },

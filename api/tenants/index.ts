@@ -103,6 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       agent_name,
       agent_tone,
       agent_avatar_url,
+      scan_results,
     } = (req.body || {}) as {
       company_name?: string;
       company_url?: string;
@@ -110,6 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       agent_name?: string;
       agent_tone?: string;
       agent_avatar_url?: string;
+      scan_results?: Record<string, unknown> | null;
     };
 
     if (!company_name || typeof company_name !== 'string' || company_name.trim().length < 2) {
@@ -142,6 +144,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       agent_name: typeof agent_name === 'string' && agent_name.trim() ? agent_name.trim() : 'Luna',
       agent_tone: agent_tone || 'professional',
       agent_avatar_url: agent_avatar_url || 'amber-l',
+      scan_results: scan_results && typeof scan_results === 'object' ? scan_results : null,
       completed_at: new Date().toISOString(),
     };
 

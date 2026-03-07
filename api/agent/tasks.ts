@@ -32,21 +32,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     const validTypes = ['draft_content', 'research', 'competitor_analysis', 'strategy', 'report'];
-    if (!validTypes.includes(task_type)) {
+    let normalizedTaskType = String(task_type).trim();
+
+    if (normalizedTaskType.startsWith('research_')) {
+      normalizedTaskType = normalizedTaskType.includes('competitor') ? 'competitor_analysis' : 'research';
+    }
+
+    if (normalizedTaskType === 'strategy_report') {
+      normalizedTaskType = 'report';
+    }
+
+    if (!validTypes.includes(normalizedTaskType)) {
       return res.status(400).json({ error: `Invalid task_type. Must be one of: ${validTypes.join(', ')}` });
     }
 
     const validStatuses = ['pending', 'running', 'completed', 'failed', 'cancelled'];
-    if (status && !validStatuses.includes(status)) {
+    let normalizedStatus = typeof status === 'string' ? status.trim() : status;
+
+    if (normalizedStatus === 'in_progress') {
+      normalizedStatus = 'running';
+    }
+
+    if (normalizedStatus && !validStatuses.includes(normalizedStatus)) {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
 
     const insertData: Record<string, unknown> = {
       tenant_id: tenant.id,
       agent_role,
-      task_type,
+      task_type: normalizedTaskType,
       task_description,
-      status: status || 'pending',
+      status: normalizedStatus || 'pending',
     };
 
     if (agent_model) insertData.agent_model = agent_model;
