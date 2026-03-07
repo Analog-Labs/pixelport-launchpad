@@ -7,6 +7,60 @@
 
 ## Last Session
 
+- **Date:** 2026-03-07 (session 27)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then implemented the duplicate-bootstrap hotfix for the fresh-tenant `2026.3.2` rollout without changing the overall provisioning/runtime architecture.
+  - Added a shared bootstrap lifecycle helper at `api/lib/bootstrap-state.ts` and made `tenants.onboarding_data.bootstrap` the source of truth for onboarding bootstrap state. The persisted states are now `dispatching`, `accepted`, `completed`, and `failed`, with timestamps, source, and last-error tracking stored inside `onboarding_data`.
+  - Updated `api/inngest/functions/provision-tenant.ts` so fresh tenants now persist `bootstrap.status = "dispatching"` before they are marked `active`, then persist `accepted` or `failed` after the initial bootstrap trigger completes. This closes the original race window where Dashboard Home could see `active` before bootstrap state existed.
+  - Updated `api/tenants/bootstrap.ts` so replay is now authoritative and idempotent:
+    - returns `409 reason=bootstrap_in_progress` when bootstrap is already `dispatching` or `accepted`
+    - returns `409 reason=bootstrap_already_completed` when bootstrap is already `completed` or real agent output already exists
+    - persists `dispatching`, `accepted`, and `failed` around real replay attempts
+    - keeps the existing hooks-repair path for older droplets
+  - Updated `api/tenants/status.ts` to return additive field `bootstrap_status`, derived from `tenant.onboarding_data.bootstrap.status`.
+  - Updated `src/pages/dashboard/Home.tsx` so the frontend no longer guesses solely from `tenant.status === active` plus empty tasks. Home now reads `bootstrap_status` from `/api/tenants/status` and only auto-replays bootstrap for legacy recovery cases where the tenant is `active`, tasks are still empty, and bootstrap state is `not_started` or `failed`.
+  - Updated `api/agent/tasks.ts`, `api/agent/competitors.ts`, and `api/agent/vault/[key].ts` so the first successful agent-origin write marks bootstrap `completed` when the bootstrap lifecycle is still `dispatching` or `accepted`.
+  - Kept this as a forward-only fix: no cleanup logic was added for tenants that already have duplicated onboarding artifacts.
+  - Ran `npx tsc --noEmit` after the code changes — clean.
+- **What's next:**
+  - Deploy the bootstrap idempotency hotfix and run one fresh-tenant production QA pass to confirm Dashboard Home no longer replays bootstrap during the first onboarding write window.
+  - Re-check the live replay endpoint behavior for all three expected cases: `bootstrap_in_progress`, `bootstrap_already_completed`, and a real replay from `failed`.
+  - Leave Supabase signup throttling out of this hotfix unless founder chooses to prioritize it separately.
+- **Blockers:** No new design blocker was introduced. Live validation is still required after deploy to confirm the duplicate-bootstrap race is gone on production.
+
+- **Date:** 2026-03-07 (session 26)
+- **Who worked:** Codex
+- **What was done:**
+  - Ran the focused post-rollout production QA for the fresh-tenant OpenClaw `2026.3.2` default against the live app and created a brand-new tenant `50d6ac40-3a73-4321-8258-86efc5404ebe` (`pixelport-qa-rollout-20260307`) through the real onboarding flow.
+  - Fresh auth hit a live Supabase signup throttle during QA: the real signup flow created the auth user but later retries returned `429 email rate limit exceeded`, so the same newly created user was service-role confirmed to finish the required live onboarding path.
+  - Verified the fresh droplet end to end:
+    - droplet `556582623` / `157.230.185.69`
+    - cloud-init completed
+    - runtime image `pixelport-openclaw:2026.3.2-chromium`
+    - OpenClaw version `2026.3.2`
+    - `/opt/openclaw/config-validate.json` reported `{"valid":true,...}`
+    - generated `openclaw.json` kept `acp.dispatch.enabled=false`
+    - hooks mapping was present with a distinct derived hooks token
+    - LiteLLM provider still pointed at `/v1` with `api: "openai-responses"`
+    - `/health` and `/ready` both returned HTML `200` once the gateway became healthy
+  - Verified truthful backend/dashboard data on the fresh tenant:
+    - tenant reached `active`
+    - Supabase and authenticated dashboard APIs agreed on real rows
+    - final backend state during QA: `16` task rows, `5` vault sections `ready`, `9` competitor rows, `sessions_log = 0`
+    - Content, Vault, Home, and Competitors dashboard pages rendered those real rows rather than placeholders
+  - Captured the main fresh-tenant regression exposed by the live rollout: once the tenant became `active`, Dashboard Home auto-posted `POST /api/tenants/bootstrap => 202` while the original onboarding bootstrap work was still landing, which produced duplicated onboarding artifacts (duplicate research/report tasks and duplicate competitor entries like `Jasper`, `Klue`, and `Crayon`).
+  - Documented additional non-blocking runtime findings from the fresh droplet:
+    - browser control still times out in-container
+    - `web_search` still errors without search credentials and throws noisy OpenClaw failover/context-overflow logs before the agent falls back to a conservative competitor set
+    - shell helpers inside the runtime are brittle (`python`, `rg`, and `jq` issues)
+    - generated `SOUL.md` shows mojibake characters for some punctuation even though the task-type guidance itself is valid
+- **What's next:**
+  - Hotfix bootstrap idempotency so Dashboard Home does not replay `POST /api/tenants/bootstrap` while the original onboarding bootstrap is still in flight.
+  - Decide whether to lower/relax Supabase signup throttling for production QA and new-user reliability, or document a deterministic QA auth path that does not require repeated live signup attempts.
+  - Keep the `2026.3.2` rollout in place for now because core provisioning, activation, truthful backend writes, and truthful dashboard reads passed; treat duplicate bootstrap writes as the urgent follow-up fix.
+- **Blockers:** No new rollout-revert blocker was found in the core `2026.3.2` provisioning/runtime path, but duplicate bootstrap writes on fresh tenants are now a high-priority production bug.
+
 - **Date:** 2026-03-07 (session 25)
 - **Who worked:** Codex + Founder
 - **What was done:**

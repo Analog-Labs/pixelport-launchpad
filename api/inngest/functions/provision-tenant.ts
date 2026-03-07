@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
+import { persistBootstrapState } from '../../lib/bootstrap-state';
 import {
   buildBootstrapHooksConfig,
   buildOnboardingBootstrapMessage,
@@ -84,6 +85,7 @@ export const provisionTenant = inngest.createFunction(
 
       return data as TenantRow;
     });
+    let onboardingData = (tenant.onboarding_data ?? {}) as Json;
 
     const litellmTeam = await step.run('create-litellm-team', async () => {
       const tenantSettings = (tenant.settings ?? {}) as Json;
@@ -346,7 +348,6 @@ export const provisionTenant = inngest.createFunction(
     });
 
     await step.run('create-agent-records', async () => {
-      const onboardingData = (tenant.onboarding_data ?? {}) as Json;
       const agentName = (onboardingData.agent_name as string) || 'Luna';
       const agentTone = (onboardingData.agent_tone as string) || 'professional';
 
@@ -371,7 +372,7 @@ export const provisionTenant = inngest.createFunction(
     });
 
     await step.run('seed-vault', async () => {
-      const scanResults = (tenant.onboarding_data ?? {} as Json).scan_results as Record<string, unknown> | undefined;
+      const scanResults = onboardingData.scan_results as Record<string, unknown> | undefined;
 
       const sections = [
         { section_key: 'company_profile', section_title: 'Company Profile' },
@@ -432,6 +433,17 @@ export const provisionTenant = inngest.createFunction(
       console.log(`Welcome message placeholder for inbox ${agentmailInbox}`);
     });
 
+    onboardingData = await step.run('mark-bootstrap-dispatching', async () => {
+      return await persistBootstrapState({
+        tenantId,
+        onboardingData,
+        update: {
+          status: 'dispatching',
+          source: 'provisioning',
+        },
+      });
+    });
+
     await step.run('mark-active', async () => {
       const { error } = await supabase.from('tenants').update({ status: 'active' }).eq('id', tenantId);
 
@@ -447,7 +459,7 @@ export const provisionTenant = inngest.createFunction(
           gatewayToken: droplet.gatewayToken,
           message: buildOnboardingBootstrapMessage({
             tenantName: tenant.name,
-            onboardingData: tenant.onboarding_data,
+            onboardingData,
           }),
         });
       } catch (error) {
@@ -465,6 +477,23 @@ export const provisionTenant = inngest.createFunction(
         `(HTTP ${bootstrapResult.status}): ${bootstrapResult.body}`
       );
     }
+
+    onboardingData = await step.run('persist-bootstrap-result', async () => {
+      return await persistBootstrapState({
+        tenantId,
+        onboardingData,
+        update: bootstrapResult.ok
+          ? {
+              status: 'accepted',
+              source: 'provisioning',
+            }
+          : {
+              status: 'failed',
+              source: 'provisioning',
+              lastError: bootstrapResult.body,
+            },
+      });
+    });
 
     return {
       success: true,

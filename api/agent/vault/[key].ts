@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateAgentRequest, errorResponse } from '../../lib/auth';
+import { markBootstrapCompletedIfInProgress } from '../../lib/bootstrap-state';
 import { supabase } from '../../lib/supabase';
 
 const VALID_KEYS = ['company_profile', 'brand_voice', 'icp', 'competitors', 'products'];
@@ -51,6 +52,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     if (!data) {
       return res.status(404).json({ error: 'Vault section not found' });
+    }
+
+    try {
+      await markBootstrapCompletedIfInProgress({
+        tenantId: tenant.id,
+        onboardingData: tenant.onboarding_data,
+      });
+    } catch (bootstrapError) {
+      console.warn('Vault write succeeded but failed to mark bootstrap completed:', bootstrapError);
     }
 
     return res.status(200).json(data);

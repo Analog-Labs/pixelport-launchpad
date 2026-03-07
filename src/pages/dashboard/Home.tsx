@@ -11,11 +11,32 @@ import {
 } from "lucide-react";
 import { getAvatarConfig, getAgentName, getAgentAvatarId } from "@/lib/avatars";
 
+type BootstrapStatus = "not_started" | "dispatching" | "accepted" | "completed" | "failed";
+
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return "Good morning";
   if (h < 18) return "Good afternoon";
   return "Good evening";
+}
+
+function normalizeBootstrapStatus(value: unknown): BootstrapStatus {
+  return value === "dispatching" ||
+    value === "accepted" ||
+    value === "completed" ||
+    value === "failed"
+    ? value
+    : "not_started";
+}
+
+function getBootstrapStatusFromOnboardingData(onboardingData: Record<string, unknown> | null | undefined): BootstrapStatus {
+  const bootstrap = onboardingData?.bootstrap;
+
+  if (!bootstrap || typeof bootstrap !== "object" || Array.isArray(bootstrap)) {
+    return "not_started";
+  }
+
+  return normalizeBootstrapStatus((bootstrap as { status?: unknown }).status);
 }
 
 function getFirstName(user: ReturnType<typeof useAuth>["user"]): string {
@@ -56,6 +77,9 @@ const Home = () => {
   const [tasks, setTasks] = useState<any[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [bootstrapRequested, setBootstrapRequested] = useState(false);
+  const [bootstrapStatus, setBootstrapStatus] = useState<BootstrapStatus>(
+    getBootstrapStatusFromOnboardingData(onboardingData as Record<string, unknown>)
+  );
 
   const fetchTasks = async (accessToken: string, isCancelled?: () => boolean) => {
     try {
@@ -85,6 +109,10 @@ const Home = () => {
     setBootstrapRequested(false);
   }, [tenant?.id]);
 
+  useEffect(() => {
+    setBootstrapStatus(getBootstrapStatusFromOnboardingData(tenant?.onboarding_data ?? null));
+  }, [tenant?.id, tenant?.onboarding_data]);
+
   // Status polling (existing)
   useEffect(() => {
     if (!isOnboarded || !tenant) return;
@@ -100,18 +128,17 @@ const Home = () => {
         if (res.ok && !cancelled) {
           const data = await res.json();
           setTenantStatus(data.status);
+          setBootstrapStatus(normalizeBootstrapStatus(data.bootstrap_status));
           localStorage.setItem("pixelport_tenant_status", data.status);
         }
       } catch { /* retry next interval */ }
     };
 
     checkStatus();
-    const interval = setInterval(() => {
-      if (tenantStatus !== "active" && tenantStatus !== "failed") checkStatus();
-    }, 10000);
+    const interval = setInterval(checkStatus, 10000);
 
     return () => { cancelled = true; clearInterval(interval); };
-  }, [isOnboarded, session, tenantStatus]);
+  }, [isOnboarded, session?.access_token, tenant?.id]);
 
   // Fetch Slack connection status
   useEffect(() => {
@@ -149,11 +176,14 @@ const Home = () => {
   useEffect(() => {
     if (!session?.access_token || !tenant) return;
     if (tenantStatus !== "active" || tasksLoading || tasks.length > 0 || bootstrapRequested) return;
+    if (bootstrapStatus !== "not_started" && bootstrapStatus !== "failed") return;
 
     let cancelled = false;
 
     (async () => {
       setBootstrapRequested(true);
+      setBootstrapStatus("dispatching");
+
       try {
         const res = await fetch("/api/tenants/bootstrap", {
           method: "POST",
@@ -163,16 +193,36 @@ const Home = () => {
           },
         });
 
-        if (!res.ok && res.status !== 409) {
-          console.error("Failed to trigger onboarding bootstrap:", await res.text());
+        const contentType = res.headers.get("content-type") || "";
+        const payload = contentType.includes("application/json")
+          ? await res.json()
+          : null;
+
+        if (res.status === 202) {
+          setBootstrapStatus(normalizeBootstrapStatus(payload?.bootstrap_status));
+
+          if (!cancelled) {
+            window.setTimeout(() => {
+              void fetchTasks(session.access_token);
+            }, 3000);
+          }
           return;
         }
 
-        if (!cancelled) {
-          window.setTimeout(() => {
-            void fetchTasks(session.access_token);
-          }, 3000);
+        if (res.status === 409) {
+          const fallbackStatus =
+            payload?.reason === "bootstrap_already_completed"
+              ? "completed"
+              : payload?.reason === "bootstrap_in_progress"
+                ? "accepted"
+                : "not_started";
+
+          setBootstrapStatus(normalizeBootstrapStatus(payload?.bootstrap_status ?? fallbackStatus));
+          return;
         }
+
+        setBootstrapStatus(normalizeBootstrapStatus(payload?.bootstrap_status ?? "failed"));
+        console.error("Failed to trigger onboarding bootstrap:", payload ?? (await res.text()));
       } catch (error) {
         console.error("Bootstrap trigger error:", error);
       }
@@ -181,7 +231,7 @@ const Home = () => {
     return () => {
       cancelled = true;
     };
-  }, [bootstrapRequested, session?.access_token, tasks.length, tasksLoading, tenant, tenantStatus]);
+  }, [bootstrapRequested, bootstrapStatus, session?.access_token, tasks.length, tasksLoading, tenant, tenantStatus]);
 
   // Onboarding checklist logic
   const checklistItems = [
