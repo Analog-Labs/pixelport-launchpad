@@ -7,6 +7,37 @@
 
 ## Last Session
 
+- **Date:** 2026-03-07 (session 31)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then implemented the requested live process-doc update for future build sessions.
+  - Updated `AGENTS.md` and `CLAUDE.md` with the short build-loop summary while keeping them as compact constitutions.
+  - Added the new canonical workflow reference at `docs/build-workflow.md`, covering founder steps, build-brief usage, Claude CTO handoff expectations, feedback loops, merge authority, and post-deploy QA rules.
+  - Added the reusable build brief template at `docs/build-briefs/template.md` so future implementation sessions can start from a consistent handoff artifact.
+  - Updated `docs/project-coordination-system.md`, `docs/ACTIVE-PLAN.md`, and `docs/pixelport-project-status.md` to reflect the new `planning thread -> build brief -> execution session -> CTO review -> merge/deploy -> same-session smoke` flow.
+  - No product code, infra config, or runtime behavior changed in this session.
+- **What's next:**
+  - Use this chat for continued Q&A and planning.
+  - Turn the next approved feature or fix into a build brief under `docs/build-briefs/`, then start a separate Codex execution session from that brief.
+- **Blockers:** No blocker for the workflow update itself. Existing product blockers remain tracked in `docs/ACTIVE-PLAN.md`.
+
+- **Date:** 2026-03-07 (session 30)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md` per session protocol, then reviewed the recent delivery trail and planning source-of-truth for a dedicated Q&A/research thread.
+  - Read the current execution context across:
+    - recent sessions in `docs/SESSION-LOG.md` (including the `2026.3.2` rollout, bootstrap race fix, and live validation)
+    - archived session history in `docs/archive/session-history.md`
+    - current plan in `docs/ACTIVE-PLAN.md`
+    - project history, decisions, risks, and next actions in `docs/pixelport-project-status.md`
+    - locked product/architecture spec in `docs/pixelport-master-plan-v2.md`
+    - strategic feature backlog in `docs/strategic-ideas-backlog.md`
+  - Confirmed this thread is for Q&A, research, and drafting high-quality future implementation prompts only; no product code, infra, or UX changes were made in this session.
+- **What's next:**
+  - Use this thread to answer founder questions, research candidate features, and convert approved Q&A outcomes into implementation-ready prompts for later execution sessions.
+  - Keep actual feature implementation in separate scoped sessions once priorities are chosen.
+- **Blockers:** No blocker for the Q&A/research thread itself. Existing product blockers remain tracked in `docs/ACTIVE-PLAN.md`.
+
 - **Date:** 2026-03-07 (session 29)
 - **Who worked:** Codex
 - **What was done:**

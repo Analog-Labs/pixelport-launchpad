@@ -222,6 +222,8 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 
 ### Notes
 
+- **Build workflow update (2026-03-07, session 31):** Future work now follows `planning thread -> repo build brief -> separate execution session`. Medium/high builds default to `codex/*` branches and require Claude CTO review before merge. After approval, Codex may merge/deploy and run same-session production smoke. Reference: `docs/build-workflow.md` and `docs/build-briefs/template.md`.
+- **Q&A research thread opened (2026-03-07, session 30):** A separate Codex session is now reserved for founder Q&A, targeted research, and drafting future implementation prompts. No checklist items changed from that session; use it to refine scope before starting execution sessions.
 - **Operating model changed (2026-03-06):** Codex is now the Technical Lead and primary owner of repo implementation across frontend, backend, infra, and integrations. Founder approves major product, architecture, and UX decisions. CTO is now an occasional QA/reviewer rather than a routine gate.
 - **Auth redirect hardening (2026-03-06, session 11):** Frontend auth now uses a shared canonical app URL helper and Supabase PKCE flow. Repo code no longer relies on arbitrary browser origins or hash-fragment tokens, and the live Supabase Auth URL configuration was updated to allow the production callback flow.
 - **Tenant state fix (2026-03-06, session 11):** Dashboard/onboarding gating no longer trusts stale `pixelport_*` localStorage across users. Frontend now fetches the real tenant via `/api/tenants/me`, clears tenant state on sign-out/account switch, and only shows provisioning placeholders when a real tenant is actually provisioning.

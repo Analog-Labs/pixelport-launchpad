@@ -16,7 +16,7 @@ Growth Swarm is the dogfood instance running Vidacious marketing on OpenClaw (3 
 |------|-------|----------|
 | **Founder** | Approves major product, architecture, and UX decisions. May still use Lovable for visual/UI-only changes. | Own functional implementation by default |
 | **Codex (Technical Lead)** | Primary owner for frontend, backend, infra, integrations, repo maintenance, debugging, and release execution. Keeps founder + CTO in loop. | Make major product/architecture/UX decisions without founder approval |
-| **CTO (QA/Reviewer)** | Occasional QA, audit, release review, and strategic feedback when practical. | Gate routine implementation work |
+| **CTO (QA/Reviewer)** | Reviews medium/high builds before merge, plus audits and strategic feedback when needed. | Gate small low-risk tweaks |
 
 ## Where to Find Things
 | Need | File |
@@ -27,6 +27,7 @@ Growth Swarm is the dogfood instance running Vidacious marketing on OpenClaw (3 
 | Product spec (52 locked decisions) | `docs/pixelport-master-plan-v2.md` |
 | Frontend/UI collaboration workflow | `docs/lovable-collaboration-guide.md` |
 | Coordination system rules | `docs/project-coordination-system.md` |
+| Build/review/release workflow | `docs/build-workflow.md` |
 | OpenClaw platform reference | `docs/openclaw-reference.md` |
 
 ## Tech Stack
@@ -46,7 +47,9 @@ Memory: Mem0 | Analytics: PostHog | Email: AgentMail | Payments: Stripe
 - Founder is non-technical. Present choices in plain language with clear tradeoffs.
 - Routine implementation can proceed under Technical Lead ownership.
 - Major product, architecture, and UX decisions require founder approval first.
-- CTO QA is requested when practical but is not a hard gate for routine work.
+- Planning/Q&A can happen in dedicated research sessions; approved build work runs in separate execution sessions.
+- Medium/high builds default to `codex/*` branches and require Claude CTO review before merge. Small low-risk tweaks do not.
+- After CTO approval, Codex may merge to `main`, monitor deploy, and run same-session production smoke. See `docs/build-workflow.md`.
 - Founder may keep using Lovable for visual/UI-only changes, but all functional frontend changes are repo-managed by Technical Lead.
 - Vercel = website + API. Railway = LiteLLM gateway. Both are required.
 

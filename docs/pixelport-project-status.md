@@ -1,6 +1,6 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-03-06
+**Last Updated:** 2026-03-07
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
 **Formerly:** Growth Swarm (now first tenant / dogfood instance of PixelPort)
 **Infrastructure:** OpenClaw on DigitalOcean droplet `openclaw-prod` (ID: `552336242`)
@@ -17,6 +17,19 @@ Effective 2026-03-06, PixelPort moved to a new working model for current and fut
 - **CTO (QA/Reviewer)** shifts to occasional QA, audit, and strategic review when practical rather than acting as a hard gate for routine implementation.
 
 This note updates the live operating model only. Historical sessions, archived plans, and prior authorship references remain preserved as historical record.
+
+## Build Workflow Note (2026-03-07)
+
+Effective 2026-03-07, PixelPort now uses a standardized build/review/release loop for future product work:
+
+- planning and Q&A happen in a dedicated research thread when useful
+- each approved medium/high build gets a repo brief under `docs/build-briefs/`
+- implementation runs in a separate Codex execution session
+- medium/high builds use a short-lived `codex/*` branch and require Claude CTO review before merge
+- after CTO approval, Codex may merge to `main`, monitor deploy, and run same-session production smoke unless a founder-only decision is still pending
+- separate deep production QA is used only for risky or ambiguous releases
+
+Detailed founder and CTO handoff steps live in `docs/build-workflow.md`.
 
 ---
 
@@ -111,6 +124,8 @@ Full product spec: `docs/pixelport-master-plan-v2.md`
 ### Canonical docs
 - **Project plan/status:** local repo `docs/pixelport-project-status.md` (this file)
 - **Product spec (v2.0):** local repo `docs/pixelport-master-plan-v2.md`
+- **Build workflow:** `docs/build-workflow.md`
+- **Build brief template:** `docs/build-briefs/template.md`
 - **CTO transition briefing:** `docs/archive/cto-instructions-master-plan-v2-transition.md`
 - **Lovable collaboration guide:** `docs/lovable-collaboration-guide.md`
 - **Infrastructure benchmark:** `docs/cto-founder-infra-benchmark-2026-02-27.md`

@@ -1,6 +1,6 @@
 # PixelPort — Project Coordination System
 
-**Last Updated:** 2026-03-06
+**Last Updated:** 2026-03-07
 **Purpose:** Keep Founder, Codex, and CTO aligned across async sessions without relying on chat memory.
 **Source of Truth:** The GitHub repo.
 
@@ -17,8 +17,10 @@
   - Owns functional frontend work, backend, infra, integrations, repo maintenance, debugging, and release execution.
   - Keeps founder and CTO informed through the repo docs and commits.
 - **CTO (QA/Reviewer)**
-  - Provides occasional QA, audits, and strategic review when practical.
-  - Is not a hard gate for routine implementation.
+  - Reviews medium and high-risk builds before merge.
+  - Provides audits and strategic review when needed.
+
+Detailed founder/CTO handoff steps live in `docs/build-workflow.md`.
 
 This note changes current operating rules only. Historical session ownership stays as written in archive docs and old session entries.
 
@@ -90,6 +92,7 @@ Do not rewrite history there. Add dated notes instead.
 - Major product, architecture, or UX changes still require founder approval first.
 - If something is unclear and it changes user-facing behavior materially, pause and ask founder in plain language.
 - If an issue is architectural but outside approved scope, document it without redesigning the system unilaterally.
+- If work is approved for implementation, create or use a repo build brief before starting the execution session.
 
 ### End
 
@@ -122,8 +125,30 @@ Do not rewrite history there. Add dated notes instead.
 
 ### CTO review usage
 
-- request CTO QA when practical for risky changes, release checks, or strategic feedback
-- do not block routine fixes on CTO availability
+- CTO review is required before merge for medium/high builds
+- small low-risk tweaks do not require CTO review
+- founder still approves any major product, architecture, or UX decision before implementation or release
+
+## Build Session Workflow
+
+### Planning and handoff
+
+- Planning and Q&A can happen in a dedicated research thread or session.
+- Each approved medium/high build gets a repo brief in `docs/build-briefs/`.
+- The build brief is the handoff artifact from planning to execution.
+
+### Branch and review flow
+
+- Small low-risk tweaks may be implemented directly if no founder-only decision is involved.
+- Medium/high builds should use a short-lived `codex/*` branch.
+- Codex implements the change, validates locally, and prepares a CTO handoff prompt from the build brief.
+- Founder opens a fresh Claude Code review session and pastes that prompt manually.
+- Founder pastes Claude's review output back into the Codex build session for fixes or approval handling.
+
+### Merge and release authority
+
+- After CTO approval, Codex may merge/deploy unless a founder-only decision is still pending.
+- `main` remains the production branch and Vercel deploy source.
 
 ---
 
@@ -148,9 +173,11 @@ Use the collaboration guide in `docs/lovable-collaboration-guide.md` for the day
 
 ## Release and QA Flow
 
-- Routine implementation may ship under Technical Lead ownership.
+- Routine small fixes may ship under Technical Lead ownership.
+- Medium/high builds require Claude CTO review before merge.
 - Founder approval is still required before shipping major product, architecture, or UX changes.
-- CTO QA is preferred when practical for high-risk or high-visibility releases.
+- After approval, Codex merges to `main`, monitors deploy, and runs production smoke in the same session by default.
+- Open a separate deep production QA session only for risky or ambiguous releases, or when the initial smoke reveals uncertainty.
 - Validation evidence should live in:
   - `docs/SESSION-LOG.md`
   - `docs/ACTIVE-PLAN.md`
