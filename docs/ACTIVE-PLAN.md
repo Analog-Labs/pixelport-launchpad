@@ -213,7 +213,7 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 | Mem0 API key | Mem0 endpoint activation | Founder signs up at mem0.ai + adds key to Vercel env |
 | AGENTMAIL_API_KEY in Vercel | Automatic tenant inbox creation and inbox-backed onboarding promises | Founder adds key to Vercel env |
 | GEMINI_API_KEY in Vercel | Explicit Gemini-backed web search for fresh tenants | Founder adds key to Vercel env |
-| OpenClaw browser control timeout on fresh-tenant droplets (`2026.2.24` and `2026.3.2` canaries) | Broad rollout of the `2026.3.2` default pin is on hold even though core provisioning succeeds | Technical Lead investigation and/or upstream OpenClaw fix |
+| OpenClaw browser control timeout on fresh-tenant droplets (`2026.2.24` and `2026.3.2` canaries) | Non-blocking follow-up for browser-assisted workflows; founder approved rollout of `2026.3.2` without waiting on this | Technical Lead investigation and/or upstream OpenClaw fix |
 | X Developer App credentials | X integration (Session 11) | Founder registers at developer.x.com |
 | LinkedIn App credentials | LinkedIn integration (Session 11) | Founder registers at developer.linkedin.com |
 | Google OAuth credentials | GA4 integration (Session 12) | Founder configures at Google Cloud Console |
@@ -246,6 +246,8 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 - **OpenClaw `2026.3.2` canary upgrade (2026-03-07, session 24):** Fresh-tenant provisioning now pins OpenClaw `2026.3.2`, validates `openclaw.json` via `docker run --rm ... openclaw.mjs config validate --json` before gateway start, and disables ACP dispatch by default with a validation-gated fallback if the ACP keys are rejected. The first canary exposed a real onboarding write-contract bug (`research_*` task types), which was fixed by preserving `scan_results` in tenant onboarding data, tightening the bootstrap/SOUL task contract, and normalizing task aliases in `api/agent/tasks.ts`.
 - **Current canary verdict (2026-03-07, session 24):** A second fresh tenant on `2026.3.2` reached `active`, passed config validation, accepted bootstrap, wrote real rows (`9` tasks, `5` ready vault sections, `5` competitors), and the authenticated dashboard APIs returned those same rows instead of placeholders. However, the explicit `tools.profile: "full"` smoke still fails on browser access: shell and file tools succeed, but the browser tool times out against the OpenClaw browser control service. Recommendation is `keep canary only`, not broad roll-forward yet.
 - **Health probe nuance (2026-03-07, session 24):** `/health`, `/healthz`, `/ready`, and `/readyz` all return `200` on the canary droplet, but each serves the HTML control UI rather than a dedicated readiness payload. Keep `/health` as the coded gate for now and treat the others as observational only.
+- **Founder rollout decision (2026-03-07, session 25):** Founder explicitly approved broad rollout of the OpenClaw `2026.3.2` default after the successful fresh-tenant canary. Browser control timeout is now tracked as a non-blocking follow-up because the Chief still completed useful onboarding work and wrote truthful backend data without it.
+- **Post-rollout QA handoff (2026-03-07, session 25):** Use `docs/openclaw-2026-3-2-qa-brief-2026-03-07.md` for the next-session validation pass after production rollout.
 
 ---
 

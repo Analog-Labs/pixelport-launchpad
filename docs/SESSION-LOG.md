@@ -7,6 +7,18 @@
 
 ## Last Session
 
+- **Date:** 2026-03-07 (session 25)
+- **Who worked:** Codex + Founder
+- **What was done:**
+  - Founder reviewed the `2026.3.2` canary result and explicitly approved broad rollout even though browser tooling is still a non-blocking follow-up.
+  - Logged the rollout decision: browser-control timeout is no longer treated as a release gate for the OpenClaw runtime upgrade as long as the Chief still completes useful onboarding research through the existing website scan + shell/web-fetch path.
+  - Prepared a fresh-session QA handoff brief for the post-rollout validation pass at `docs/openclaw-2026-3-2-qa-brief-2026-03-07.md`.
+  - Pushed the OpenClaw `2026.3.2` upgrade commit to `main` and redeployed production so new tenants now use the upgraded default provisioning/runtime path.
+- **What's next:**
+  - Run the separate QA session using the new brief and confirm a post-rollout fresh tenant still provisions, activates, writes real backend rows, and surfaces truthful dashboard data.
+  - Keep browser-control debugging de-prioritized unless the QA pass finds a browser-only workflow gap.
+- **Blockers:** No rollout blocker remains for the OpenClaw `2026.3.2` default. Browser control timeout remains a follow-up issue, not a launch gate.
+
 - **Date:** 2026-03-07 (session 24)
 - **Who worked:** Codex
 - **What was done:**
