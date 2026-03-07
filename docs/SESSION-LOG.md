@@ -7,6 +7,39 @@
 
 ## Last Session
 
+- **Date:** 2026-03-07 (session 29)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then ran a live production validation pass against the pushed bootstrap replay hardening commit `5a4030a`.
+  - Created a fresh QA auth user and new production tenant on the live app to validate the exact first-run onboarding path rather than only checking an already-active tenant.
+  - Verified the duplicate-bootstrap fix end to end on production:
+    - fresh tenant `vidacious-ai-5` reached `active`
+    - the critical race window was observed live as `status=active`, `bootstrap_status=accepted`, `has_agent_output=false`
+    - Home did **not** emit an extra `POST /api/tenants/bootstrap` during that window
+    - a manual replay attempt during the same window returned `409 reason=bootstrap_in_progress`
+    - once real agent writes landed, bootstrap moved to `completed`
+    - a second manual replay attempt then returned `409 reason=bootstrap_already_completed`
+  - Verified truthful backend/dashboard behavior on the same fresh tenant:
+    - real task rows landed (`10` total by the end of the run)
+    - competitor rows landed (`3`, all unique: Arcads, Synthesia, HeyGen)
+    - all `5` vault sections reached `ready` with `last_updated_by=agent`
+    - Home `Recent Activity`, Content Pipeline, Knowledge Vault, and Competitors all rendered those real rows on production
+    - Vault markdown rendered formatted content rather than raw markdown source
+  - Re-checked the live runtime edge conditions during provisioning:
+    - cloud-init completed on the new droplet
+    - OpenClaw container came up and later answered `/health` with the known HTML `200` control page response
+    - no browser-control work was needed for this validation and the known browser timeout remains a separate non-blocking follow-up
+  - Found one follow-up frontend regression during the same production run:
+    - the signed-out deep link to `/dashboard/content` correctly redirected to `/login`
+    - after sign-in and onboarding, the app initially landed on `/dashboard/content`
+    - during the early provisioning window it later drifted to `/dashboard` without user action
+    - direct authenticated hard-loads to `/dashboard/content`, `/dashboard/connections`, `/dashboard/vault`, and `/dashboard/competitors` all worked correctly once the tenant was active
+- **What's next:**
+  - Treat duplicate-bootstrap replay as validated and closed for production.
+  - Decide whether to fix the onboarding-to-child-route drift next, since it appears limited to the first post-onboarding provisioning window rather than normal authenticated hard-loads.
+  - Keep the existing env-gated items (`AGENTMAIL_API_KEY`, `GEMINI_API_KEY`) and the non-blocking browser timeout as separate follow-ups.
+- **Blockers:** No blocker remains for the bootstrap idempotency fix itself. One follow-up UX bug remains around post-onboarding child-route persistence during provisioning.
+
 - **Date:** 2026-03-07 (session 28)
 - **Who worked:** Codex
 - **What was done:**
