@@ -7,6 +7,27 @@
 
 ## Last Session
 
+- **Date:** 2026-03-07 (session 19)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then reviewed the current repo/tooling setup before adding new Codex workflow support.
+  - Confirmed the local secure secret system at `~/.pixelport/` is active and currently stores the keys needed for DigitalOcean and core PixelPort infra access.
+  - Added three PixelPort-specific Codex skills under `~/.codex/skills/`:
+    - `pixelport-fresh-tenant-canary`
+    - `pixelport-openclaw-upgrade`
+    - `pixelport-release-smoke`
+  - Added DigitalOcean MCP wiring to `.mcp.json` via a local wrapper script at `tools/mcp/digitalocean-mcp.sh` that reads `DO_API_TOKEN` from `~/.pixelport/get-secret.sh` instead of hardcoding secrets in repo config.
+  - Added GitHub MCP wiring to `.mcp.json` using the remote GitHub MCP endpoint (`https://api.github.com/mcp`) so future sessions can authenticate through the client when needed instead of depending on Docker or a locally built GitHub MCP binary.
+  - Verified `.mcp.json` still parses cleanly after the changes.
+  - Confirmed the local machine does not currently have Docker or Go installed, so the older local GitHub MCP server paths are not the best fit on this machine right now.
+- **What's next:**
+  - Start a fresh Codex session when ready to pick up the newly added MCP config cleanly.
+  - Authenticate GitHub MCP through the client when first needed.
+  - If Supabase MCP is still wanted, add a proper `SUPABASE_ACCESS_TOKEN` to the secure local secret store first; the existing service-role key is not the same thing.
+- **Blockers:**
+  - Supabase MCP is still blocked on a real Supabase access token / PAT.
+  - GitHub MCP may require first-use authentication in the client before it becomes usable in practice.
+
 - **Date:** 2026-03-06 (session 18)
 - **Who worked:** Codex
 - **What was done:**

@@ -238,6 +238,7 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 - **Founder priority update (2026-03-06, session 18):** Browser tooling is not a near-term blocker as long as the Chief can still produce useful research without it and the dashboard shows real backend activity. Keep browser-tool investigation de-prioritized unless QA reveals a browser-only workflow gap.
 - **Live truthfulness check (2026-03-06, session 18):** Pushed commit `ee284b3` to `main` and re-validated `vidacious-ai-4` on production. Dashboard `Recent Activity` now maps to real `agent_tasks` rows, not placeholder onboarding text. Authenticated API check for the tenant returned `active`, `5` completed research tasks, `3` competitor rows, and all `5` vault sections `ready`.
 - **Current web-access nuance (2026-03-06, session 18):** Fresh tenants are clearly producing real research artifacts, but `tools.web` is still empty on live tenant configs until `GEMINI_API_KEY` is added to Vercel. Treat explicit Gemini-backed search as a capability gap, not as evidence that the current onboarding research is fake.
+- **Workflow tooling added (2026-03-07, session 19):** `.mcp.json` now includes GitHub MCP (remote HTTP) and DigitalOcean MCP (local wrapper using the secure `~/.pixelport/get-secret.sh` flow). New Codex skills were added for `pixelport-fresh-tenant-canary`, `pixelport-openclaw-upgrade`, and `pixelport-release-smoke`. Supabase MCP is still pending a proper `SUPABASE_ACCESS_TOKEN`.
 
 ---
 
