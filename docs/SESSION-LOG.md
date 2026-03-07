@@ -7,6 +7,34 @@
 
 ## Last Session
 
+- **Date:** 2026-03-06 (session 18)
+- **Who worked:** Codex
+- **What was done:**
+  - Pushed commit `ee284b3` (`fix: harden tenant runtime and update operating model`) to `main` so GitHub now matches the validated production state.
+  - Re-validated the live fresh-tenant canary in the browser using the signed-in QA tenant `vidacious-ai-4` (`qa-browser-1772846173@example.com`).
+  - Confirmed the dashboard Home page is no longer showing placeholder onboarding activity for this tenant. The visible `Recent Activity` entries map to real `agent_tasks` rows from the backend, including:
+    - `Bootstrap products and services mapping for Vidacious.ai`
+    - `Bootstrap competitor landscape for Vidacious.ai`
+    - `Bootstrap ICP and audience research for Vidacious.ai`
+    - `Bootstrap brand voice for Vidacious.ai`
+    - `Bootstrap company profile for Vidacious.ai`
+  - Confirmed the authenticated APIs for `vidacious-ai-4` return real backend state:
+    - tenant status `active`
+    - `5` completed research tasks
+    - `3` competitor rows
+    - all `5` vault sections in `ready`
+  - Verified the written research is substantive and persisted in the backend. Example: the live Vault content includes a company profile, brand voice, ICP, products/services mapping, and competitor analysis for Vidacious.ai rather than seed placeholders.
+  - Checked the live tenant config on droplet `165.227.200.246`: the current `tools.web` block is empty, so this tenant does **not** currently have an explicit Gemini-backed search provider configured. This matches the missing `GEMINI_API_KEY` in Vercel.
+  - Founder clarified priority: the OpenClaw browser tool is not a near-term blocker as long as the Chief can still perform useful web-backed research without it and the dashboard shows real backend activity.
+- **What's next:**
+  - Founder runs product QA on the pushed build and reports issues.
+  - Keep browser-tool investigation de-prioritized unless a future use case truly requires browser-only interactions.
+  - Focus next engineering work on issues found during founder QA plus the remaining env-gated capabilities (`GEMINI_API_KEY`, `AGENTMAIL_API_KEY`).
+- **Blockers:**
+  - `GEMINI_API_KEY` is still missing in Vercel, so explicit Gemini-backed search config is still off.
+  - `AGENTMAIL_API_KEY` is still missing in Vercel, so inbox auto-creation remains off.
+  - Browser-tool timeout remains known but is currently de-prioritized for QA/release as long as real non-browser research continues to land in backend rows.
+
 - **Date:** 2026-03-06 (session 17)
 - **Who worked:** Codex
 - **What was done:**

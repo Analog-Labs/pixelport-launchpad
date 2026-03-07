@@ -209,7 +209,7 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 | Mem0 API key | Mem0 endpoint activation | Founder signs up at mem0.ai + adds key to Vercel env |
 | AGENTMAIL_API_KEY in Vercel | Automatic tenant inbox creation and inbox-backed onboarding promises | Founder adds key to Vercel env |
 | GEMINI_API_KEY in Vercel | Explicit Gemini-backed web search for fresh tenants | Founder adds key to Vercel env |
-| OpenClaw browser tool timeout on tenant droplets | Reliable browser-assisted agent work on fresh tenants | Technical Lead investigation and/or upstream OpenClaw fix |
+| OpenClaw browser tool timeout on tenant droplets | Nice-to-have browser-assisted workflows on fresh tenants (currently de-prioritized for QA/release) | Technical Lead investigation and/or upstream OpenClaw fix |
 | X Developer App credentials | X integration (Session 11) | Founder registers at developer.x.com |
 | LinkedIn App credentials | LinkedIn integration (Session 11) | Founder registers at developer.linkedin.com |
 | Google OAuth credentials | GA4 integration (Session 12) | Founder configures at Google Cloud Console |
@@ -235,6 +235,9 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 - **Fresh tenants after browser-image hardening (2026-03-06, session 17):** Two new production canaries validated the updated provisioning path. `vidacious-ai-3` (`206.189.180.152`) and `vidacious-ai-4` (`165.227.200.246`) both reached `active`, wrote real backend rows, preserved protected child-route hard loads, and rendered formatted Vault markdown on live content.
 - **Browser runtime status after hardening (2026-03-06, session 17):** The old `No supported browser found` failure is fixed. Chromium is present in-container, the OpenClaw browser control service now boots, profile directories are writable, and `http://127.0.0.1:18791/` returns `401 Unauthorized` from the authenticated service. However, the in-agent `browser` tool still times out on OpenClaw `2026.2.24`, and `node /app/openclaw.mjs browser start` reports `Chrome extension relay is running, but no tab is connected`. Treat this as a separate runtime/upstream limitation, not a provisioning-image bug.
 - **Current env-gated gaps (2026-03-06, session 17):** `GEMINI_API_KEY` and `AGENTMAIL_API_KEY` are both currently missing from the live Vercel environment. Gemini-backed explicit search config remains disabled for fresh tenants, and AgentMail inbox auto-creation is skipped.
+- **Founder priority update (2026-03-06, session 18):** Browser tooling is not a near-term blocker as long as the Chief can still produce useful research without it and the dashboard shows real backend activity. Keep browser-tool investigation de-prioritized unless QA reveals a browser-only workflow gap.
+- **Live truthfulness check (2026-03-06, session 18):** Pushed commit `ee284b3` to `main` and re-validated `vidacious-ai-4` on production. Dashboard `Recent Activity` now maps to real `agent_tasks` rows, not placeholder onboarding text. Authenticated API check for the tenant returned `active`, `5` completed research tasks, `3` competitor rows, and all `5` vault sections `ready`.
+- **Current web-access nuance (2026-03-06, session 18):** Fresh tenants are clearly producing real research artifacts, but `tools.web` is still empty on live tenant configs until `GEMINI_API_KEY` is added to Vercel. Treat explicit Gemini-backed search as a capability gap, not as evidence that the current onboarding research is fake.
 
 ---
 
