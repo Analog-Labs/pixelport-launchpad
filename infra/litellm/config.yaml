@@ -2,7 +2,13 @@
 # Deployed on Railway — routes all tenant AI calls through this gateway
 
 model_list:
-  # Primary model (what customer agents run by default)
+  # Primary model for new tenants (GPT-5.4 flagship, general reasoning)
+  - model_name: gpt-5.4
+    litellm_params:
+      model: openai/gpt-5.4
+      api_key: os.environ/OPENAI_API_KEY
+
+  # Legacy primary model (existing tenants may still reference this)
   - model_name: gpt-5.2-codex
     litellm_params:
       model: openai/gpt-5.2-codex

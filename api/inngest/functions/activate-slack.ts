@@ -267,8 +267,9 @@ export const activateSlack = inngest.createFunction(
     });
 
     if (!gatewayHealth.healthy) {
+      const gatewayStatus = 'status' in gatewayHealth ? gatewayHealth.status : undefined;
       throw new Error(
-        `Gateway unhealthy on ${tenant.droplet_ip} (status: ${gatewayHealth.status ?? 'unreachable'}). Inngest will retry.`
+        `Gateway unhealthy on ${tenant.droplet_ip} (status: ${gatewayStatus ?? 'unreachable'}). Inngest will retry.`
       );
     }
 

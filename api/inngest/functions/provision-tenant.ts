@@ -99,7 +99,7 @@ export const provisionTenant = inngest.createFunction(
           team_alias: `pixelport-${tenant.slug}-${randomUUID().slice(0, 8)}`,
           max_budget: budgetUsd,
           budget_duration: '30d',
-          models: ['gpt-5.2-codex', 'gemini-2.5-flash', 'gpt-4o-mini'],
+          models: ['gpt-5.4', 'gpt-4o-mini', 'gemini-2.5-flash'],
         }),
       });
 
@@ -145,6 +145,7 @@ export const provisionTenant = inngest.createFunction(
         openclawImage: OPENCLAW_IMAGE,
         litellmUrl: LITELLM_URL,
         litellmKey: litellmKey.key,
+        geminiApiKey: process.env.GEMINI_API_KEY || '',
         agentmailApiKey: AGENTMAIL_API_KEY || '',
         agentApiKey,
         onboardingData: tenant.onboarding_data ?? {},
@@ -353,7 +354,7 @@ export const provisionTenant = inngest.createFunction(
         display_name: agentName,
         role: 'chief_of_staff',
         tone: agentTone,
-        model: 'gpt-5.2-codex',
+        model: 'gpt-5.4',
         fallback_model: 'gemini-2.5-flash',
         is_visible: true,
         status: 'active',
@@ -487,6 +488,7 @@ function buildCloudInit(params: {
   openclawImage: string;
   litellmUrl: string;
   litellmKey: string;
+  geminiApiKey: string;
   agentmailApiKey: string;
   agentApiKey: string;
   onboardingData: Json;
@@ -538,6 +540,7 @@ SOUL_MD
 cat > /opt/openclaw/.env << 'ENV_FILE'
 OPENAI_API_KEY=${params.litellmKey}
 OPENAI_BASE_URL=${params.litellmUrl}/v1
+GEMINI_API_KEY=${params.geminiApiKey}
 AGENTMAIL_API_KEY=${params.agentmailApiKey}
 PIXELPORT_API_KEY=${params.agentApiKey}
 SLACK_APP_TOKEN=${process.env.SLACK_APP_TOKEN || ''}
@@ -571,7 +574,22 @@ function buildOpenClawConfig(params: {
   gatewayToken: string;
   litellmUrl: string;
   agentName: string;
+  geminiApiKey: string;
 }): Record<string, unknown> {
+  const webToolsConfig = params.geminiApiKey
+    ? {
+        web: {
+          search: {
+            enabled: true,
+            provider: 'gemini',
+            gemini: {
+              model: 'gemini-2.5-flash',
+            },
+          },
+        },
+      }
+    : {};
+
   return {
     gateway: {
       auth: {
@@ -585,6 +603,7 @@ function buildOpenClawConfig(params: {
     },
     hooks: buildBootstrapHooksConfig(params.gatewayToken),
     tools: {
+      ...webToolsConfig,
       sessions: {
         visibility: 'all',
       },
@@ -595,8 +614,8 @@ function buildOpenClawConfig(params: {
     agents: {
       defaults: {
         model: {
-          primary: 'litellm/gpt-5.2-codex',
-          fallbacks: ['litellm/gpt-4o-mini'],
+          primary: 'litellm/gpt-5.4',
+          fallbacks: ['litellm/gemini-2.5-flash', 'litellm/gpt-4o-mini'],
         },
         subagents: {
           maxSpawnDepth: 2,
@@ -608,7 +627,7 @@ function buildOpenClawConfig(params: {
           id: 'main',
           name: params.agentName,
           workspace: '/home/node/.openclaw/workspace-main',
-          model: 'litellm/gpt-5.2-codex',
+          model: 'litellm/gpt-5.4',
           subagents: {
             allowAgents: ['*'],
           },
@@ -624,13 +643,13 @@ function buildOpenClawConfig(params: {
         litellm: {
           baseUrl: `${params.litellmUrl}/v1`,
           apiKey: '${OPENAI_API_KEY}',
-          api: 'openai-completions',
+          api: 'openai-responses',
           authHeader: true,
           models: [
             {
-              id: 'gpt-5.2-codex',
-              name: 'GPT 5.2 Codex',
-              api: 'openai-completions',
+              id: 'gpt-5.4',
+              name: 'GPT 5.4',
+              api: 'openai-responses',
               reasoning: false,
               input: ['text'],
               cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -640,7 +659,7 @@ function buildOpenClawConfig(params: {
             {
               id: 'gpt-4o-mini',
               name: 'GPT 4o Mini',
-              api: 'openai-completions',
+              api: 'openai-responses',
               reasoning: false,
               input: ['text'],
               cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -650,12 +669,12 @@ function buildOpenClawConfig(params: {
             {
               id: 'gemini-2.5-flash',
               name: 'Gemini 2.5 Flash',
-              api: 'openai-completions',
+              api: 'openai-responses',
               reasoning: false,
               input: ['text'],
               cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-              contextWindow: 128000,
-              maxTokens: 16384,
+              contextWindow: 1048576,
+              maxTokens: 8192,
             },
           ],
         },
@@ -713,9 +732,9 @@ You can dynamically spawn specialist sub-agents to handle specific tasks. Sub-ag
 - Strategy work (content calendars, campaign planning)
 
 **Sub-agent model selection:**
-- Use \`litellm/gpt-5.2-codex\` for complex tasks (strategy, long-form content)
+- Use \`litellm/gpt-5.4\` for complex tasks (strategy, long-form content)
 - Use \`litellm/gpt-4o-mini\` for quick tasks (summaries, short drafts, data formatting)
-- Use \`litellm/gemini-2.5-flash\` as fallback
+- Use \`litellm/gemini-2.5-flash\` as a cross-provider fallback and for search-grounded synthesis when useful
 
 **Important:** You orchestrate everything. Sub-agents work behind the scenes — the human only talks to you.
 
@@ -793,14 +812,29 @@ curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
     "analysis": {"strengths": ["..."], "weaknesses": ["..."]}
   }' \\
   ${apiBaseUrl}/api/agent/competitors
+
+# --- IMAGE GENERATION ---
+
+# Generate a supporting image for content or campaign concepts
+curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "prompt": "Editorial hero image for a product launch announcement",
+    "provider": "openai",
+    "model": "gpt-image-1",
+    "size": "1024x1024",
+    "task_description": "Generate supporting visual for launch campaign"
+  }' \\
+  ${apiBaseUrl}/api/agent/generate-image
 \`\`\`
 
 ## Core Responsibilities
 1. **Knowledge Management** — Keep the vault populated and up-to-date via auto-research
 2. **Content Creation** — Spawn sub-agents for content, store drafts as tasks requiring approval
 3. **Competitor Monitoring** — Track competitors, update profiles, alert on significant moves
-4. **Proactive Strategy** — Suggest content ideas, campaigns, and improvements
-5. **Reporting** — Respond to human requests promptly with data-backed answers
+4. **Visual Support** — Generate supporting images for campaigns and content when useful
+5. **Proactive Strategy** — Suggest content ideas, campaigns, and improvements
+6. **Reporting** — Respond to human requests promptly with data-backed answers
 
 ## Operating Rules
 - You are the ONLY interface to the human. Sub-agents work behind the scenes.

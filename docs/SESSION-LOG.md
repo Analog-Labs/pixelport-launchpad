@@ -7,6 +7,51 @@
 
 ## Last Session
 
+- **Date:** 2026-03-06 (session 16)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then implemented the fresh-tenant runtime canary from `docs/qa/debug-pixel-fix-gpt54-responses-2026-03-06.md`.
+  - Updated `api/inngest/functions/provision-tenant.ts` so fresh tenants now provision with `gpt-5.4` as primary, `gpt-4o-mini` and `gemini-2.5-flash` as fallback options, and `openai-responses` for the custom LiteLLM provider config written into `openclaw.json`.
+  - Preserved Gemini-backed search support in the generated droplet config when `GEMINI_API_KEY` exists in the deploy environment, and added image-generation guidance to the generated SOUL template so the Chief knows about `POST /api/agent/generate-image`.
+  - Fixed a separate Vercel build blocker in `api/inngest/functions/activate-slack.ts` by making the gateway-health error path union-safe for TypeScript.
+  - Ran `npx tsc --noEmit` after each code edit — clean.
+  - Restored direct Railway CLI access, redeployed LiteLLM from `infra/litellm/`, and confirmed the new production deployment (`b37f0dc1-51e8-4c58-9096-2811d4e3f2e9`) started cleanly with aliases for `gpt-5.4`, `gpt-5.2-codex`, `gemini-2.5-flash`, `gpt-4o-mini`, and `claude-sonnet`.
+  - Verified live LiteLLM canary calls on the Responses path: both `gpt-5.4` and `gemini-2.5-flash` returned `200 OK` through `/v1/responses`.
+  - Deployed the Vercel app from the local working tree, including the canary provisioning changes.
+  - Created a fresh confirmed QA user, completed onboarding visibly in Playwright, and validated the new tenant canary `vidacious-ai-2` end to end on production.
+  - Live production result for `vidacious-ai-2`:
+    - tenant reached `active`
+    - droplet created at `104.248.226.0`
+    - `agent_tasks = 6`
+    - `competitors = 5`
+    - all 5 vault sections reached `ready`
+    - dashboard Home switched from placeholder feed to real backend-generated activity
+    - Knowledge Vault rendered formatted markdown correctly
+    - hard-loads to `/dashboard/content` and `/dashboard/connections` stayed on the requested child routes
+  - Captured two residual runtime issues during the canary:
+    - Vercel does not currently have `GEMINI_API_KEY`, so fresh droplets do not emit explicit `tools.web.search.provider = "gemini"` config even though the code path now supports it.
+    - OpenClaw on the fresh droplet still logged browser-tool unavailability and a shell warning from `source /opt/openclaw/.env`; onboarding recovered anyway and completed successfully.
+- **What's next:**
+  - Founder continues live QA/QnA against the now-working fresh-tenant flow and reports any remaining product/runtime issues.
+  - If browser-assisted research needs to be reliable on tenant droplets, investigate the OpenClaw browser availability issue separately.
+  - If Gemini-backed web search is required for fresh tenants, add `GEMINI_API_KEY` to the Vercel environment and redeploy so the explicit search config path becomes active.
+  - Clean up the `source /opt/openclaw/.env` shell example in the generated SOUL template in a follow-up hardening pass.
+- **Blockers:** No blocker remains for the scoped canary path. Fresh-tenant onboarding is working again in production. Remaining issues are follow-up hardening items, not release blockers for this flow.
+
+- **Date:** 2026-03-06 (session 15)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then reviewed the current new-tenant provisioning path in `api/inngest/functions/provision-tenant.ts`, `api/lib/onboarding-bootstrap.ts`, and `infra/litellm/config.yaml`.
+  - Consolidated the already-confirmed live failure point: fresh tenants now provision successfully through `active`, but the first autonomous onboarding run still fails on the LiteLLM/OpenClaw runtime boundary after activation.
+  - Re-checked primary-source guidance for the proposed fix direction: OpenAI current model guidance, OpenClaw configuration support, and LiteLLM proxy behavior/issues.
+  - Authored a Debug Pixel execution brief at `docs/qa/debug-pixel-fix-gpt54-responses-2026-03-06.md`.
+  - The handoff recommends keeping LiteLLM/Railway, simplifying fresh-tenant runtime to OpenAI-only for the canary, switching new tenants to general `gpt-5.4` with `gpt-4o-mini` fallback, and moving the OpenClaw provider transport back to `openai-responses`.
+- **What's next:**
+  - Have the Debug Pixel session execute `docs/qa/debug-pixel-fix-gpt54-responses-2026-03-06.md`.
+  - Redeploy Railway and Vercel with that scoped runtime change.
+  - Validate the change on a brand-new account and confirm real onboarding writes appear (`agent_tasks`, vault updates, `sessions_log`, competitors).
+- **Blockers:** The fix brief is ready, but the runtime change is not implemented yet. Fresh onboarding remains blocked at the first autonomous run until the new model/transport canary is deployed and verified.
+
 - **Date:** 2026-03-06 (session 14)
 - **Who worked:** Codex
 - **What was done:**
