@@ -1,5 +1,6 @@
 {
-  "_comment": "OpenClaw configuration template for PixelPort tenants. Matches buildOpenClawConfig() in provision-tenant.ts.",
+  "_comment": "OpenClaw configuration template for fresh PixelPort tenants. Matches buildOpenClawConfig() in api/inngest/functions/provision-tenant.ts.",
+  "_note": "Gemini-backed web search is emitted only when GEMINI_API_KEY exists in the deploy environment.",
   "gateway": {
     "auth": {
       "mode": "token",
@@ -10,31 +11,45 @@
       "dangerouslyAllowHostHeaderOriginFallback": true
     }
   },
+  "hooks": {
+    "_comment": "Runtime uses buildBootstrapHooksConfig() to derive a separate hook token from the gateway token."
+  },
+  "tools": {
+    "sessions": {
+      "visibility": "all"
+    },
+    "agentToAgent": {
+      "enabled": true
+    }
+  },
   "agents": {
     "defaults": {
       "model": {
-        "primary": "litellm/gpt-5.2-codex",
-        "fallbacks": ["litellm/gpt-4o-mini"]
+        "primary": "litellm/gpt-5.4",
+        "fallbacks": [
+          "litellm/gemini-2.5-flash",
+          "litellm/gpt-4o-mini"
+        ]
+      },
+      "subagents": {
+        "maxSpawnDepth": 2,
+        "maxChildrenPerAgent": 5
       }
     },
     "list": [
       {
         "id": "main",
-        "name": "Chief of Staff",
+        "name": "{{AGENT_NAME}}",
         "workspace": "/home/node/.openclaw/workspace-main",
-        "model": "litellm/gpt-5.2-codex"
-      },
-      {
-        "id": "content",
-        "name": "Content Agent",
-        "workspace": "/home/node/.openclaw/workspace-content",
-        "model": "litellm/gpt-4o-mini"
-      },
-      {
-        "id": "growth",
-        "name": "Research Agent",
-        "workspace": "/home/node/.openclaw/workspace-growth",
-        "model": "litellm/gpt-4o-mini"
+        "model": "litellm/gpt-5.4",
+        "subagents": {
+          "allowAgents": [
+            "*"
+          ]
+        },
+        "tools": {
+          "profile": "full"
+        }
       }
     ]
   },
@@ -48,12 +63,19 @@
         "authHeader": true,
         "models": [
           {
-            "id": "gpt-5.2-codex",
-            "name": "GPT 5.2 Codex",
+            "id": "gpt-5.4",
+            "name": "GPT 5.4",
             "api": "openai-responses",
             "reasoning": false,
-            "input": ["text"],
-            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
             "contextWindow": 128000,
             "maxTokens": 32000
           },
@@ -62,8 +84,15 @@
             "name": "GPT 4o Mini",
             "api": "openai-responses",
             "reasoning": false,
-            "input": ["text"],
-            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
             "contextWindow": 128000,
             "maxTokens": 16384
           },
@@ -72,10 +101,17 @@
             "name": "Gemini 2.5 Flash",
             "api": "openai-responses",
             "reasoning": false,
-            "input": ["text"],
-            "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
-            "contextWindow": 128000,
-            "maxTokens": 16384
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 1048576,
+            "maxTokens": 8192
           }
         ]
       }

@@ -1,253 +1,169 @@
 # PixelPort — Project Coordination System
 
-**Date:** 2026-03-05
-**Purpose:** How all agents (Founder, Claude chat, CTO Claude Code, Codex) stay in sync across async sessions
-**Source of Truth:** GitHub repo (shared by all parties)
+**Last Updated:** 2026-03-06
+**Purpose:** Keep Founder, Codex, and CTO aligned across async sessions without relying on chat memory.
+**Source of Truth:** The GitHub repo.
 
 ---
 
-## The Problem We're Solving
+## Operating Model
 
-Multiple AI agents + one founder working async on the same project. When anyone picks up work — whether it's tomorrow morning or next week — they need to instantly know: what's done, what's in progress, what's next, and what decisions have been made. No re-explaining. No lost context.
+**Effective 2026-03-06:** PixelPort now runs under a Technical Lead model.
 
----
+- **Founder**
+  - Approves major product, architecture, and UX decisions.
+  - May still use Lovable for visual and UI-only changes.
+- **Codex (Technical Lead)**
+  - Owns functional frontend work, backend, infra, integrations, repo maintenance, debugging, and release execution.
+  - Keeps founder and CTO informed through the repo docs and commits.
+- **CTO (QA/Reviewer)**
+  - Provides occasional QA, audits, and strategic review when practical.
+  - Is not a hard gate for routine implementation.
 
-## The System: 4 Files That Keep Everyone in Sync
-
-### File 1: `CLAUDE.md` — The Constitution (Short, ~80 lines)
-
-This is the first file every agent reads. It's NOT a novel — it's a router that tells agents where to find everything else. Think of it as a table of contents for the whole project.
-
-**Rules:**
-- Keep it under 100 lines
-- Only contains: project identity, who does what, where to find things, and session protocol
-- Never put detailed specs, decisions, or status here — point to other files instead
-- Every agent reads this first, every session
-
-### File 2: `docs/SESSION-LOG.md` — The Handoff Note
-
-This is the most important file for continuity. Updated at the END of every work session by whoever did the work. When anyone starts a new session, they read this first.
-
-**Structure:**
-```
-## Last Session
-- **Date:** 2026-03-02
-- **Who worked:** Founder + Claude (chat)
-- **What was done:** [2-3 bullet points]
-- **What's next:** [the immediate next task]
-- **Blockers:** [anything waiting on someone else]
-- **Decisions made:** [any new decisions, with brief reasoning]
-
-## Previous Sessions (keep last 5, archive older)
-...
-```
-
-**Rules:**
-- Maximum 5 recent sessions visible. Older sessions get moved to `docs/archive/session-history.md`
-- Every agent MUST update this before ending their session
-- Be specific: "Deployed LiteLLM to Railway, health check passes" NOT "worked on infrastructure"
-
-### File 3: `docs/ACTIVE-PLAN.md` — What We're Building Right Now
-
-This is the current sprint/phase checklist. Right now it's Phase 0. When Phase 0 is done, this file gets updated to Phase 1.
-
-**Structure:**
-```
-## Current Phase: Phase 0 — Foundation
-**Target:** Week of March 3-14, 2026
-
-### Founder Track (Lovable)
-- [x] Lovable project created
-- [x] GitHub repo connected
-- [x] Vercel connected
-- [ ] Landing page ← ACTIVE
-- [x] Supabase Auth setup (Google OAuth + email/password)
-- [ ] Dashboard shell
-
-### CTO Track (Backend)
-- [ ] LiteLLM on Railway ← ACTIVE (Codex Slice 1)
-- [ ] Supabase migrations (Codex Slice 2)
-- [ ] API bridge (Codex Slice 3)
-- [ ] Provisioning script (Codex Slice 4)
-
-### Shared
-- [x] Supabase credentials shared
-- [ ] 0.9 dry-run gate
-
-### Blockers
-- None currently
-```
-
-**Rules:**
-- Only ONE phase is "active" at a time
-- Check off items as they complete
-- Add blockers immediately when discovered
-- When a phase completes, archive the old plan to `docs/archive/` and update with next phase
-
-### File 4: `docs/pixelport-project-status.md` — The Full History (Already Exists)
-
-This is the comprehensive status document we already maintain. It has the full decisions log, all Growth Swarm history, phase details, fixes, and lessons learned. It's the reference library — not the daily working doc.
-
-**Rules:**
-- Updated after meaningful milestones (phase completion, major decisions, fixes)
-- NOT updated every session — that's what SESSION-LOG.md is for
-- Contains the complete decisions log (all 52+ decisions)
-- Contains the fixes & lessons learned table
+This note changes current operating rules only. Historical session ownership stays as written in archive docs and old session entries.
 
 ---
 
-## Repo Structure (What Goes Where)
+## The 4 Live Files
 
-```
-pixelport/                          ← GitHub repo (Lovable monorepo)
-│
-├── CLAUDE.md                       ← Constitution (short, ~80 lines)
-│
-├── docs/
-│   ├── SESSION-LOG.md              ← Handoff note (read first, update last)
-│   ├── ACTIVE-PLAN.md              ← Current phase checklist
-│   ├── pixelport-project-status.md ← Full project history + decisions
-│   ├── pixelport-master-plan-v2.md ← Product spec (52 locked decisions)
-│   ├── lovable-collaboration-guide.md
-│   ├── openclaw-reference.md
-│   ├── strategic-ideas-backlog.md
-│   │
-│   └── archive/                    ← Completed phases + old session logs
-│       ├── phase0/                 ← 5 completed Phase 0 slice docs
-│       ├── phase1/                 ← 8 completed Phase 1 slice docs
-│       ├── session-history.md
-│       ├── cto-instructions-master-plan-v2-transition.md
-│       ├── CODEX-QA-BRIEF.md
-│       └── codex-wi4-sync-docs-templates.md
-│
-├── src/                            ← Lovable frontend (auto-generated)
-├── api/                            ← CTO backend code
-├── infra/                          ← Infrastructure configs
-└── supabase/                       ← Database migrations
-```
+### 1. `AGENTS.md` / `CLAUDE.md`
 
----
+Short constitutions. Every session starts here.
 
-## Session Protocol (For Every Agent)
+They should only contain:
+- project identity
+- session protocol
+- current role boundaries
+- where to find the deeper docs
 
-### When Starting a Session
+Keep them short. They route work; they do not hold full history.
 
-```
-1. Read CLAUDE.md (the constitution — tells you where everything is)
-2. Read docs/SESSION-LOG.md (what happened last, what's next)
-3. Read docs/ACTIVE-PLAN.md (the current phase checklist)
-4. If you need more context → read docs/pixelport-project-status.md
-5. If you need product spec → read docs/pixelport-master-plan-v2.md
-6. Start working on the next task from ACTIVE-PLAN.md
-```
+### 2. `docs/SESSION-LOG.md`
 
-### When Ending a Session
+The handoff note. Read first at the start of a session, update last at the end.
 
-```
-1. Update docs/ACTIVE-PLAN.md (check off completed items, note new blockers)
-2. Update docs/SESSION-LOG.md (add a new "Last Session" entry, push previous down)
-3. If a major decision was made → add to decisions log in pixelport-project-status.md
-4. If something broke and was fixed → add to fixes table in pixelport-project-status.md
-5. Commit and push to GitHub
-```
+Use it for:
+- what changed
+- what was validated
+- what is next
+- blockers or missing env/config
+- decisions made during implementation
 
-### Before Making Any Changes
+### 3. `docs/ACTIVE-PLAN.md`
 
-```
-ALL agents must follow this rule:
+The live phase checklist.
 
-→ If the change affects architecture, product decisions, or how other
-  agents work: ASK THE FOUNDER FIRST.
+Use it for:
+- current phase status
+- completed vs pending work
+- blockers waiting on founder or external credentials
+- current implementation notes that matter to future sessions
 
-→ If the change is implementation detail within your assigned scope
-  (e.g., CTO choosing between two equivalent libraries): proceed,
-  but LOG THE DECISION in SESSION-LOG.md.
+Only one phase should be marked current.
 
-→ If you're unsure whether it needs founder approval: ASK.
-  Present options in plain language with trade-offs.
-```
+### 4. `docs/pixelport-project-status.md`
+
+The long-form history and decisions library.
+
+Use it for:
+- dated governance or architecture notes
+- major milestones
+- durable lessons learned
+- deeper historical context
+
+Do not rewrite history there. Add dated notes instead.
 
 ---
 
-## Who Does What (Role Boundaries)
+## Session Protocol
 
-### Founder (Sanchal)
-- Makes all product, architecture, and strategic decisions
-- Builds frontend pages in Lovable
-- Reviews and approves CTO proposals
-- Maintains this Claude Project (chat) for brainstorming
-- Pastes instruction files to CTO Claude Code sessions
+### Start
 
-### Claude (Chat — This Project)
-- Founder's thinking partner and architect
-- Generates instruction docs, reviews plans, creates CTO packages
-- Designs frontend prompts for Lovable
-- Maintains awareness of full project context via Project files
-- Does NOT directly modify the GitHub repo (founder pastes outputs)
+1. Read `docs/SESSION-LOG.md`
+2. Read `docs/ACTIVE-PLAN.md`
+3. Read deeper docs only as needed for the task
+4. Confirm whether the task needs founder approval before changing direction
 
-### CTO (Claude Code)
-- Reads instruction files from `docs/phase0/` (or current phase)
-- Builds backend: API routes, infrastructure, integrations
-- Proposes technical decisions → waits for founder approval
-- Updates SESSION-LOG.md and ACTIVE-PLAN.md after each session
-- Does NOT touch Lovable-generated frontend files
+### During work
 
-### Codex
-- Executes specific slice instruction files written by CTO
-- Works within clearly scoped tasks (one slice = one task)
-- Reports results back to CTO for verification
-- Does NOT make architectural decisions
+- Routine implementation can proceed under Technical Lead ownership.
+- Major product, architecture, or UX changes still require founder approval first.
+- If something is unclear and it changes user-facing behavior materially, pause and ask founder in plain language.
+- If an issue is architectural but outside approved scope, document it without redesigning the system unilaterally.
 
-**Codex as QA/Debug Resource:**
-- QA audits: code review against specs, risk identification (P1/P2 classification)
-- Debugging slices: investigate errors, trace config issues, validate OpenClaw integration
-- Architecture review: identify drift between docs/templates and runtime, flag inconsistencies
-- Instruction pack format: Context → Scope → Tasks → Verification → Rollback
+### End
 
-**When to use Codex for QA:**
-- After completing a feature or fix — send code for audit before shipping
-- When debugging complex integration issues (OpenClaw config, LiteLLM routing, SSH scripts)
-- When docs/templates may be stale and need validation against runtime behavior
-
-**When NOT to use Codex:**
-- For architectural decisions (those require founder approval)
-- For frontend work (that's Lovable + Claude chat)
-- For real-time interactive debugging (use CTO Claude Code directly)
+1. Update `docs/SESSION-LOG.md`
+2. Update `docs/ACTIVE-PLAN.md`
+3. Add a dated note to `docs/pixelport-project-status.md` if the session changed governance, architecture, or long-term process
+4. Commit the work with a descriptive message
 
 ---
 
-## Communication Flow
+## Decision Rules
 
-```
-Founder ←→ Claude (chat)     : Brainstorm, plan, generate instructions
-Founder  → CTO (paste docs)  : Hand off instruction files
-CTO      → Codex (delegate)  : Send slice-specific tasks
-CTO      → Codex (QA)        : Send code for audit, get P1/P2 risk report
-Codex    → CTO (report)      : Results, completion status, and QA findings
-CTO      → Founder (report)  : Status updates via SESSION-LOG.md
-Everyone → GitHub repo        : Single source of truth
-```
+### Founder approval required
 
----
+- pricing or packaging changes
+- major product flow changes
+- architecture pivots
+- new infrastructure vendors
+- major UX changes
+- policy changes that affect how people collaborate on the project
 
-## The Golden Rules
+### Technical Lead can decide
 
-1. **One source of truth.** If it's not in the GitHub repo, it doesn't exist. Don't rely on chat memory.
+- implementation details inside an approved direction
+- bug fixes
+- data wiring
+- infrastructure fixes that do not change the approved architecture
+- frontend functional behavior needed to make approved product flows work
+- runtime hardening, observability, deployment sequencing, and maintenance work
 
-2. **Read before you write.** Every session starts by reading SESSION-LOG.md and ACTIVE-PLAN.md. No exceptions.
+### CTO review usage
 
-3. **Update before you stop.** Every session ends by updating SESSION-LOG.md and ACTIVE-PLAN.md. No exceptions.
-
-4. **Ask before you decide.** Any decision that affects the product or other agents' work gets presented to the founder as options first.
-
-5. **Keep CLAUDE.md short.** Under 100 lines. It's a router, not a novel.
-
-6. **One phase at a time.** ACTIVE-PLAN.md only shows the current phase. Previous phases go to archive.
-
-7. **Log everything that matters.** Decisions, fixes, lessons learned — they go in pixelport-project-status.md so we never repeat mistakes.
-
-8. **Be specific in handoffs.** "Deployed LiteLLM" is useless. "Deployed LiteLLM to Railway at https://litellm-xyz.railway.app, health check returns 200, test team created, virtual key generated" is useful.
+- request CTO QA when practical for risky changes, release checks, or strategic feedback
+- do not block routine fixes on CTO availability
 
 ---
 
-*This system is designed to be lightweight. Four files. Simple rules. Any agent can pick up the project at any time and know exactly where things stand.*
+## Frontend Workflow
+
+Lovable remains useful, but it is no longer the boundary for all frontend work.
+
+- Founder may use Lovable for visual, layout, and UI-only exploration.
+- Technical Lead owns repo-side implementation for:
+  - data wiring
+  - route logic
+  - auth behavior
+  - backend-dependent UI behavior
+  - integrations
+  - performance fixes
+  - bug fixes in `src/`
+- If founder creates a UI-only Lovable change, the repo still remains the source of truth and Technical Lead is responsible for keeping functional behavior coherent.
+
+Use the collaboration guide in `docs/lovable-collaboration-guide.md` for the day-to-day UI workflow.
+
+---
+
+## Release and QA Flow
+
+- Routine implementation may ship under Technical Lead ownership.
+- Founder approval is still required before shipping major product, architecture, or UX changes.
+- CTO QA is preferred when practical for high-risk or high-visibility releases.
+- Validation evidence should live in:
+  - `docs/SESSION-LOG.md`
+  - `docs/ACTIVE-PLAN.md`
+  - `docs/qa/` when a formal audit or execution brief is needed
+
+---
+
+## Golden Rules
+
+1. GitHub repo is the source of truth.
+2. Every session starts with `SESSION-LOG.md` and `ACTIVE-PLAN.md`.
+3. Every session ends with doc updates and a commit.
+4. Keep current-role docs current; preserve historical docs as history.
+5. Ask founder before changing product, architecture, or UX direction.
+6. Use plain language with founder. No avoidable jargon.
+7. Prefer one clear operating model in live docs over half-updated role notes.

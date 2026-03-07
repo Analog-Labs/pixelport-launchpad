@@ -1,10 +1,22 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-03-05
+**Last Updated:** 2026-03-06
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
 **Formerly:** Growth Swarm (now first tenant / dogfood instance of PixelPort)
 **Infrastructure:** OpenClaw on DigitalOcean droplet `openclaw-prod` (ID: `552336242`)
 **Primary Channel:** Slack (LUNA is sole human interface)
+
+---
+
+## Governance Note (2026-03-06)
+
+Effective 2026-03-06, PixelPort moved to a new working model for current and future sessions:
+
+- **Founder** approves major product, architecture, and UX decisions and may still use Lovable for visual/UI-only changes.
+- **Codex (Technical Lead)** is now the primary owner of shipped implementation across frontend, backend, infra, integrations, debugging, and repo maintenance.
+- **CTO (QA/Reviewer)** shifts to occasional QA, audit, and strategic review when practical rather than acting as a hard gate for routine implementation.
+
+This note updates the live operating model only. Historical sessions, archived plans, and prior authorship references remain preserved as historical record.
 
 ---
 

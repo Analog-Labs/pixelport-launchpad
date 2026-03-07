@@ -51,7 +51,8 @@ if (!LITELLM_URL || !LITELLM_MASTER_KEY || !DO_API_TOKEN) {
   throw new Error('Missing one or more required env vars: LITELLM_URL, LITELLM_MASTER_KEY, DO_API_TOKEN');
 }
 
-const OPENCLAW_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.2.24';
+const OPENCLAW_BASE_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.2.24';
+const OPENCLAW_RUNTIME_IMAGE = process.env.OPENCLAW_RUNTIME_IMAGE || 'pixelport-openclaw:2026.2.24-chromium';
 const DEFAULT_DROPLET_IMAGE = 'ubuntu-24-04-x64';
 const DEFAULT_DROPLET_SIZE = 's-1vcpu-2gb';
 const DEFAULT_REGION = 'nyc1';
@@ -142,7 +143,8 @@ export const provisionTenant = inngest.createFunction(
         tenantSlug: tenant.slug,
         tenantName: tenant.name,
         gatewayToken,
-        openclawImage: OPENCLAW_IMAGE,
+        openclawBaseImage: OPENCLAW_BASE_IMAGE,
+        openclawRuntimeImage: OPENCLAW_RUNTIME_IMAGE,
         litellmUrl: LITELLM_URL,
         litellmKey: litellmKey.key,
         geminiApiKey: process.env.GEMINI_API_KEY || '',
@@ -297,7 +299,7 @@ export const provisionTenant = inngest.createFunction(
     // Poll for gateway readiness using Inngest durable steps
     // (each attempt is a separate step execution to avoid Vercel function timeout)
     const gatewayUrl = `http://${dropletIp}:18789`;
-    const gatewayMaxAttempts = 40; // ~7 min: Docker install + image pull + OpenClaw startup
+    const gatewayMaxAttempts = 60; // ~10 min: Docker install + base pull + Chromium image build + OpenClaw startup
     let gatewayReady = false;
     for (let i = 0; i < gatewayMaxAttempts; i += 1) {
       const isReady = await step.run(`check-gateway-${i}`, async () => {
@@ -324,7 +326,7 @@ export const provisionTenant = inngest.createFunction(
     }
 
     if (!gatewayReady) {
-      throw new Error('OpenClaw gateway did not become healthy within 7 minutes');
+      throw new Error('OpenClaw gateway did not become healthy within 10 minutes');
     }
 
     await step.run('verify-gateway-config', async () => {
@@ -485,7 +487,8 @@ function buildCloudInit(params: {
   tenantSlug: string;
   tenantName: string;
   gatewayToken: string;
-  openclawImage: string;
+  openclawBaseImage: string;
+  openclawRuntimeImage: string;
   litellmUrl: string;
   litellmKey: string;
   geminiApiKey: string;
@@ -498,7 +501,8 @@ set -euo pipefail
 
 # PixelPort Tenant Provisioning — Docker-based OpenClaw
 # Tenant: ${params.tenantSlug}
-# Image: ${params.openclawImage}
+# Base image: ${params.openclawBaseImage}
+# Runtime image: ${params.openclawRuntimeImage}
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -516,27 +520,32 @@ if ! command -v docker &> /dev/null; then
   systemctl start docker
 fi
 
-# 2. Pull the OpenClaw image
-docker pull ${params.openclawImage}
-
-# 3. Create config, workspace, and runtime directories on host
+# 2. Build a browser-capable OpenClaw runtime image from the pinned base image
 mkdir -p /opt/openclaw
 mkdir -p /opt/openclaw/workspace-main
 mkdir -p /opt/openclaw/canvas
 mkdir -p /opt/openclaw/cron
 mkdir -p /opt/openclaw/agents
+mkdir -p /opt/openclaw/image
 
-# 4. Write agent configuration
+cat > /opt/openclaw/image/Dockerfile << 'OPENCLAW_DOCKERFILE'
+${buildOpenClawBrowserDockerfile(params.openclawBaseImage)}
+OPENCLAW_DOCKERFILE
+
+docker pull ${params.openclawBaseImage}
+docker build -t ${params.openclawRuntimeImage} /opt/openclaw/image
+
+# 3. Write agent configuration
 cat > /opt/openclaw/openclaw.json << 'OPENCLAW_CONFIG'
 ${JSON.stringify(buildOpenClawConfig({ ...params, agentName: (params.onboardingData.agent_name as string) || 'Luna' }), null, 2)}
 OPENCLAW_CONFIG
 
-# 5. Write agent persona
+# 4. Write agent persona
 cat > /opt/openclaw/workspace-main/SOUL.md << 'SOUL_MD'
 ${buildSoulTemplate(params)}
 SOUL_MD
 
-# 6. Write environment secrets (LiteLLM proxy + AgentMail + PixelPort API)
+# 5. Write environment secrets (LiteLLM proxy + AgentMail + PixelPort API)
 cat > /opt/openclaw/.env << 'ENV_FILE'
 OPENAI_API_KEY=${params.litellmKey}
 OPENAI_BASE_URL=${params.litellmUrl}/v1
@@ -546,12 +555,13 @@ PIXELPORT_API_KEY=${params.agentApiKey}
 SLACK_APP_TOKEN=${process.env.SLACK_APP_TOKEN || ''}
 ENV_FILE
 
-# 7. Set ownership (OpenClaw container runs as node:1000)
+# 6. Set ownership (OpenClaw container runs as node:1000)
 chown -R 1000:1000 /opt/openclaw
 
-# 8. Run the OpenClaw gateway container
+# 7. Run the OpenClaw gateway container
 # Use --network host because OpenClaw binds to 127.0.0.1 inside the
 # container — host networking makes it accessible on the droplet's public IP.
+docker rm -f openclaw-gateway >/dev/null 2>&1 || true
 docker run -d \\
   --name openclaw-gateway \\
   --restart unless-stopped \\
@@ -562,10 +572,25 @@ docker run -d \\
   -v /opt/openclaw/canvas:/home/node/.openclaw/canvas \\
   -v /opt/openclaw/cron:/home/node/.openclaw/cron \\
   -v /opt/openclaw/agents:/home/node/.openclaw/agents \\
-  ${params.openclawImage} \\
+  ${params.openclawRuntimeImage} \\
   openclaw.mjs gateway --port 18789 --bind lan --allow-unconfigured
 
 echo "PixelPort provisioning complete for ${params.tenantSlug}"
+`;
+}
+
+function buildOpenClawBrowserDockerfile(baseImage: string): string {
+  return `FROM ${baseImage}
+
+USER root
+
+RUN apt-get update \\
+  && apt-get install -y --no-install-recommends chromium \\
+  && mkdir -p /home/node/.openclaw/browser \\
+  && chown -R node:node /home/node/.openclaw \\
+  && rm -rf /var/lib/apt/lists/*
+
+USER node
 `;
 }
 
@@ -764,7 +789,7 @@ You have access to the PixelPort API to read and write data. Use these endpoints
 
 \`\`\`bash
 # Load environment
-source /opt/openclaw/.env
+. /opt/openclaw/.env
 
 # --- VAULT OPERATIONS ---
 

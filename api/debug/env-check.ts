@@ -28,6 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     'SSH_PRIVATE_KEY',
     'SLACK_APP_TOKEN',
     'AGENTMAIL_API_KEY',
+    'GEMINI_API_KEY',
     'OPENCLAW_IMAGE',
   ];
 

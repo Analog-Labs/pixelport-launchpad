@@ -7,6 +7,32 @@
 
 ## Last Session
 
+- **Date:** 2026-03-06 (session 17)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then implemented the approved operating-model transition across the live process docs: `AGENTS.md`, `CLAUDE.md`, `docs/project-coordination-system.md`, `docs/lovable-collaboration-guide.md`, `docs/ACTIVE-PLAN.md`, and a dated governance note in `docs/pixelport-project-status.md`.
+  - Updated the live role definitions so Founder now approves major product, architecture, and UX decisions; Codex is the Technical Lead and primary owner of repo implementation across frontend, backend, infra, integrations, and releases; and CTO is an occasional QA/reviewer rather than a routine gate.
+  - Hardened fresh-tenant provisioning without upgrading OpenClaw: `api/inngest/functions/provision-tenant.ts` now builds a Chromium-enabled runtime image per tenant droplet from the pinned `ghcr.io/openclaw/openclaw:2026.2.24` base image, waits longer for gateway health, and writes the POSIX-safe `. /opt/openclaw/.env` shell example into the generated SOUL template.
+  - Added the maintained derived image Dockerfile at `infra/openclaw-browser/Dockerfile` and refreshed the provisioning references in `infra/provisioning/cloud-init.yaml` and `infra/provisioning/openclaw-template.json` so the docs/templates match the live droplet build path.
+  - Treated Gemini-backed web search as env-gated: `api/debug/env-check.ts` now reports `GEMINI_API_KEY`, and the live docs/plan now explicitly track both `GEMINI_API_KEY` and `AGENTMAIL_API_KEY` as missing Vercel envs that gate specific fresh-tenant capabilities.
+  - Ran `npx tsc --noEmit` after the code changes — clean.
+  - Deployed the updated app to production and validated two fresh production canaries end to end:
+    - `vidacious-ai-3` (`206.189.180.152`) reached `active`, wrote real backend rows, and proved the Chromium-enabled image could be built on a tenant droplet.
+    - `vidacious-ai-4` (`165.227.200.246`) reached `active`, wrote real backend rows, preserved protected child-route hard loads, and rendered formatted Vault markdown on live content after the browser-directory ownership fix.
+  - Verified the browser-runtime hardening outcome directly on the tenant droplet:
+    - Chromium exists in-container at `/usr/bin/chromium`
+    - the OpenClaw browser control service boots and responds on `http://127.0.0.1:18791/`
+    - browser profile directories under `/home/node/.openclaw/browser` are writable by `node`
+    - the previous `No supported browser found` failure and the old `source /opt/openclaw/.env` shell warning are resolved
+  - Documented the remaining runtime limitation instead of redesigning around it: on OpenClaw `2026.2.24`, the in-agent `browser` tool still times out because the Chrome extension relay reports no attached tab even though the browser control service is up.
+- **What's next:**
+  - Founder continues live Q&A on the now-working fresh-tenant flow and reports any remaining product/runtime issues.
+  - Investigate the remaining OpenClaw `browser` tool timeout separately as an upstream/runtime limitation on `2026.2.24`; do not conflate it with provisioning-image failures.
+  - Add `GEMINI_API_KEY` and `AGENTMAIL_API_KEY` to the Vercel environment when ready, then redeploy to enable explicit Gemini-backed search config and AgentMail inbox auto-creation for fresh tenants.
+- **Blockers:**
+  - OpenClaw `browser` tool still times out on tenant droplets even after Chromium install and writable browser-profile paths because the Chrome extension relay reports no attached tab.
+  - `GEMINI_API_KEY` and `AGENTMAIL_API_KEY` are still missing in the live Vercel environment.
+
 - **Date:** 2026-03-06 (session 16)
 - **Who worked:** Codex
 - **What was done:**

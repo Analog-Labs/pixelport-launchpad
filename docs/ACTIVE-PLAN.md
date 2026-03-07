@@ -40,14 +40,14 @@
 
 ### Completed Items
 
-**Founder Track (Lovable Frontend)**
+**UI Track (Founder with Lovable)**
 - [x] 1.F1: Onboarding widget — 3-step flow
 - [x] 1.F2: Dashboard Home — agent status card, pending approvals, recent activity
 - [x] 1.F3: Chat widget (persistent sidebar) + full-page chat view
 - [x] 1.F4: Agent personalization UI
 - [x] 1.F5: Connections page
 
-**CTO Track (Backend + Infra)**
+**Technical Lead Track (Backend + Infra)**
 - [x] 1.C1: Tenant creation endpoint (Codex Slice 5)
 - [x] 1.C2: Chat API streaming SSE + message history (Codex Slice 6)
 - [x] 1.C3: Slack OAuth flow + webhook (Codex Slice 7)
@@ -55,7 +55,7 @@
 - [x] 1.C7: Website auto-scan (Codex Slice 8)
 - [x] 1.C8: Slack activation workflow (Codex Slice 9)
 
-**Integration (CTO + Founder)**
+**Integration (Technical Lead + Founder approval)**
 - [x] 1.I1: Onboarding → POST /api/tenants
 - [x] 1.I1b: Scan API in onboarding
 - [x] 1.I3: Dashboard status polling
@@ -63,8 +63,9 @@
 
 ---
 
-## Current Phase: Phase 2 — Dynamic Chief + Real Dashboard Data
+## Previous Phase: Phase 2 — Dynamic Chief + Real Dashboard Data ✅
 
+**Status:** Substantially complete. Deferred items carried into Phase 3.
 **Target:** Weeks 6–9 (March 10 – April 4, 2026)
 **Goal:** 1 persistent Chief agent per tenant (dynamic sub-agents), dashboard pages populated with real data
 
@@ -81,13 +82,13 @@
 
 | Item | Owner | Status |
 |------|-------|--------|
-| Mem0 per-tenant integration | CTO + Codex | ✅ Endpoint built (session 9). Needs MEM0_API_KEY to activate. |
-| Chat WebSocket/SSE bridge | CTO + Codex | Deferred to Phase 3 (Slack is primary channel) |
-| PostHog user-facing integration | CTO + Codex | ✅ Redesigned as tenant integration (session 10). Old `api/analytics/track.ts` deleted. New: `api/lib/integrations/adapters/posthog.ts` + generic framework. |
+| Mem0 per-tenant integration | Technical Lead | ✅ Endpoint built (session 9). Needs MEM0_API_KEY to activate. |
+| Chat WebSocket/SSE bridge | Technical Lead | Deferred to Phase 3 (Slack is primary channel) |
+| PostHog user-facing integration | Technical Lead | ✅ Redesigned as tenant integration (session 10). Old `api/analytics/track.ts` deleted. New: `api/lib/integrations/adapters/posthog.ts` + generic framework. |
 
 ---
 
-### CTO + Codex Track (Backend)
+### Technical Lead Track
 
 - [x] 2.B1: Architecture pivot — remove SPARK/SCOUT, dynamic sub-agent model
 - [x] 2.B2: Database schema (agent_tasks, vault_sections, competitors tables + agent_api_key)
@@ -105,7 +106,9 @@
 - [x] 2.B14: PostHog server-side tracking — ~~`/api/analytics/track`~~ → Redesigned as tenant integration in Phase 3 (session 10)
 - [ ] 2.B15: Inngest approval workflow — deferred to Phase 3 (scheduling engine)
 
-### Founder + Lovable Track (Frontend)
+### Frontend Track
+
+Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo-side functional frontend changes.
 
 - [x] 2.F1: Content Pipeline page — reads `GET /api/tasks?task_type=draft_content`, approve/reject actions
 - [x] 2.F2: Content Calendar page — monthly grid wired to `GET /api/tasks?scheduled_for=true`
@@ -115,7 +118,7 @@
 - [ ] 2.F6: Chat WebSocket UI — real-time agent chat (when 2.B13 is ready)
 - [ ] 2.F7: Performance page — KPI tracking + agent metrics
 
-### Integration (CTO + Founder)
+### Integration (Technical Lead + Founder approval)
 
 - [x] 2.I1: Wire Content Pipeline page → tasks API
 - [x] 2.I2: Wire Knowledge Vault → vault API
@@ -144,10 +147,10 @@
 - **Agent API key pattern:** Per-tenant `agent_api_key` (prefix `ppk-`) stored in tenants table, injected as `PIXELPORT_API_KEY` in droplet `.env`. Chief authenticates via `X-Agent-Key` header.
 - **Dashboard data flow:** Chief → `/api/agent/*` (writes) → Supabase → `/api/tasks/*`, `/api/vault/*`, `/api/competitors/*` (reads) → Lovable dashboard
 - **Loading states:** Dashboard pages show "[Agent name] is working on this..." until Chief populates data.
-- **Integration wiring pattern (from Phase 1):** CTO proposes changes to Lovable-managed frontend files, founder reviews and applies. Do NOT modify `src/` files directly without founder approval.
+- **Frontend ownership model (2026-03-06):** Founder may still use Lovable for visual/UI-only work, but Technical Lead now owns repo-side functional frontend changes, auth behavior, data wiring, and integration logic.
 - **DO droplet quota:** 1 slot available. Use `/api/debug/test-provision?cleanup=true` after each test to free the slot.
 - **Vercel build cost discipline:** Docs-only changes auto-skipped. Batch code pushes. Target <$5/day.
-- **Secrets management:** All API keys stored locally at `~/.pixelport/secrets.env`. CTO reads via `~/.pixelport/get-secret.sh VAR_NAME`. Usage logged to `~/.pixelport/usage.log`.
+- **Secrets management:** All API keys stored locally at `~/.pixelport/secrets.env`. Technical Lead reads via `~/.pixelport/get-secret.sh VAR_NAME`. Usage logged to `~/.pixelport/usage.log`.
 - **Test tenant (Phase 2):** TestCo Phase2 — droplet `142.93.195.23` (ID `556101720`), agent_api_key `ppk-f633202f-...`
 
 ---
@@ -190,7 +193,9 @@
 - [ ] 3.M3: Weekly report Inngest cron + endpoint
 - [ ] 3.M4: SOUL.md template update for integration awareness
 
-### Founder Track (Parallel)
+### UI / Product Track (Parallel)
+
+Founder may continue UI exploration in Lovable. Technical Lead owns implementation of functional behavior behind these surfaces.
 
 - [ ] 3.FE1: Rebuild Connections page as dynamic grid (reads from registry API)
 - [ ] 3.FE2: Build Social Publishing page + Calendar enhancements
@@ -202,6 +207,9 @@
 |---------|---------------|-----------------|
 | PostHog Personal API Key + Project ID | E2E test of PostHog integration | Founder provides from PostHog dashboard |
 | Mem0 API key | Mem0 endpoint activation | Founder signs up at mem0.ai + adds key to Vercel env |
+| AGENTMAIL_API_KEY in Vercel | Automatic tenant inbox creation and inbox-backed onboarding promises | Founder adds key to Vercel env |
+| GEMINI_API_KEY in Vercel | Explicit Gemini-backed web search for fresh tenants | Founder adds key to Vercel env |
+| OpenClaw browser tool timeout on tenant droplets | Reliable browser-assisted agent work on fresh tenants | Technical Lead investigation and/or upstream OpenClaw fix |
 | X Developer App credentials | X integration (Session 11) | Founder registers at developer.x.com |
 | LinkedIn App credentials | LinkedIn integration (Session 11) | Founder registers at developer.linkedin.com |
 | Google OAuth credentials | GA4 integration (Session 12) | Founder configures at Google Cloud Console |
@@ -210,6 +218,7 @@
 
 ### Notes
 
+- **Operating model changed (2026-03-06):** Codex is now the Technical Lead and primary owner of repo implementation across frontend, backend, infra, and integrations. Founder approves major product, architecture, and UX decisions. CTO is now an occasional QA/reviewer rather than a routine gate.
 - **Auth redirect hardening (2026-03-06, session 11):** Frontend auth now uses a shared canonical app URL helper and Supabase PKCE flow. Repo code no longer relies on arbitrary browser origins or hash-fragment tokens, and the live Supabase Auth URL configuration was updated to allow the production callback flow.
 - **Tenant state fix (2026-03-06, session 11):** Dashboard/onboarding gating no longer trusts stale `pixelport_*` localStorage across users. Frontend now fetches the real tenant via `/api/tenants/me`, clears tenant state on sign-out/account switch, and only shows provisioning placeholders when a real tenant is actually provisioning.
 - **Onboarding testability fix (2026-03-06, session 11):** Duplicate company names are now allowed across different accounts by auto-generating a unique tenant slug for infra. Slack connect is hidden/disabled until provisioning is complete, so onboarding no longer suggests pre-provisioning integrations.
@@ -222,6 +231,10 @@
 - **Debug handoff prepared (2026-03-06, session 15):** Founder approved a simpler fresh-tenant canary that keeps LiteLLM/Railway but moves new tenants to general `gpt-5.4` with `gpt-4o-mini` fallback over the OpenAI Responses API path. Execution brief: `docs/qa/debug-pixel-fix-gpt54-responses-2026-03-06.md`.
 - **Fresh-tenant runtime canary validated (2026-03-06, session 16):** LiteLLM was redeployed on Railway with the `gpt-5.4` alias live, Vercel was redeployed with the new-tenant provisioning/runtime config, and a brand-new production tenant canary (`vidacious-ai-2`) completed successfully end to end. Live result: tenant `active`, 6 task rows, 5 competitor rows, all 5 vault sections `ready`, real dashboard activity, protected child-route hard loads still stable, and Vault markdown rendering confirmed on live content.
 - **Residual runtime notes (2026-03-06, session 16):** The canary also showed three follow-up hardening items: Vercel does not currently expose `GEMINI_API_KEY`, so explicit Gemini web-search config is not emitted to fresh droplets; OpenClaw browser tooling is still unavailable inside the tenant container; and the generated SOUL template still uses `source /opt/openclaw/.env`, which logs a shell warning under OpenClaw exec even though onboarding now completes.
+- **Operating model transition + runtime hardening validated (2026-03-06, session 17):** Live docs now reflect the new governance model: Founder approves major product/architecture/UX decisions, Codex is the Technical Lead for repo implementation, and CTO is an occasional QA/reviewer. Fresh-tenant provisioning now builds a Chromium-enabled OpenClaw image on each droplet from the pinned `ghcr.io/openclaw/openclaw:2026.2.24` base tag, and the generated SOUL template now uses POSIX-safe `. /opt/openclaw/.env` instead of `source`.
+- **Fresh tenants after browser-image hardening (2026-03-06, session 17):** Two new production canaries validated the updated provisioning path. `vidacious-ai-3` (`206.189.180.152`) and `vidacious-ai-4` (`165.227.200.246`) both reached `active`, wrote real backend rows, preserved protected child-route hard loads, and rendered formatted Vault markdown on live content.
+- **Browser runtime status after hardening (2026-03-06, session 17):** The old `No supported browser found` failure is fixed. Chromium is present in-container, the OpenClaw browser control service now boots, profile directories are writable, and `http://127.0.0.1:18791/` returns `401 Unauthorized` from the authenticated service. However, the in-agent `browser` tool still times out on OpenClaw `2026.2.24`, and `node /app/openclaw.mjs browser start` reports `Chrome extension relay is running, but no tab is connected`. Treat this as a separate runtime/upstream limitation, not a provisioning-image bug.
+- **Current env-gated gaps (2026-03-06, session 17):** `GEMINI_API_KEY` and `AGENTMAIL_API_KEY` are both currently missing from the live Vercel environment. Gemini-backed explicit search config remains disabled for fresh tenants, and AgentMail inbox auto-creation is skipped.
 
 ---
 

@@ -7,16 +7,16 @@ Growth Swarm is the dogfood instance running Vidacious marketing on OpenClaw (3 
 
 ## Session Protocol (EVERY agent, EVERY session)
 1. **Start:** Read `docs/SESSION-LOG.md` → `docs/ACTIVE-PLAN.md`
-2. **Work:** Execute tasks from ACTIVE-PLAN.md within your assigned scope
-3. **End:** Update `docs/SESSION-LOG.md` + check off items in `docs/ACTIVE-PLAN.md`
-4. **Decisions:** Ask founder before any product/architecture changes. Log all decisions.
+2. **Work:** Execute the current phase work within your role
+3. **End:** Update `docs/SESSION-LOG.md` + `docs/ACTIVE-PLAN.md`
+4. **Decisions:** Ask founder before any major product, architecture, or UX decision. Log all decisions.
 
 ## Who Does What
 | Role | Scope | Does NOT |
 |------|-------|----------|
-| **Founder + Codex (chat)** | Build new frontend features (Lovable), product decisions, instruction docs | Write backend code directly |
-| **CTO (Codex)** | Backend, infra, API routes, integrations. Also fixes bugs in `src/` found during QA (after founder approval). | Build new frontend features |
-| **Codex** | Execute CTO instructions. Has full project context. Updates SESSION-LOG + ACTIVE-PLAN after every session. Actively provides feedback and observations to CTO. | Make architectural decisions unilaterally |
+| **Founder** | Approves major product, architecture, and UX decisions. May still use Lovable for visual/UI-only changes. | Own functional implementation by default |
+| **Codex (Technical Lead)** | Primary owner for frontend, backend, infra, integrations, repo maintenance, debugging, and release execution. Keeps founder + CTO in loop. | Make major product/architecture/UX decisions without founder approval |
+| **CTO (QA/Reviewer)** | Occasional QA, audit, release review, and strategic feedback when practical. | Gate routine implementation work |
 
 ## Where to Find Things
 | Need | File |
@@ -25,40 +25,30 @@ Growth Swarm is the dogfood instance running Vidacious marketing on OpenClaw (3 
 | Current phase checklist | `docs/ACTIVE-PLAN.md` |
 | Full project history + decisions | `docs/pixelport-project-status.md` |
 | Product spec (52 locked decisions) | `docs/pixelport-master-plan-v2.md` |
-| Archived Phase 0/1 slice docs | `docs/archive/phase0/` and `docs/archive/phase1/` |
-| How founder + Codex work on frontend | `docs/lovable-collaboration-guide.md` |
-| OpenClaw platform reference | `docs/openclaw-reference.md` |
+| Frontend/UI collaboration workflow | `docs/lovable-collaboration-guide.md` |
 | Coordination system rules | `docs/project-coordination-system.md` |
+| OpenClaw platform reference | `docs/openclaw-reference.md` |
 
 ## Tech Stack
-Frontend: Lovable Cloud → GitHub → Vercel (web app + API routes)
-Backend: Vercel serverless API routes (in `api/` directory)
-LLM Gateway: LiteLLM on Railway (always-on Docker, ~$5-7/mo)
-Auth: Supabase Auth (Google OAuth + email/password) — changed from Clerk 2026-03-03
-Database: Supabase (PostgreSQL, provisioned by Lovable)
-Agent Runtime: OpenClaw on DO Droplets (1 per customer)
-Workflows: Inngest Cloud (free tier)
-Memory: Mem0 managed cloud | Analytics: PostHog | Email: AgentMail | Payments: Stripe
-CTO ↔ Codex: Codex CLI v0.111.0 + MCP (`codex-cli` + `codex` in `.mcp.json`), GPT-5.4 xhigh reasoning
+Frontend: Lovable Cloud + repo-managed React/Vite → Vercel
+Backend: Vercel serverless API routes (`api/`)
+LLM Gateway: LiteLLM on Railway
+Auth + DB: Supabase
+Agent Runtime: OpenClaw on DO droplets (1 per customer)
+Workflows: Inngest Cloud
+Memory: Mem0 | Analytics: PostHog | Email: AgentMail | Payments: Stripe
 
-## Codex Integration
-CTO (Codex) orchestrates Codex as developer/executor. Two MCP servers in `.mcp.json` + Task tool for parallel work.
-- **Advisory:** `codex-cli` MCP → code review, architecture analysis
-- **Implementation:** Task tool + worktree + `codex exec` → isolated parallel tasks
-- **Model:** Always `gpt-5.4` with `xhigh` reasoning. No exceptions.
-- **Dual QA:** CTO manual QA + Codex QA review (two sets of eyes).
-- **Never merge without CTO review.** Codex writes, CTO approves.
-
-## Operating Rules
+## Working Rules
 - Source of truth = GitHub repo. If it's not committed, it doesn't exist.
 - AGENTS.md stays under 100 lines. Details go in referenced docs.
-- Growth Swarm stays in maintenance mode. Modify only if needed for validation.
-- Docker images: always pin explicit version tags (never `:latest`).
-- Founder is non-technical. All questions and decisions must be presented in plain, everyday language with clear options. No jargon without explanation.
-- Ask founder before making decisions. Present options in plain language.
-- CTO QA covers the whole codebase (including `src/`). Bugs found → explain to founder → fix after approval.
-- Every QA session: CTO researches and proposes 4-5 strategic improvements (features, optimization, architecture, UX, competitive). Founder approves → added to project plan.
-- Vercel = website + API. Railway = LiteLLM gateway. Both are needed.
+- Growth Swarm stays in maintenance mode unless validation requires changes.
+- Docker images: always pin explicit version tags. Never use `:latest`.
+- Founder is non-technical. Present choices in plain language with clear tradeoffs.
+- Routine implementation can proceed under Technical Lead ownership.
+- Major product, architecture, and UX decisions require founder approval first.
+- CTO QA is requested when practical but is not a hard gate for routine work.
+- Founder may keep using Lovable for visual/UI-only changes, but all functional frontend changes are repo-managed by Technical Lead.
+- Vercel = website + API. Railway = LiteLLM gateway. Both are required.
 
 ## Growth Swarm Quick Reference
 - Droplet: `openclaw-prod` (`167.71.90.199`), container: `openclaw-gateway`
