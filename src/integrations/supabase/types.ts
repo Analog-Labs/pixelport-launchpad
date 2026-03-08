@@ -453,6 +453,77 @@ export type Database = {
           },
         ]
       }
+      integrations: {
+        Row: {
+          access_token: string | null
+          account_id: string | null
+          account_name: string | null
+          auth_type: string
+          connected_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          metadata: Json | null
+          refresh_token: string | null
+          scopes: string[] | null
+          service: string
+          status: string
+          tenant_id: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_id?: string | null
+          account_name?: string | null
+          auth_type?: string
+          connected_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          metadata?: Json | null
+          refresh_token?: string | null
+          scopes?: string[] | null
+          service: string
+          status?: string
+          tenant_id: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          account_id?: string | null
+          account_name?: string | null
+          auth_type?: string
+          connected_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          metadata?: Json | null
+          refresh_token?: string | null
+          scopes?: string[] | null
+          service?: string
+          status?: string
+          tenant_id?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions_log: {
         Row: {
           agent_id: string | null
