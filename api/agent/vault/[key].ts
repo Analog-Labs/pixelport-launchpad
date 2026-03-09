@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateAgentRequest, errorResponse } from '../../lib/auth';
 import { markBootstrapCompletedIfInProgress } from '../../lib/bootstrap-state';
 import { supabase } from '../../lib/supabase';
-import { VAULT_SECTION_KEYS, isVaultSectionKey } from '../../../src/lib/vault-contract';
+import { VAULT_SECTION_KEYS, isVaultSectionKey } from '../../../lib/vault-contract';
 
 /**
  * PUT /api/agent/vault/:key — Chief updates a vault section

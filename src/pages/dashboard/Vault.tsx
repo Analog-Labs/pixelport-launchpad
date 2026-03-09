@@ -24,7 +24,7 @@ import {
   getStoredVaultRefreshCommandId,
   setStoredVaultRefreshCommandId,
 } from "@/lib/pixelport-storage";
-import { getVaultSectionTitle, type VaultSectionKey } from "@/lib/vault-contract";
+import { getVaultSectionTitle, type VaultSectionKey } from "../../../lib/vault-contract";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 

@@ -1,7 +1,7 @@
 import {
   VAULT_SECTION_KEYS,
   getVaultSectionSnapshotPath,
-} from "../../src/lib/vault-contract";
+} from "../../lib/vault-contract";
 
 type JsonValue =
   | string
