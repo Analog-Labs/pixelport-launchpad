@@ -148,4 +148,64 @@ describe("POST /api/commands", () => {
       }),
     });
   });
+
+  it("marks the command failed and returns 502 when hook dispatch transport fails", async () => {
+    const { default: handler } = await import("../../api/commands/index");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-1",
+        droplet_ip: "127.0.0.1",
+        gateway_token: "gw-token",
+      },
+      userId: "user-1",
+    });
+    getCommandByIdempotencyKey.mockResolvedValue(null);
+    createCommandRecord.mockResolvedValue({
+      id: "cmd-timeout",
+      tenant_id: "tenant-1",
+      status: "pending",
+    });
+    appendCommandEvent.mockResolvedValue({});
+    dispatchAgentHookMessage.mockResolvedValue({
+      ok: false,
+      status: 504,
+      body: "fetch failed: Connect Timeout Error",
+    });
+    updateCommandStatus.mockResolvedValue({
+      id: "cmd-timeout",
+      tenant_id: "tenant-1",
+      status: "failed",
+      last_error: "fetch failed: Connect Timeout Error",
+    });
+
+    const req = {
+      method: "POST",
+      body: {
+        command_type: "release_smoke",
+        title: "Foundation smoke",
+        instructions: "No-op smoke test only.",
+        idempotency_key: "foundation-smoke-timeout-1",
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(updateCommandStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nextStatus: "failed",
+        lastError: "fetch failed: Connect Timeout Error",
+      })
+    );
+    expect(res.statusCode).toBe(502);
+    expect(res.body).toEqual({
+      error: "Runtime hook rejected the command dispatch",
+      command: expect.objectContaining({
+        id: "cmd-timeout",
+        status: "failed",
+      }),
+      gateway_status: 504,
+    });
+  });
 });

@@ -115,27 +115,50 @@ export async function dispatchAgentHookMessage(params: {
   message: string;
   agentId?: string;
 }): Promise<AgentHookDispatchResult> {
-  const response = await fetch(`${params.gatewayUrl}${GATEWAY_HOOKS_PATH}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${deriveHooksToken(params.gatewayToken)}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      name: params.name,
-      agentId: params.agentId || 'main',
-      message: params.message,
-    }),
-    signal: AbortSignal.timeout(15_000),
-  });
+  const timeoutSignal =
+    typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+      ? AbortSignal.timeout(15_000)
+      : undefined;
 
-  const body = await response.text();
+  try {
+    const response = await fetch(`${params.gatewayUrl}${GATEWAY_HOOKS_PATH}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${deriveHooksToken(params.gatewayToken)}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: params.name,
+        agentId: params.agentId || 'main',
+        message: params.message,
+      }),
+      signal: timeoutSignal,
+    });
 
-  return {
-    ok: response.ok,
-    status: response.status,
-    body,
-  };
+    const body = await response.text();
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      body,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown hook dispatch error';
+    const causeMessage =
+      error instanceof Error &&
+      error.cause &&
+      typeof error.cause === 'object' &&
+      'message' in error.cause &&
+      typeof error.cause.message === 'string'
+        ? error.cause.message
+        : null;
+
+    return {
+      ok: false,
+      status: 504,
+      body: causeMessage ? `${message}: ${causeMessage}` : message,
+    };
+  }
 }
 
 export async function triggerOnboardingBootstrap(params: {
