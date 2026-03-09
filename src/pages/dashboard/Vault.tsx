@@ -50,9 +50,21 @@ type CommandStatus =
   | "failed"
   | "cancelled";
 
+type VaultRefreshStaleMetadata = {
+  is_stale: true;
+  reason: string;
+  summary: string;
+  detected_at: string;
+  latest_activity_at: string;
+  target_section_status: string | null;
+  target_section_updated_at: string | null;
+};
+
+type SectionCommandStatus = CommandStatus | "stalled";
+
 type SectionCommandState = {
   commandId: string | null;
-  status: CommandStatus;
+  status: SectionCommandStatus;
   lastError: string | null;
   summary: string | null;
 };
@@ -63,6 +75,7 @@ type CommandDetailsResponse = {
     status: CommandStatus;
     last_error: string | null;
   };
+  stale?: VaultRefreshStaleMetadata | null;
   events?: Array<{
     message?: string | null;
   }>;
@@ -82,6 +95,7 @@ type CommandListItem = {
   target_entity_id: string | null;
   status: CommandStatus;
   last_error: string | null;
+  stale?: VaultRefreshStaleMetadata | null;
 };
 
 type CommandListResponse = {
@@ -100,6 +114,43 @@ const TERMINAL_COMMAND_STATUSES: CommandStatus[] = ["completed", "failed", "canc
 
 function isTerminalCommandStatus(status: CommandStatus): boolean {
   return TERMINAL_COMMAND_STATUSES.includes(status);
+}
+
+function isTerminalSectionCommandStatus(status: SectionCommandStatus): boolean {
+  return status === "completed" || status === "failed" || status === "cancelled";
+}
+
+function isNonBlockingSectionCommandStatus(status: SectionCommandStatus): boolean {
+  return status === "stalled" || isTerminalSectionCommandStatus(status);
+}
+
+function retainHistoricalSectionCommands(
+  previous: Record<string, SectionCommandState>,
+  options?: { includeStalled?: boolean }
+): Record<string, SectionCommandState> {
+  const includeStalled = options?.includeStalled ?? false;
+
+  return Object.fromEntries(
+    Object.entries(previous).filter(([, commandState]) => {
+      if (commandState.status === "stalled") {
+        return includeStalled;
+      }
+
+      return isTerminalSectionCommandStatus(commandState.status);
+    })
+  );
+}
+
+function buildStalledCommandState(
+  commandId: string,
+  stale: VaultRefreshStaleMetadata | null | undefined
+): SectionCommandState {
+  return {
+    commandId,
+    status: "stalled",
+    lastError: null,
+    summary: stale?.summary ?? "Refresh stalled. You can retry this section.",
+  };
 }
 
 function buildVaultRefreshIdempotencyKey(tenantId: string, sectionKey: VaultSectionKey): string {
@@ -136,7 +187,7 @@ async function fetchCommandDetails(accessToken: string, commandId: string): Prom
 }
 
 async function fetchRecentCommands(accessToken: string): Promise<CommandListItem[]> {
-  const response = await fetch("/api/commands?limit=10", {
+  const response = await fetch("/api/commands?command_type=vault_refresh&limit=10", {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
@@ -177,6 +228,10 @@ function getLatestCommandSummary(details: CommandDetailsResponse): string | null
 }
 
 function getCommandStateFromDetails(details: CommandDetailsResponse): SectionCommandState {
+  if (details.stale?.is_stale && !isTerminalCommandStatus(details.command.status)) {
+    return buildStalledCommandState(details.command.id, details.stale);
+  }
+
   return {
     commandId: details.command.id,
     status: details.command.status,
@@ -185,7 +240,7 @@ function getCommandStateFromDetails(details: CommandDetailsResponse): SectionCom
   };
 }
 
-function getCommandStatusLabel(status: CommandStatus): string {
+function getCommandStatusLabel(status: SectionCommandStatus): string {
   switch (status) {
     case "pending":
     case "dispatched":
@@ -200,6 +255,8 @@ function getCommandStatusLabel(status: CommandStatus): string {
       return "Refresh failed";
     case "cancelled":
       return "Refresh cancelled";
+    case "stalled":
+      return "Refresh stalled";
     default:
       return "Refresh update";
   }
@@ -210,7 +267,7 @@ function upsertActiveSectionCommand(
   sectionKey: VaultSectionKey,
   commandState: SectionCommandState
 ): Record<string, SectionCommandState> {
-  if (isTerminalCommandStatus(commandState.status)) {
+  if (isNonBlockingSectionCommandStatus(commandState.status)) {
     return {
       ...previous,
       [sectionKey]: commandState,
@@ -224,7 +281,7 @@ function upsertActiveSectionCommand(
       continue;
     }
 
-    if (isTerminalCommandStatus(existingState.status)) {
+    if (isNonBlockingSectionCommandStatus(existingState.status)) {
       nextCommands[key] = existingState;
     }
   }
@@ -295,13 +352,9 @@ const Vault = () => {
     }
 
     setSectionCommands((previous) => {
-      const restoredCommands: Record<string, SectionCommandState> = {};
-
-      for (const [sectionKey, commandState] of Object.entries(previous)) {
-        if (isTerminalCommandStatus(commandState.status)) {
-          restoredCommands[sectionKey] = commandState;
-        }
-      }
+      const restoredCommands = retainHistoricalSectionCommands(previous, {
+        includeStalled: true,
+      });
 
       const storedEntry = sections
         .map((section) => ({
@@ -344,21 +397,36 @@ const Vault = () => {
 
         const activeVaultRefresh = commands.find(
           (command) =>
-            command.command_type === "vault_refresh" &&
             !isTerminalCommandStatus(command.status) &&
+            !command.stale?.is_stale &&
+            command.target_entity_type === "vault_section" &&
+            isVaultSectionKey(command.target_entity_id)
+        );
+        const staleVaultRefresh = commands.find(
+          (command) =>
+            !isTerminalCommandStatus(command.status) &&
+            command.stale?.is_stale &&
             command.target_entity_type === "vault_section" &&
             isVaultSectionKey(command.target_entity_id)
         );
 
         if (!activeVaultRefresh || !isVaultSectionKey(activeVaultRefresh.target_entity_id)) {
+          if (staleVaultRefresh && isVaultSectionKey(staleVaultRefresh.target_entity_id)) {
+            clearStoredVaultRefreshCommandsForTenant(tenant.id);
+            setSectionCommands((previous) => ({
+              ...retainHistoricalSectionCommands(previous, {
+                includeStalled: true,
+              }),
+              [staleVaultRefresh.target_entity_id]: buildStalledCommandState(
+                staleVaultRefresh.id,
+                staleVaultRefresh.stale
+              ),
+            }));
+            return;
+          }
+
           clearStoredVaultRefreshCommandsForTenant(tenant.id);
-          setSectionCommands((previous) =>
-            Object.fromEntries(
-              Object.entries(previous).filter(([, commandState]) =>
-                isTerminalCommandStatus(commandState.status)
-              )
-            )
-          );
+          setSectionCommands((previous) => retainHistoricalSectionCommands(previous));
           return;
         }
 
@@ -385,14 +453,18 @@ const Vault = () => {
   }, [session?.access_token, tenant?.id]);
 
   const activeCommandPollKey = Object.entries(sectionCommands)
-    .filter(([, commandState]) => !!commandState.commandId && !isTerminalCommandStatus(commandState.status))
+    .filter(
+      ([, commandState]) =>
+        !!commandState.commandId && !isNonBlockingSectionCommandStatus(commandState.status)
+    )
     .map(([sectionKey, commandState]) => `${sectionKey}:${commandState.commandId}`)
     .sort()
     .join("|");
 
   const activeTenantRefreshSectionKey = (
     Object.entries(sectionCommands).find(
-      ([, commandState]) => !!commandState.commandId && !isTerminalCommandStatus(commandState.status)
+      ([, commandState]) =>
+        !!commandState.commandId && !isNonBlockingSectionCommandStatus(commandState.status)
     )?.[0] ?? null
   ) as VaultSectionKey | null;
 
@@ -403,7 +475,7 @@ const Vault = () => {
 
     const activeSectionEntries = Object.entries(sectionCommandsRef.current).filter(
       ([, commandState]) =>
-        !!commandState.commandId && !isTerminalCommandStatus(commandState.status)
+        !!commandState.commandId && !isNonBlockingSectionCommandStatus(commandState.status)
     );
 
     if (activeSectionEntries.length === 0) {
@@ -415,7 +487,7 @@ const Vault = () => {
     const pollCommands = async () => {
       const currentEntries = Object.entries(sectionCommandsRef.current).filter(
         ([, commandState]) =>
-          !!commandState.commandId && !isTerminalCommandStatus(commandState.status)
+          !!commandState.commandId && !isNonBlockingSectionCommandStatus(commandState.status)
       );
 
       const results = await Promise.all(
@@ -443,6 +515,17 @@ const Vault = () => {
         }
 
         const nextState = getCommandStateFromDetails(result.details);
+
+        if (nextState.status === "stalled") {
+          clearStoredVaultRefreshCommandsForTenant(tenant.id);
+          setSectionCommands((previous) => ({
+            ...retainHistoricalSectionCommands(previous, {
+              includeStalled: true,
+            }),
+            [result.sectionKey]: nextState,
+          }));
+          continue;
+        }
 
         if (
           result.previousStatus !== nextState.status &&
@@ -485,7 +568,7 @@ const Vault = () => {
             /* best-effort refetch */
           }
 
-          if (!isTerminalCommandStatus(result.previousStatus)) {
+          if (!isNonBlockingSectionCommandStatus(result.previousStatus)) {
             toast.error(nextState.lastError || nextState.summary || "Refresh did not complete");
           }
         }
@@ -575,6 +658,9 @@ const Vault = () => {
       });
 
       const payload = await response.json();
+      const recoveredStaleCommands = Array.isArray(payload?.recovered_stale_commands)
+        ? payload.recovered_stale_commands
+        : [];
       const command = payload?.command as
         | {
             id: string;
@@ -604,6 +690,8 @@ const Vault = () => {
             ? "Using the current refresh already in progress for this section."
             : isCrossSectionReuse
               ? `Another vault refresh is already running for ${getVaultSectionTitle(resolvedSectionKey)}.`
+            : recoveredStaleCommands.length > 0
+              ? "Recovered a stalled refresh and requested a new run. Waiting for Chief progress..."
             : "Refresh requested. Waiting for Chief progress...",
       };
 
@@ -672,12 +760,15 @@ const Vault = () => {
       return null;
     }
 
-    const isBusy = !isTerminalCommandStatus(commandState.status);
+    const isBusy = !isNonBlockingSectionCommandStatus(commandState.status);
     const isFailure = commandState.status === "failed" || commandState.status === "cancelled";
-    const Icon = isFailure ? XCircle : isBusy ? Loader2 : CheckCircle2;
+    const isStalled = commandState.status === "stalled";
+    const Icon = isFailure ? XCircle : isStalled ? AlertCircle : isBusy ? Loader2 : CheckCircle2;
     const iconClassName = isBusy ? "h-4 w-4 animate-spin" : "h-4 w-4";
     const textClassName = isFailure
       ? "border-red-500/30 bg-red-500/10 text-red-300"
+      : isStalled
+        ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
       : isBusy
         ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
         : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
@@ -736,7 +827,7 @@ const Vault = () => {
         const isEditing = editingKey === section.section_key;
         const commandState = sectionCommands[section.section_key];
         const isCommandBusy =
-          !!commandState && !isTerminalCommandStatus(commandState.status);
+          !!commandState && !isNonBlockingSectionCommandStatus(commandState.status);
         const isDispatching = dispatchingSections[section.section_key] === true;
         const isAnotherSectionRefreshing =
           !!activeTenantRefreshSectionKey && activeTenantRefreshSectionKey !== section.section_key;

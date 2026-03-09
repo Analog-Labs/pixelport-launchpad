@@ -7,9 +7,14 @@ import {
   getActiveCommandByType,
   getActiveCommandByTarget,
   getCommandByIdempotencyKey,
+  listNonTerminalCommandsByType,
   listCommands,
   updateCommandStatus,
 } from '../lib/commands';
+import {
+  annotateCommandsWithVaultRefreshStaleMetadata,
+  recoverStaleVaultRefreshCommands,
+} from '../lib/vault-refresh-recovery';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { dispatchAgentHookMessage } from '../lib/onboarding-bootstrap';
 
@@ -39,18 +44,24 @@ function asJsonRecord(value: unknown): JsonRecord | null {
 async function handleGet(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
   const { tenant } = await authenticateRequest(req);
   const status = normalizeString(req.query.status);
+  const commandType = normalizeString(req.query.command_type);
   const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
   const offset = Math.max(Number(req.query.offset) || 0, 0);
 
   const { commands, total } = await listCommands({
     tenantId: tenant.id,
     status,
+    commandType,
     limit,
     offset,
   });
+  const commandsWithStale = await annotateCommandsWithVaultRefreshStaleMetadata({
+    tenantId: tenant.id,
+    commands,
+  });
 
   return res.status(200).json({
-    commands,
+    commands: commandsWithStale,
     total,
     limit,
     offset,
@@ -92,6 +103,9 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
   }
 
   const commandInput = resolvedCommand.command;
+  let recoveredStaleCommands: Awaited<
+    ReturnType<typeof recoverStaleVaultRefreshCommands>
+  >['recovered'] = [];
 
   const existing = await getCommandByIdempotencyKey(tenant.id, idempotencyKey);
   if (existing) {
@@ -105,24 +119,37 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
   if (commandInput.activeCommandReuseScope !== 'none') {
     let activeCommand = null;
 
-    if (
-      commandInput.activeCommandReuseScope === 'target' &&
-      commandInput.targetEntityType &&
-      commandInput.targetEntityId
-    ) {
-      activeCommand = await getActiveCommandByTarget({
+    if (commandInput.commandType === 'vault_refresh') {
+      const nonTerminalVaultRefreshCommands = await listNonTerminalCommandsByType({
         tenantId: tenant.id,
         commandType: commandInput.commandType,
-        targetEntityType: commandInput.targetEntityType,
-        targetEntityId: commandInput.targetEntityId,
       });
-    }
+      const staleRecovery = await recoverStaleVaultRefreshCommands({
+        tenantId: tenant.id,
+        commands: nonTerminalVaultRefreshCommands,
+      });
+      recoveredStaleCommands = staleRecovery.recovered;
+      activeCommand = staleRecovery.activeCommands[0] ?? null;
+    } else {
+      if (
+        commandInput.activeCommandReuseScope === 'target' &&
+        commandInput.targetEntityType &&
+        commandInput.targetEntityId
+      ) {
+        activeCommand = await getActiveCommandByTarget({
+          tenantId: tenant.id,
+          commandType: commandInput.commandType,
+          targetEntityType: commandInput.targetEntityType,
+          targetEntityId: commandInput.targetEntityId,
+        });
+      }
 
-    if (commandInput.activeCommandReuseScope === 'command_type') {
-      activeCommand = await getActiveCommandByType({
-        tenantId: tenant.id,
-        commandType: commandInput.commandType,
-      });
+      if (commandInput.activeCommandReuseScope === 'command_type') {
+        activeCommand = await getActiveCommandByType({
+          tenantId: tenant.id,
+          commandType: commandInput.commandType,
+        });
+      }
     }
 
     if (activeCommand) {
@@ -134,6 +161,9 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
         idempotent: false,
         reuse_reason: isSameTarget ? 'active_target' : 'active_command_type',
         command: activeCommand,
+        ...(recoveredStaleCommands.length > 0
+          ? { recovered_stale_commands: recoveredStaleCommands }
+          : {}),
       });
     }
   }
@@ -269,6 +299,9 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
   return res.status(201).json({
     idempotent: false,
     command: dispatchedCommand,
+    ...(recoveredStaleCommands.length > 0
+      ? { recovered_stale_commands: recoveredStaleCommands }
+      : {}),
   });
 }
 

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { getCommandById, listCommandEvents, listWorkspaceEventsForCommand } from '../lib/commands';
+import { getVaultRefreshStaleMetadataForCommand } from '../lib/vault-refresh-recovery';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
   if (req.method !== 'GET') {
@@ -24,11 +25,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       listCommandEvents(command.id),
       listWorkspaceEventsForCommand(command.id),
     ]);
+    const stale = await getVaultRefreshStaleMetadataForCommand({
+      tenantId: tenant.id,
+      command,
+    });
 
     return res.status(200).json({
       command,
       events,
       workspace_events: workspaceEvents,
+      stale,
     });
   } catch (error) {
     return errorResponse(res, error);

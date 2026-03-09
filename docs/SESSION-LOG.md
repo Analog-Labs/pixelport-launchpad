@@ -7,6 +7,44 @@
 
 ## Last Session
 
+- **Date:** 2026-03-09 (session 43)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `AGENTS.md`, `docs/SESSION-LOG.md`, `docs/ACTIVE-PLAN.md`, `docs/build-workflow.md`, `docs/qa-policy.md`, `docs/build-briefs/2026-03-08-workspace-canonical-architecture.md`, and `docs/build-briefs/2026-03-09-vault-refresh-command-v1.md`, then executed the approved high-risk hardening build on branch `codex/vault-refresh-recovery`.
+  - Implemented stale non-terminal `vault_refresh` recovery without changing the healthy tenant-wide single-active guard:
+    - added `api/lib/vault-refresh-recovery.ts` to classify only non-terminal `vault_refresh` commands against real command ledger timestamps, correlated `workspace_events`, and current `vault_sections` truth
+    - marked commands stale only when one of the approved rules is true:
+      - target vault section is already `ready` and at least 60 seconds newer than the command's latest activity
+      - `pending` or `dispatched` command has no acknowledgement 10 minutes after latest activity
+      - `acknowledged` or `running` command has no command/workspace activity for 15 minutes
+    - stale repair now marks the old command `failed`, records a human-readable `last_error`, stamps `failed_at`, and appends a `command_events` row with `event_type: "stale_recovered"` plus the stale reasoning payload
+  - Extended the existing command APIs additively:
+    - `GET /api/commands` now accepts optional `command_type` and returns per-command `stale` metadata
+    - `GET /api/commands/:id` now returns the same additive `stale` metadata
+    - `POST /api/commands` now auto-recovers stale non-terminal `vault_refresh` rows before the reuse decision, preserves the healthy tenant-wide reuse path, and returns additive `recovered_stale_commands` when repair occurred
+  - Updated the Knowledge Vault page so stale rows are shown truthfully as `Refresh stalled` instead of active:
+    - stale rows clear the persisted active-command local storage
+    - `Refresh with Chief` stays enabled for the founder-approved retry-directly flow
+    - healthy active refreshes still disable all section refresh buttons exactly as before
+  - Added and updated tests for stale classification, command list/detail routes, auto-repair before command creation, reuse of a healthy tenant-wide active refresh, and Vault UI stalled-state behavior.
+  - Local validation passed on the branch:
+    - `npx vitest run src/test/vault-refresh-recovery.test.ts src/test/commands-route.test.ts src/test/command-detail-route.test.ts src/test/workspace-events-route.test.ts src/pages/dashboard/Vault.test.tsx`
+    - `npx tsc --noEmit`
+    - targeted `npx eslint` across the touched API, helper, and Vault files
+  - Real QA validation passed against the existing tenant `vault-refresh-qa-20260309` (`1e45c138-0eca-4f08-a93e-ca817dced78b`) using the branch locally and the real tenant runtime:
+    - the old stuck `brand_voice` row `2a351c7d-15b4-42f7-aca7-11b171072fa8` surfaced in the UI as `Refresh stalled`, not as an actively running refresh
+    - clicking `Refresh with Chief` on `brand_voice` auto-repaired that stale row to `failed`, wrote `command_events.event_type = "stale_recovered"`, and created new command `638686d1-a31b-4d9f-9d5d-99e506d0300f`
+    - the new command advanced through `dispatched -> acknowledged -> running -> completed`, with correlated `workspace_events` for `command.acknowledged`, `command.running`, `runtime.artifact.promoted`, and `command.completed`
+    - `vault_sections.brand_voice` remained truthful and updated to the refreshed ready content visible on the Vault page
+    - while the new refresh was genuinely active, a second section refresh request correctly reused it with `reuse_reason: "active_command_type"`
+    - adjacent authenticated reads remained healthy on the same tenant: `/api/tenants/me`, `/api/tenants/status`, `/api/tasks`, `/api/vault`, and `/api/competitors`
+  - Added the execution brief at `docs/build-briefs/2026-03-09-vault-refresh-recovery.md` and the CTO review prompt at `docs/build-briefs/2026-03-09-vault-refresh-recovery-cto-prompt.md`.
+- **What's next:**
+  - Submit branch `codex/vault-refresh-recovery` for CTO review using the new handoff prompt.
+  - Do not merge or deploy this branch until CTO review is complete and approved.
+  - After approval, merge to `main`, deploy, and run same-session production smoke focused on stale false positives, guard preservation, and truthful Vault UI behavior.
+- **Blockers:** Waiting on CTO review before merge/deploy. No additional founder decision is needed for this slice because the retry-directly UX was already approved.
+
 - **Date:** 2026-03-09 (session 42)
 - **Who worked:** Codex
 - **What was done:**

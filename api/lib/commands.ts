@@ -200,6 +200,7 @@ export async function createCommandRecord(params: {
 export async function listCommands(params: {
   tenantId: string;
   status?: string | null;
+  commandType?: string | null;
   limit: number;
   offset: number;
 }): Promise<{ commands: CommandRecordRow[]; total: number }> {
@@ -214,6 +215,10 @@ export async function listCommands(params: {
     query = query.eq('status', params.status);
   }
 
+  if (params.commandType) {
+    query = query.eq('command_type', params.commandType);
+  }
+
   const { data, error, count } = await query;
 
   if (error) {
@@ -224,6 +229,25 @@ export async function listCommands(params: {
     commands: (data as CommandRecordRow[] | null) ?? [],
     total: count ?? 0,
   };
+}
+
+export async function listNonTerminalCommandsByType(params: {
+  tenantId: string;
+  commandType: string;
+}): Promise<CommandRecordRow[]> {
+  const { data, error } = await supabase
+    .from('command_records')
+    .select('*')
+    .eq('tenant_id', params.tenantId)
+    .eq('command_type', params.commandType)
+    .in('status', NON_TERMINAL_COMMAND_STATUSES)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to list non-terminal commands by type: ${error.message}`);
+  }
+
+  return (data as CommandRecordRow[] | null) ?? [];
 }
 
 export async function appendCommandEvent(params: {
@@ -298,6 +322,32 @@ export async function updateCommandStatus(params: {
     error,
     'Failed to update command status'
   );
+}
+
+export async function markCommandFailedIfStillNonTerminal(params: {
+  tenantId: string;
+  commandId: string;
+  lastError: string;
+  occurredAt?: string;
+}): Promise<CommandRecordRow | null> {
+  const { data, error } = await supabase
+    .from('command_records')
+    .update({
+      status: 'failed',
+      failed_at: params.occurredAt ?? new Date().toISOString(),
+      last_error: params.lastError,
+    })
+    .eq('tenant_id', params.tenantId)
+    .eq('id', params.commandId)
+    .in('status', NON_TERMINAL_COMMAND_STATUSES)
+    .select('*');
+
+  if (error) {
+    throw new Error(`Failed to mark stale command failed: ${error.message}`);
+  }
+
+  const commands = (data as CommandRecordRow[] | null) ?? [];
+  return commands[0] ?? null;
 }
 
 export async function listCommandEvents(commandId: string): Promise<CommandEventRow[]> {
