@@ -162,7 +162,7 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 
 ## Current Phase: Phase 3 — Integration Framework + Social Publishing
 
-**Status:** Old Phase 3 execution sequence remains paused. The approved foundation replacement slice is implemented on `codex/foundation-spine`; CTO review is approved, and the branch now needs the reviewed diff committed before merge/deploy (session 35).
+**Status:** Old Phase 3 execution sequence remains paused. The approved foundation replacement slice is now merged, deployed, and production-validated. Remaining follow-up is runtime hook reachability on existing tenants, not the additive ledger/event foundation itself.
 **Target:** March 2026 (Sessions 10–12+)
 **Goal:** Generic integration framework, first 4 integrations (PostHog, GA4, X, LinkedIn), social publishing + metrics
 
@@ -176,7 +176,8 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 - [x] 3.R4: Provisioning/bootstrap scaffolds `SOUL.md`, `TOOLS.md`, `AGENTS.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`, and the `pixelport/` workspace namespace
 - [x] 3.R5: Validation passed — `npx tsc --noEmit`, targeted `npx eslint`, `npm test`, mocked route smoke
 - [x] 3.R6: Claude CTO review on branch `codex/foundation-spine`
-- [ ] 3.R7: Merge/deploy only after approval, then run same-session production smoke
+- [x] 3.R7: Merge/deploy after approval, apply remote migration `008_foundation_spine.sql`, and run same-session production smoke
+- [ ] 3.R8: Investigate runtime hook reachability for existing tenant droplets so dashboard-originated commands can dispatch instead of failing cleanly with `502/504`
 
 ### Session 10: Integration Framework — COMPLETE ✅
 

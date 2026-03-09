@@ -7,6 +7,46 @@
 
 ## Last Session
 
+- **Date:** 2026-03-09 (session 36)
+- **Who worked:** Codex
+- **What was done:**
+  - Continued the post-approval foundation-spine release flow after merge to `main`, using the production `Pixelport` Supabase project and the existing QA tenant `vidacious-ai-4` for same-session smoke.
+  - Added the founder-provided `SUPABASE_DB_PASSWORD` to the local secret store at `~/.pixelport/secrets.env` and corrected the stale local secret-store README connection example from the old `aws-0` pooler host to the linked project's actual `aws-1-eu-west-1.pooler.supabase.com:5432` session pooler.
+  - Confirmed the first production failure root cause for `GET /api/commands` was not a Vercel deploy issue but a missing remote migration: Supabase REST/OpenAPI did not expose `command_records`, `command_events`, or `workspace_events`.
+  - Used the linked Supabase CLI with the provided DB password to dry-run and then apply `supabase/migrations/008_foundation_spine.sql` to production. Verified afterward that:
+    - migration history shows `008` on both local and remote
+    - Supabase REST/OpenAPI now exposes `/command_records`, `/command_events`, and `/workspace_events`
+    - service-role reads against all three tables succeed
+  - Re-ran authenticated production smoke and confirmed the original `GET /api/commands` issue is resolved.
+  - Found one real post-migration bug in the new command path:
+    - `POST /api/commands` created the command row, then threw a raw `500`
+    - Vercel logs showed `dispatchAgentHookMessage()` was letting undici transport timeouts bubble out when the droplet hook endpoint was unreachable
+  - Implemented the narrow production hotfix on branch `codex/command-dispatch-timeout`:
+    - updated `api/lib/onboarding-bootstrap.ts` so hook transport exceptions are normalized into `{ ok: false, status: 504, body: ... }` instead of throwing
+    - made timeout-signal setup defensive for environments without `AbortSignal.timeout()`
+    - added regression coverage in `src/test/onboarding-bootstrap.test.ts`
+    - extended `src/test/commands-route.test.ts` to assert failed hook dispatch returns `502` with a failed command record
+  - Validation for the hotfix passed:
+    - `npx tsc --noEmit`
+    - `npx eslint api/lib/onboarding-bootstrap.ts src/test/commands-route.test.ts src/test/onboarding-bootstrap.test.ts`
+    - `npm test -- src/test/commands-route.test.ts src/test/onboarding-bootstrap.test.ts`
+  - Committed the hotfix as `de0b04b` (`fix: normalize command dispatch transport failures`), pushed `codex/command-dispatch-timeout`, fast-forwarded `main`, pushed `main`, and waited for production deployment `dpl_6Fen2b17ezkDK73KFkELQSxtr5cj` to go ready on `https://pixelport-launchpad.vercel.app`.
+  - Final production smoke on the live alias confirmed:
+    - `GET /api/commands?limit=5` returns `200`
+    - `POST /api/commands` now returns a structured `502` with a persisted failed command and `gateway_status: 504` when the droplet hook is unreachable, instead of a raw `500`
+    - duplicate `POST /api/commands` returns `200 { idempotent: true }` for the same failed command
+    - `POST /api/agent/workspace-events` accepts correlated `command.acknowledged` and `command.completed` events with `201`
+    - `GET /api/commands/:id` shows the command lifecycle advancement and correlated workspace events
+    - previously checked existing live reads remained healthy: `/api/tenants/me`, `/api/tenants/status`, `/api/tasks`, `/api/vault`, `/api/competitors`
+  - Verified one remaining production/runtime fact outside the API bugfix:
+    - direct network access to the active test tenant hook endpoint `165.227.200.246:18789` times out from this environment
+    - command dispatch therefore currently fails gracefully for that tenant because the runtime hook is unreachable, not because of the new ledger/event code
+- **What's next:**
+  - Treat the additive foundation-spine release itself as deployed and validated.
+  - Investigate runtime hook reachability for existing tenant droplets before declaring live dashboard-originated command dispatch fully operational across old tenants.
+  - If command dispatch is meant to work immediately for existing tenants, inspect droplet networking, container health, and hook exposure on the affected tenant(s).
+- **Blockers:** No blocker remains for the additive ledger/event foundation code. One runtime follow-up remains: the tested tenant's hook endpoint on port `18789` is not reachable from production/public network paths, so command dispatch degrades to a clean failed state.
+
 - **Date:** 2026-03-09 (session 35)
 - **Who worked:** Codex
 - **What was done:**
