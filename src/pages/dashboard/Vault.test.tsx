@@ -98,7 +98,7 @@ describe("Vault page", () => {
         ]);
       }
 
-      if (url === "/api/commands?limit=10") {
+      if (url === "/api/commands?command_type=vault_refresh&limit=10") {
         return jsonResponse({
           commands: [],
         });
@@ -212,7 +212,7 @@ describe("Vault page", () => {
         ]);
       }
 
-      if (url === "/api/commands?limit=10") {
+      if (url === "/api/commands?command_type=vault_refresh&limit=10") {
         return jsonResponse({
           commands: [
             {
@@ -298,7 +298,7 @@ describe("Vault page", () => {
         return jsonResponse(readySections);
       }
 
-      if (url === "/api/commands?limit=10") {
+      if (url === "/api/commands?command_type=vault_refresh&limit=10") {
         return jsonResponse({
           commands: [],
         });
@@ -360,5 +360,103 @@ describe("Vault page", () => {
     expect(toastMock.message).toHaveBeenCalledWith(
       "Another vault refresh is already running for Company Profile"
     );
+  });
+
+  it("shows a stalled refresh inline, keeps refresh enabled, and retries with a new command", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/vault") {
+        return jsonResponse(readySections);
+      }
+
+      if (url === "/api/commands?command_type=vault_refresh&limit=10") {
+        return jsonResponse({
+          commands: [
+            {
+              id: "cmd-stale",
+              command_type: "vault_refresh",
+              target_entity_type: "vault_section",
+              target_entity_id: "brand_voice",
+              status: "dispatched",
+              last_error: null,
+              stale: {
+                is_stale: true,
+                reason: "target_ready_after_activity",
+                summary:
+                  "Vault refresh stalled: the ready section already has newer vault truth, but this command never reached a terminal state.",
+              },
+            },
+          ],
+        });
+      }
+
+      if (url === "/api/commands" && init?.method === "POST") {
+        return jsonResponse(
+          {
+            idempotent: false,
+            recovered_stale_commands: [
+              {
+                id: "cmd-stale",
+                reason: "target_ready_after_activity",
+                previous_status: "dispatched",
+              },
+            ],
+            command: {
+              id: "cmd-new",
+              status: "dispatched",
+              last_error: null,
+              target_entity_id: "brand_voice",
+            },
+          },
+          201
+        );
+      }
+
+      if (url === "/api/commands/cmd-new") {
+        return jsonResponse({
+          command: {
+            id: "cmd-new",
+            status: "dispatched",
+            last_error: null,
+          },
+          stale: null,
+          events: [],
+          workspace_events: [],
+        });
+      }
+
+      throw new Error(`Unhandled fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    localStorage.setItem(
+      "pixelport_active_vault_refresh_commands",
+      JSON.stringify({
+        "tenant-1:brand_voice": "cmd-stale",
+      })
+    );
+
+    render(<Vault />);
+
+    await screen.findByText("Knowledge Vault");
+    await screen.findByText("Refresh stalled");
+    expect(screen.getByText(/newer vault truth/i)).toBeInTheDocument();
+    expect(localStorage.getItem("pixelport_active_vault_refresh_commands")).toBe("{}");
+
+    const refreshButtons = screen.getAllByRole("button", { name: /Refresh with Chief/i });
+    for (const button of refreshButtons) {
+      expect(button).not.toBeDisabled();
+    }
+
+    fireEvent.click(refreshButtons[1]);
+
+    await screen.findByText("Refresh requested");
+    expect(
+      JSON.parse(localStorage.getItem("pixelport_active_vault_refresh_commands") ?? "{}")
+    ).toEqual({
+      "tenant-1:brand_voice": "cmd-new",
+    });
   });
 });

@@ -9,11 +9,14 @@ const errorResponse = vi.fn((res: MockResponse, error: unknown) =>
 const getActiveCommandByType = vi.fn();
 const getCommandByIdempotencyKey = vi.fn();
 const getActiveCommandByTarget = vi.fn();
+const listNonTerminalCommandsByType = vi.fn();
 const createCommandRecord = vi.fn();
 const appendCommandEvent = vi.fn();
 const updateCommandStatus = vi.fn();
 const listCommands = vi.fn();
 const dispatchAgentHookMessage = vi.fn();
+const annotateCommandsWithVaultRefreshStaleMetadata = vi.fn();
+const recoverStaleVaultRefreshCommands = vi.fn();
 
 vi.mock("../../api/lib/auth", () => ({
   authenticateRequest,
@@ -26,8 +29,14 @@ vi.mock("../../api/lib/commands", () => ({
   getActiveCommandByType,
   getActiveCommandByTarget,
   getCommandByIdempotencyKey,
+  listNonTerminalCommandsByType,
   listCommands,
   updateCommandStatus,
+}));
+
+vi.mock("../../api/lib/vault-refresh-recovery", () => ({
+  annotateCommandsWithVaultRefreshStaleMetadata,
+  recoverStaleVaultRefreshCommands,
 }));
 
 vi.mock("../../api/lib/onboarding-bootstrap", () => ({
@@ -61,6 +70,13 @@ describe("POST /api/commands", () => {
     vi.clearAllMocks();
     getActiveCommandByType.mockResolvedValue(null);
     getActiveCommandByTarget.mockResolvedValue(null);
+    listNonTerminalCommandsByType.mockResolvedValue([]);
+    recoverStaleVaultRefreshCommands.mockResolvedValue({
+      annotatedCommands: [],
+      activeCommands: [],
+      recovered: [],
+    });
+    annotateCommandsWithVaultRefreshStaleMetadata.mockImplementation(async ({ commands }) => commands);
   });
 
   it("creates and dispatches a new command", async () => {
@@ -228,13 +244,29 @@ describe("POST /api/commands", () => {
       userId: "user-1",
     });
     getCommandByIdempotencyKey.mockResolvedValue(null);
-    getActiveCommandByType.mockResolvedValue({
-      id: "cmd-active",
-      tenant_id: "tenant-1",
-      status: "running",
-      command_type: "vault_refresh",
-      target_entity_type: "vault_section",
-      target_entity_id: "company_profile",
+    listNonTerminalCommandsByType.mockResolvedValue([
+      {
+        id: "cmd-active",
+        tenant_id: "tenant-1",
+        status: "running",
+        command_type: "vault_refresh",
+        target_entity_type: "vault_section",
+        target_entity_id: "company_profile",
+      },
+    ]);
+    recoverStaleVaultRefreshCommands.mockResolvedValue({
+      annotatedCommands: [],
+      activeCommands: [
+        {
+          id: "cmd-active",
+          tenant_id: "tenant-1",
+          status: "running",
+          command_type: "vault_refresh",
+          target_entity_type: "vault_section",
+          target_entity_id: "company_profile",
+        },
+      ],
+      recovered: [],
     });
 
     const req = {
@@ -275,13 +307,29 @@ describe("POST /api/commands", () => {
       userId: "user-1",
     });
     getCommandByIdempotencyKey.mockResolvedValue(null);
-    getActiveCommandByType.mockResolvedValue({
-      id: "cmd-active-company",
-      tenant_id: "tenant-1",
-      status: "acknowledged",
-      command_type: "vault_refresh",
-      target_entity_type: "vault_section",
-      target_entity_id: "company_profile",
+    listNonTerminalCommandsByType.mockResolvedValue([
+      {
+        id: "cmd-active-company",
+        tenant_id: "tenant-1",
+        status: "acknowledged",
+        command_type: "vault_refresh",
+        target_entity_type: "vault_section",
+        target_entity_id: "company_profile",
+      },
+    ]);
+    recoverStaleVaultRefreshCommands.mockResolvedValue({
+      annotatedCommands: [],
+      activeCommands: [
+        {
+          id: "cmd-active-company",
+          tenant_id: "tenant-1",
+          status: "acknowledged",
+          command_type: "vault_refresh",
+          target_entity_type: "vault_section",
+          target_entity_id: "company_profile",
+        },
+      ],
+      recovered: [],
     });
 
     const req = {
@@ -323,6 +371,7 @@ describe("POST /api/commands", () => {
       userId: "user-1",
     });
     getCommandByIdempotencyKey.mockResolvedValue(null);
+    listNonTerminalCommandsByType.mockResolvedValue([]);
     createCommandRecord.mockResolvedValue({
       id: "cmd-vault",
       tenant_id: "tenant-1",
@@ -375,6 +424,95 @@ describe("POST /api/commands", () => {
     expect(res.statusCode).toBe(201);
   });
 
+  it("auto-repairs stale vault refresh commands before creating a new one", async () => {
+    const { default: handler } = await import("../../api/commands/index");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-1",
+        droplet_ip: "127.0.0.1",
+        gateway_token: "gw-token",
+      },
+      userId: "user-1",
+    });
+    getCommandByIdempotencyKey.mockResolvedValue(null);
+    listNonTerminalCommandsByType.mockResolvedValue([
+      {
+        id: "cmd-stale",
+        tenant_id: "tenant-1",
+        status: "dispatched",
+        command_type: "vault_refresh",
+        target_entity_type: "vault_section",
+        target_entity_id: "brand_voice",
+      },
+    ]);
+    recoverStaleVaultRefreshCommands.mockResolvedValue({
+      annotatedCommands: [],
+      activeCommands: [],
+      recovered: [
+        {
+          id: "cmd-stale",
+          reason: "target_ready_after_activity",
+          previous_status: "dispatched",
+        },
+      ],
+    });
+    createCommandRecord.mockResolvedValue({
+      id: "cmd-new",
+      tenant_id: "tenant-1",
+      status: "pending",
+    });
+    appendCommandEvent.mockResolvedValue({});
+    dispatchAgentHookMessage.mockResolvedValue({
+      ok: true,
+      status: 202,
+      body: "accepted",
+    });
+    updateCommandStatus.mockResolvedValue({
+      id: "cmd-new",
+      tenant_id: "tenant-1",
+      status: "dispatched",
+    });
+
+    const req = {
+      method: "POST",
+      body: {
+        command_type: "vault_refresh",
+        target_entity_type: "vault_section",
+        target_entity_id: "brand_voice",
+        idempotency_key: "vault-refresh:tenant-1:brand_voice:retry-3",
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(recoverStaleVaultRefreshCommands).toHaveBeenCalledWith({
+      tenantId: "tenant-1",
+      commands: expect.arrayContaining([
+        expect.objectContaining({
+          id: "cmd-stale",
+        }),
+      ]),
+    });
+    expect(createCommandRecord).toHaveBeenCalled();
+    expect(res.statusCode).toBe(201);
+    expect(res.body).toEqual({
+      idempotent: false,
+      command: expect.objectContaining({
+        id: "cmd-new",
+        status: "dispatched",
+      }),
+      recovered_stale_commands: [
+        expect.objectContaining({
+          id: "cmd-stale",
+          reason: "target_ready_after_activity",
+          previous_status: "dispatched",
+        }),
+      ],
+    });
+  });
+
   it("rejects invalid vault_refresh section targets", async () => {
     const { default: handler } = await import("../../api/commands/index");
 
@@ -402,6 +540,82 @@ describe("POST /api/commands", () => {
     expect(createCommandRecord).not.toHaveBeenCalled();
     expect(res.body).toEqual({
       error: "vault_refresh requires a valid target_entity_id vault section key",
+    });
+  });
+});
+
+describe("GET /api/commands", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    annotateCommandsWithVaultRefreshStaleMetadata.mockImplementation(async ({ commands }) => commands);
+  });
+
+  it("filters by command_type and returns stale metadata additively", async () => {
+    const { default: handler } = await import("../../api/commands/index");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-1",
+      },
+      userId: "user-1",
+    });
+    listCommands.mockResolvedValue({
+      commands: [
+        {
+          id: "cmd-stale",
+          tenant_id: "tenant-1",
+          status: "dispatched",
+          command_type: "vault_refresh",
+        },
+      ],
+      total: 1,
+    });
+    annotateCommandsWithVaultRefreshStaleMetadata.mockResolvedValue([
+      {
+        id: "cmd-stale",
+        tenant_id: "tenant-1",
+        status: "dispatched",
+        command_type: "vault_refresh",
+        stale: {
+          is_stale: true,
+          reason: "target_ready_after_activity",
+          summary: "Vault refresh stalled",
+        },
+      },
+    ]);
+
+    const req = {
+      method: "GET",
+      query: {
+        command_type: "vault_refresh",
+        limit: "10",
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(listCommands).toHaveBeenCalledWith({
+      tenantId: "tenant-1",
+      status: null,
+      commandType: "vault_refresh",
+      limit: 10,
+      offset: 0,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      commands: [
+        expect.objectContaining({
+          id: "cmd-stale",
+          stale: expect.objectContaining({
+            is_stale: true,
+            reason: "target_ready_after_activity",
+          }),
+        }),
+      ],
+      total: 1,
+      limit: 10,
+      offset: 0,
     });
   });
 });
