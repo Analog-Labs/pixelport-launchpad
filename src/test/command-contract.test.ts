@@ -22,19 +22,25 @@ describe("command contract", () => {
   it("builds a dispatch message with command id and workspace-event instructions", () => {
     const message = buildCommandDispatchMessage({
       commandId: "cmd-123",
-      commandType: "content_refresh",
-      title: "Refresh homepage content",
-      instructions: "Audit the homepage copy and produce a tighter draft.",
-      targetEntityType: "deliverable",
-      targetEntityId: "homepage",
+      commandType: "vault_refresh",
+      title: "Refresh Company Profile with Chief",
+      instructions: "Refresh the company profile vault section only.",
+      targetEntityType: "vault_section",
+      targetEntityId: "company_profile",
       payload: {
-        priority: "high",
+        section_key: "company_profile",
       },
+      commandSpecificRequirements: [
+        'Set the section to status "populating" through PUT /api/agent/vault/company_profile when execution starts.',
+        'Emit runtime.artifact.promoted with entity_type "vault_section" and entity_id "company_profile".',
+      ],
     });
 
     expect(message).toContain("Command ID: cmd-123");
     expect(message).toContain("/api/agent/workspace-events");
     expect(message).toContain("runtime.artifact.promoted");
-    expect(message).toContain('"priority": "high"');
+    expect(message).toContain('PUT /api/agent/vault/company_profile');
+    expect(message).toContain('entity_id "company_profile"');
+    expect(message).toContain('"section_key": "company_profile"');
   });
 });

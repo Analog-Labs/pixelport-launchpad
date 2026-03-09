@@ -29,6 +29,9 @@ export const COMMAND_RUNTIME_EVENT_TO_STATUS = {
 } as const satisfies Record<string, CommandStatus>;
 
 export const COMMAND_TERMINAL_STATUSES = ['completed', 'failed', 'cancelled'] as const;
+export const NON_TERMINAL_COMMAND_STATUSES = COMMAND_STATUSES.filter(
+  (status) => !COMMAND_TERMINAL_STATUSES.includes(status as CommandTerminalStatus)
+) as CommandStatus[];
 
 export type CommandTerminalStatus = (typeof COMMAND_TERMINAL_STATUSES)[number];
 
@@ -97,6 +100,7 @@ export function buildCommandDispatchMessage(params: {
   targetEntityType?: string | null;
   targetEntityId?: string | null;
   payload?: JsonRecord | null;
+  commandSpecificRequirements?: string[];
 }): string {
   const targetSummary = params.targetEntityType && params.targetEntityId
     ? `${params.targetEntityType}:${params.targetEntityId}`
@@ -119,6 +123,13 @@ export function buildCommandDispatchMessage(params: {
     '3. Write durable runtime artifacts under `pixelport/` and keep disposable sub-agent work under `pixelport/scratch/subagents/`.',
     '4. Emit `runtime.artifact.promoted` when you promote a final artifact into a canonical `pixelport/` location.',
     '5. Emit exactly one terminal event: `command.completed`, `command.failed`, or `command.cancelled`.',
+    ...(params.commandSpecificRequirements && params.commandSpecificRequirements.length > 0
+      ? [
+          '',
+          'Command-specific requirements:',
+          ...params.commandSpecificRequirements.map((requirement, index) => `${index + 1}. ${requirement}`),
+        ]
+      : []),
     '',
     'Payload:',
     '```json',

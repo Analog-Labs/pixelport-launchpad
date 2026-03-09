@@ -8,6 +8,7 @@ const PIXELPORT_STORAGE_KEYS = [
   "pixelport_agent_tone",
   "pixelport_tenant_id",
   "pixelport_tenant_status",
+  "pixelport_active_vault_refresh_commands",
 ] as const;
 
 type TenantLike = {
@@ -27,6 +28,36 @@ function getStorage(): Storage | null {
 
 function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function readActiveVaultRefreshCommands(storage: Storage): Record<string, string> {
+  const raw = storage.getItem("pixelport_active_vault_refresh_commands");
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        ([key, value]) => typeof key === "string" && typeof value === "string" && value.trim().length > 0
+      )
+    );
+  } catch {
+    return {};
+  }
+}
+
+function writeActiveVaultRefreshCommands(storage: Storage, commands: Record<string, string>): void {
+  storage.setItem("pixelport_active_vault_refresh_commands", JSON.stringify(commands));
+}
+
+function getVaultRefreshStorageKey(tenantId: string, sectionKey: string): string {
+  return `${tenantId}:${sectionKey}`;
 }
 
 export function clearPixelportSessionState(): void {
@@ -65,4 +96,36 @@ export function hydratePixelportTenantState(userId: string, tenant: TenantLike):
   storage.setItem("pixelport_agent_tone", agentTone);
   storage.setItem("pixelport_tenant_id", tenant.id);
   storage.setItem("pixelport_tenant_status", tenant.status);
+}
+
+export function getStoredVaultRefreshCommandId(tenantId: string, sectionKey: string): string | null {
+  const storage = getStorage();
+  if (!storage) {
+    return null;
+  }
+
+  const commands = readActiveVaultRefreshCommands(storage);
+  return commands[getVaultRefreshStorageKey(tenantId, sectionKey)] ?? null;
+}
+
+export function setStoredVaultRefreshCommandId(tenantId: string, sectionKey: string, commandId: string): void {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  const commands = readActiveVaultRefreshCommands(storage);
+  commands[getVaultRefreshStorageKey(tenantId, sectionKey)] = commandId;
+  writeActiveVaultRefreshCommands(storage, commands);
+}
+
+export function clearStoredVaultRefreshCommandId(tenantId: string, sectionKey: string): void {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  const commands = readActiveVaultRefreshCommands(storage);
+  delete commands[getVaultRefreshStorageKey(tenantId, sectionKey)];
+  writeActiveVaultRefreshCommands(storage, commands);
 }

@@ -1,3 +1,8 @@
+import {
+  VAULT_SECTION_KEYS,
+  getVaultSectionSnapshotPath,
+} from "../../src/lib/vault-contract";
+
 type JsonValue =
   | string
   | number
@@ -30,13 +35,7 @@ export const WORKSPACE_ROOT_PROMPT_FILES = [
 
 export type WorkspaceRootPromptFile = (typeof WORKSPACE_ROOT_PROMPT_FILES)[number];
 
-export const VAULT_SNAPSHOT_KEYS = [
-  'company_profile',
-  'brand_voice',
-  'icp',
-  'competitors',
-  'products',
-] as const;
+export const VAULT_SNAPSHOT_KEYS = VAULT_SECTION_KEYS;
 
 export type VaultSnapshotKey = (typeof VAULT_SNAPSHOT_KEYS)[number];
 
@@ -228,6 +227,8 @@ ${buildBrandContext(scanResults)}
 function buildToolsFile(params: {
   apiBaseUrl: string;
 }): string {
+  const vaultRefreshKeys = VAULT_SECTION_KEYS.map((sectionKey) => `\`${sectionKey}\``).join(', ');
+
   return `# PixelPort Tooling Guide
 
 ## Setup
@@ -285,6 +286,17 @@ curl -s -X POST \\
   }' \\
   "$API_BASE_URL/api/agent/workspace-events"
 \`\`\`
+
+## Vault Refresh Commands
+- Valid vault refresh section keys: ${vaultRefreshKeys}
+- A \`vault_refresh\` command always targets exactly one \`vault_section\`.
+- Start by reading the current vault state through \`GET /api/agent/vault\`.
+- When work begins, set the target section to \`"populating"\` through \`PUT /api/agent/vault/<section_key>\`.
+- Update the durable markdown snapshot at \`${getVaultSectionSnapshotPath('company_profile').replace('company_profile', '<section_key>')}\`.
+- Emit \`runtime.artifact.promoted\` with \`entity_type: "vault_section"\` and the same \`entity_id\`.
+- Finish by writing the final markdown and \`status: "ready"\` through \`PUT /api/agent/vault/<section_key>\`.
+- If the refresh must fail or be cancelled after switching to \`"populating"\`, restore the prior content with \`status: "ready"\` before the terminal command event.
+- Emit exactly one terminal command event after the final vault write.
 
 ## File Placement Rules
 - Durable packages: \`pixelport/content/deliverables/<deliverable-id>/\`
