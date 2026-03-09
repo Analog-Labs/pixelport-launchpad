@@ -7,6 +7,43 @@
 
 ## Last Session
 
+- **Date:** 2026-03-09 (session 44)
+- **Who worked:** Codex
+- **What was done:**
+  - Received Claude CTO review for `codex/vault-refresh-recovery`; verdict was `APPROVED` with no required fixes before merge.
+  - Pushed the reviewed branch commit `f7eb96e` to `origin/codex/vault-refresh-recovery`.
+  - Synced local `main` to the current remote `origin/main`, which had picked up two unrelated landing-page copy commits on `src/components/landing/HeroSection.tsx`, then merged `codex/vault-refresh-recovery` into `main` as merge commit `13f3d81` without changing the reviewed stale-recovery code.
+  - Re-ran post-merge validation on `main` before release:
+    - `npx tsc --noEmit`
+    - `npx vitest run src/test/vault-refresh-recovery.test.ts src/test/commands-route.test.ts src/test/command-detail-route.test.ts src/test/workspace-events-route.test.ts src/pages/dashboard/Vault.test.tsx`
+  - Pushed `main` to GitHub and monitored the production Vercel deployment:
+    - deployment id `dpl_89X7zuMu124Fj5wrSGLDsTw1Nbut`
+    - production alias `https://pixelport-launchpad.vercel.app`
+    - deployment reached `Ready`
+  - Ran same-session production smoke on the live alias using the real QA tenant `vault-refresh-qa-20260309` (`1e45c138-0eca-4f08-a93e-ca817dced78b`):
+    - confirmed the live Vault page loads correctly for the QA tenant on production
+    - confirmed `GET /api/commands?command_type=vault_refresh&limit=10` returns the additive `stale` field and that `GET /api/commands/:id` also returns the additive `stale` field
+    - triggered a real production `products` refresh from the live Vault page, which created command `93c2a749-da91-43ee-9d99-eaeb296a427c`
+    - confirmed the live UI showed `Refresh requested`, disabled all `Refresh with Chief` buttons during the healthy active refresh, and re-enabled them after completion
+    - confirmed a second production refresh request during that active run reused the in-flight command with `reuse_reason: "active_command_type"`
+    - confirmed the active production command reached `completed` with correlated `workspace_events`:
+      - `command.acknowledged`
+      - `command.running`
+      - `runtime.artifact.promoted`
+      - `command.completed`
+    - confirmed adjacent authenticated live reads remained healthy with `200`:
+      - `/api/tenants/me`
+      - `/api/tenants/status`
+      - `/api/tasks`
+      - `/api/vault`
+      - `/api/competitors`
+  - Recorded the release result in the repo docs.
+- **What's next:**
+  - Treat Vault refresh stale recovery as shipped to production.
+  - Keep the single-active tenant-wide Vault refresh guard and the new stale-recovery logic in place as the baseline before any broader command-backed dashboard expansion.
+  - Resume the next approved Phase 3 priority from the product roadmap or next founder-approved build brief.
+- **Blockers:** None for Vault refresh recovery. The release is merged, deployed, and production-smoked.
+
 - **Date:** 2026-03-09 (session 43)
 - **Who worked:** Codex
 - **What was done:**
