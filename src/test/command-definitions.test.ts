@@ -24,7 +24,7 @@ describe("command definitions", () => {
           section_title: "Products & Services",
           snapshot_path: "pixelport/vault/snapshots/products.md",
         },
-        reuseActiveTarget: true,
+        activeCommandReuseScope: "command_type",
       }),
     });
 
@@ -78,7 +78,7 @@ describe("command definitions", () => {
           priority: "high",
         },
         dispatchRequirements: [],
-        reuseActiveTarget: false,
+        activeCommandReuseScope: "none",
       },
     });
   });

@@ -20,11 +20,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { getAgentName } from "@/lib/avatars";
 import {
-  clearStoredVaultRefreshCommandId,
+  clearStoredVaultRefreshCommandsForTenant,
   getStoredVaultRefreshCommandId,
   setStoredVaultRefreshCommandId,
 } from "@/lib/pixelport-storage";
-import { getVaultSectionTitle, type VaultSectionKey } from "../../../api/lib/vault-contract";
+import {
+  getVaultSectionTitle,
+  isVaultSectionKey,
+  type VaultSectionKey,
+} from "../../../api/lib/vault-contract";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 
@@ -69,6 +73,19 @@ type CommandDetailsResponse = {
       error?: string | null;
     } | null;
   }>;
+};
+
+type CommandListItem = {
+  id: string;
+  command_type: string;
+  target_entity_type: string | null;
+  target_entity_id: string | null;
+  status: CommandStatus;
+  last_error: string | null;
+};
+
+type CommandListResponse = {
+  commands: CommandListItem[];
 };
 
 const SECTION_ICONS: Record<VaultSectionKey, typeof Building2> = {
@@ -116,6 +133,18 @@ async function fetchCommandDetails(accessToken: string, commandId: string): Prom
   }
 
   return (await response.json()) as CommandDetailsResponse;
+}
+
+async function fetchRecentCommands(accessToken: string): Promise<CommandListItem[]> {
+  const response = await fetch("/api/commands?limit=10", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load commands");
+  }
+
+  return ((await response.json()) as CommandListResponse).commands;
 }
 
 function getLatestCommandSummary(details: CommandDetailsResponse): string | null {
@@ -174,6 +203,34 @@ function getCommandStatusLabel(status: CommandStatus): string {
     default:
       return "Refresh update";
   }
+}
+
+function upsertActiveSectionCommand(
+  previous: Record<string, SectionCommandState>,
+  sectionKey: VaultSectionKey,
+  commandState: SectionCommandState
+): Record<string, SectionCommandState> {
+  if (isTerminalCommandStatus(commandState.status)) {
+    return {
+      ...previous,
+      [sectionKey]: commandState,
+    };
+  }
+
+  const nextCommands: Record<string, SectionCommandState> = {};
+
+  for (const [key, existingState] of Object.entries(previous)) {
+    if (key === sectionKey) {
+      continue;
+    }
+
+    if (isTerminalCommandStatus(existingState.status)) {
+      nextCommands[key] = existingState;
+    }
+  }
+
+  nextCommands[sectionKey] = commandState;
+  return nextCommands;
 }
 
 const Vault = () => {
@@ -246,35 +303,98 @@ const Vault = () => {
         }
       }
 
-      for (const section of sections) {
-        const commandId = getStoredVaultRefreshCommandId(tenant.id, section.section_key);
-        if (!commandId) {
-          continue;
-        }
+      const storedEntry = sections
+        .map((section) => ({
+          sectionKey: section.section_key,
+          commandId: getStoredVaultRefreshCommandId(tenant.id, section.section_key),
+        }))
+        .find((entry) => !!entry.commandId);
 
-        const existingState = previous[section.section_key];
-        if (existingState?.commandId === commandId) {
-          restoredCommands[section.section_key] = existingState;
-          continue;
+      if (storedEntry?.commandId) {
+        const existingState = previous[storedEntry.sectionKey];
+        if (existingState?.commandId === storedEntry.commandId) {
+          restoredCommands[storedEntry.sectionKey] = existingState;
+        } else {
+          restoredCommands[storedEntry.sectionKey] = {
+            commandId: storedEntry.commandId,
+            status: "dispatched",
+            lastError: null,
+            summary: "Resuming section refresh status...",
+          };
         }
-
-        restoredCommands[section.section_key] = {
-          commandId,
-          status: "dispatched",
-          lastError: null,
-          summary: "Resuming section refresh status...",
-        };
       }
 
       return restoredCommands;
     });
   }, [tenant?.id, sections]);
 
+  useEffect(() => {
+    if (!session?.access_token || !tenant?.id) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const commands = await fetchRecentCommands(session.access_token);
+        if (cancelled) {
+          return;
+        }
+
+        const activeVaultRefresh = commands.find(
+          (command) =>
+            command.command_type === "vault_refresh" &&
+            !isTerminalCommandStatus(command.status) &&
+            command.target_entity_type === "vault_section" &&
+            isVaultSectionKey(command.target_entity_id)
+        );
+
+        if (!activeVaultRefresh || !isVaultSectionKey(activeVaultRefresh.target_entity_id)) {
+          clearStoredVaultRefreshCommandsForTenant(tenant.id);
+          setSectionCommands((previous) =>
+            Object.fromEntries(
+              Object.entries(previous).filter(([, commandState]) =>
+                isTerminalCommandStatus(commandState.status)
+              )
+            )
+          );
+          return;
+        }
+
+        const sectionKey = activeVaultRefresh.target_entity_id;
+        const nextState: SectionCommandState = {
+          commandId: activeVaultRefresh.id,
+          status: activeVaultRefresh.status,
+          lastError: activeVaultRefresh.last_error,
+          summary: "Refresh requested. Waiting for Chief progress...",
+        };
+
+        setStoredVaultRefreshCommandId(tenant.id, sectionKey, activeVaultRefresh.id);
+        setSectionCommands((previous) =>
+          upsertActiveSectionCommand(previous, sectionKey, nextState)
+        );
+      } catch {
+        /* best-effort discovery only */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.access_token, tenant?.id]);
+
   const activeCommandPollKey = Object.entries(sectionCommands)
     .filter(([, commandState]) => !!commandState.commandId && !isTerminalCommandStatus(commandState.status))
     .map(([sectionKey, commandState]) => `${sectionKey}:${commandState.commandId}`)
     .sort()
     .join("|");
+
+  const activeTenantRefreshSectionKey = (
+    Object.entries(sectionCommands).find(
+      ([, commandState]) => !!commandState.commandId && !isTerminalCommandStatus(commandState.status)
+    )?.[0] ?? null
+  ) as VaultSectionKey | null;
 
   useEffect(() => {
     if (!session?.access_token || !tenant?.id) {
@@ -336,7 +456,7 @@ const Vault = () => {
         }
 
         if (nextState.status === "completed") {
-          clearStoredVaultRefreshCommandId(tenant.id, result.sectionKey);
+          clearStoredVaultRefreshCommandsForTenant(tenant.id);
 
           try {
             await loadSections(session.access_token!);
@@ -357,7 +477,7 @@ const Vault = () => {
         }
 
         if (nextState.status === "failed" || nextState.status === "cancelled") {
-          clearStoredVaultRefreshCommandId(tenant.id, result.sectionKey);
+          clearStoredVaultRefreshCommandsForTenant(tenant.id);
 
           try {
             await loadSections(session.access_token!);
@@ -460,12 +580,20 @@ const Vault = () => {
             id: string;
             status: CommandStatus;
             last_error?: string | null;
+            target_entity_id?: string | null;
           }
         | undefined;
 
       if (!command) {
         throw new Error(payload?.error || "Failed to start refresh");
       }
+
+      const resolvedSectionKey = isVaultSectionKey(command.target_entity_id)
+        ? command.target_entity_id
+        : section.section_key;
+      const isCrossSectionReuse =
+        payload?.reuse_reason === "active_command_type" &&
+        resolvedSectionKey !== section.section_key;
 
       const nextCommandState: SectionCommandState = {
         commandId: command.id,
@@ -474,18 +602,19 @@ const Vault = () => {
         summary:
           payload?.reuse_reason === "active_target"
             ? "Using the current refresh already in progress for this section."
+            : isCrossSectionReuse
+              ? `Another vault refresh is already running for ${getVaultSectionTitle(resolvedSectionKey)}.`
             : "Refresh requested. Waiting for Chief progress...",
       };
 
-      setSectionCommands((prev) => ({
-        ...prev,
-        [section.section_key]: nextCommandState,
-      }));
+      setSectionCommands((previous) =>
+        upsertActiveSectionCommand(previous, resolvedSectionKey, nextCommandState)
+      );
 
       if (!isTerminalCommandStatus(command.status)) {
-        setStoredVaultRefreshCommandId(tenant.id, section.section_key, command.id);
+        setStoredVaultRefreshCommandId(tenant.id, resolvedSectionKey, command.id);
       } else {
-        clearStoredVaultRefreshCommandId(tenant.id, section.section_key);
+        clearStoredVaultRefreshCommandsForTenant(tenant.id);
       }
 
       if (!response.ok) {
@@ -495,6 +624,10 @@ const Vault = () => {
 
       if (payload?.reuse_reason === "active_target") {
         toast.message("Using the active refresh for this section");
+      } else if (isCrossSectionReuse) {
+        toast.message(
+          `Another vault refresh is already running for ${getVaultSectionTitle(resolvedSectionKey)}`
+        );
       } else {
         toast.success(`Refresh started for ${getVaultSectionTitle(section.section_key)}`);
       }
@@ -605,7 +738,14 @@ const Vault = () => {
         const isCommandBusy =
           !!commandState && !isTerminalCommandStatus(commandState.status);
         const isDispatching = dispatchingSections[section.section_key] === true;
-        const canRefresh = section.status === "ready" && !isEditing && !isCommandBusy && !isDispatching;
+        const isAnotherSectionRefreshing =
+          !!activeTenantRefreshSectionKey && activeTenantRefreshSectionKey !== section.section_key;
+        const canRefresh =
+          section.status === "ready" &&
+          !isEditing &&
+          !isCommandBusy &&
+          !isDispatching &&
+          !isAnotherSectionRefreshing;
         const canEdit = section.status === "ready" && !isCommandBusy && !isDispatching;
         const hasContent = typeof section.content === "string" && section.content.trim().length > 0;
 

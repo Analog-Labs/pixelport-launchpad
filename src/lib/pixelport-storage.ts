@@ -60,6 +60,10 @@ function getVaultRefreshStorageKey(tenantId: string, sectionKey: string): string
   return `${tenantId}:${sectionKey}`;
 }
 
+function isTenantVaultRefreshStorageKey(key: string, tenantId: string): boolean {
+  return key.startsWith(`${tenantId}:`);
+}
+
 export function clearPixelportSessionState(): void {
   const storage = getStorage();
   if (!storage) {
@@ -115,6 +119,11 @@ export function setStoredVaultRefreshCommandId(tenantId: string, sectionKey: str
   }
 
   const commands = readActiveVaultRefreshCommands(storage);
+  for (const key of Object.keys(commands)) {
+    if (isTenantVaultRefreshStorageKey(key, tenantId)) {
+      delete commands[key];
+    }
+  }
   commands[getVaultRefreshStorageKey(tenantId, sectionKey)] = commandId;
   writeActiveVaultRefreshCommands(storage, commands);
 }
@@ -127,5 +136,20 @@ export function clearStoredVaultRefreshCommandId(tenantId: string, sectionKey: s
 
   const commands = readActiveVaultRefreshCommands(storage);
   delete commands[getVaultRefreshStorageKey(tenantId, sectionKey)];
+  writeActiveVaultRefreshCommands(storage, commands);
+}
+
+export function clearStoredVaultRefreshCommandsForTenant(tenantId: string): void {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  const commands = readActiveVaultRefreshCommands(storage);
+  for (const key of Object.keys(commands)) {
+    if (isTenantVaultRefreshStorageKey(key, tenantId)) {
+      delete commands[key];
+    }
+  }
   writeActiveVaultRefreshCommands(storage, commands);
 }

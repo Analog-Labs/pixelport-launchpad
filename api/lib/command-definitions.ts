@@ -15,6 +15,8 @@ type JsonValue =
 
 type JsonRecord = Record<string, JsonValue>;
 
+export type ActiveCommandReuseScope = "none" | "target" | "command_type";
+
 type RawCommandInput = {
   commandType: string;
   title: string | null;
@@ -32,7 +34,7 @@ export type ResolvedCommandInput = {
   targetEntityId: string | null;
   payload: JsonRecord;
   dispatchRequirements: string[];
-  reuseActiveTarget: boolean;
+  activeCommandReuseScope: ActiveCommandReuseScope;
 };
 
 type ResolvedCommandResult =
@@ -116,7 +118,7 @@ const commandDefinitions: Record<string, CommandDefinition> = {
             snapshot_path: getVaultSectionSnapshotPath(sectionKey),
           },
           dispatchRequirements: buildVaultRefreshDispatchRequirements(sectionKey),
-          reuseActiveTarget: true,
+          activeCommandReuseScope: "command_type",
         },
       };
     },
@@ -144,7 +146,7 @@ export function resolveCommandInput(input: RawCommandInput): ResolvedCommandResu
         targetEntityId: input.targetEntityId,
         payload: input.payload,
         dispatchRequirements: [],
-        reuseActiveTarget: false,
+        activeCommandReuseScope: "none",
       },
     };
   }

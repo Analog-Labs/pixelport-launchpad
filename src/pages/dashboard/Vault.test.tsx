@@ -98,6 +98,12 @@ describe("Vault page", () => {
         ]);
       }
 
+      if (url === "/api/commands?limit=10") {
+        return jsonResponse({
+          commands: [],
+        });
+      }
+
       if (url === "/api/commands" && init?.method === "POST") {
         return jsonResponse(
           {
@@ -166,7 +172,7 @@ describe("Vault page", () => {
     expect(screen.getAllByText(byTextContent("Existing company profile")).length).toBeGreaterThan(0);
 
     await act(async () => {
-      await new Promise((resolve) => window.setTimeout(resolve, 4100));
+      await new Promise((resolve) => window.setTimeout(resolve, 8200));
     });
 
     await screen.findByText("Refresh failed");
@@ -196,16 +202,6 @@ describe("Vault page", () => {
           return jsonResponse(readySections);
         }
 
-        if (vaultCalls === 2) {
-          return jsonResponse([
-            {
-              ...readySections[0],
-              status: "populating",
-            },
-            readySections[1],
-          ]);
-        }
-
         return jsonResponse([
           {
             ...readySections[0],
@@ -214,6 +210,21 @@ describe("Vault page", () => {
           },
           readySections[1],
         ]);
+      }
+
+      if (url === "/api/commands?limit=10") {
+        return jsonResponse({
+          commands: [
+            {
+              id: "cmd-stored",
+              command_type: "vault_refresh",
+              target_entity_type: "vault_section",
+              target_entity_id: "company_profile",
+              status: "running",
+              last_error: null,
+            },
+          ],
+        });
       }
 
       if (url === "/api/commands/cmd-stored") {
@@ -272,8 +283,82 @@ describe("Vault page", () => {
     await waitFor(() => {
       expect(screen.queryByText("Chief is refreshing")).not.toBeInTheDocument();
     });
-    expect(screen.getAllByText(byTextContent("Refreshed company profile")).length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByText(byTextContent("Refreshed company profile")).length).toBeGreaterThan(0);
+    });
     expect(localStorage.getItem("pixelport_active_vault_refresh_commands")).toBe("{}");
     expect(toastMock.success).toHaveBeenCalledWith("Company Profile refreshed");
   }, 12000);
+
+  it("reuses the tenant's active refresh and disables refresh across other sections", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/vault") {
+        return jsonResponse(readySections);
+      }
+
+      if (url === "/api/commands?limit=10") {
+        return jsonResponse({
+          commands: [],
+        });
+      }
+
+      if (url === "/api/commands" && init?.method === "POST") {
+        return jsonResponse({
+          idempotent: false,
+          reuse_reason: "active_command_type",
+          command: {
+            id: "cmd-existing",
+            status: "running",
+            last_error: null,
+            target_entity_id: "company_profile",
+          },
+        });
+      }
+
+      if (url === "/api/commands/cmd-existing") {
+        return jsonResponse({
+          command: {
+            id: "cmd-existing",
+            status: "running",
+            last_error: null,
+          },
+          events: [{ message: "Chief is refreshing the section." }],
+          workspace_events: [
+            {
+              payload: {
+                summary: "Chief is refreshing the section.",
+              },
+            },
+          ],
+        });
+      }
+
+      throw new Error(`Unhandled fetch: ${url}`);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<Vault />);
+
+    await screen.findByText("Knowledge Vault");
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Refresh with Chief/i })[1]);
+
+    await screen.findByText("Chief is refreshing");
+    expect(
+      JSON.parse(localStorage.getItem("pixelport_active_vault_refresh_commands") ?? "{}")
+    ).toEqual({
+      "tenant-1:company_profile": "cmd-existing",
+    });
+
+    for (const button of screen.getAllByRole("button", { name: /Refresh with Chief/i })) {
+      expect(button).toBeDisabled();
+    }
+
+    expect(toastMock.message).toHaveBeenCalledWith(
+      "Another vault refresh is already running for Company Profile"
+    );
+  });
 });

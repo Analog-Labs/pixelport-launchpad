@@ -135,6 +135,27 @@ export async function getActiveCommandByTarget(params: {
   return commands[0] ?? null;
 }
 
+export async function getActiveCommandByType(params: {
+  tenantId: string;
+  commandType: string;
+}): Promise<CommandRecordRow | null> {
+  const { data, error } = await supabase
+    .from('command_records')
+    .select('*')
+    .eq('tenant_id', params.tenantId)
+    .eq('command_type', params.commandType)
+    .in('status', NON_TERMINAL_COMMAND_STATUSES)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw new Error(`Failed to load active command by type: ${error.message}`);
+  }
+
+  const commands = (data as CommandRecordRow[] | null) ?? [];
+  return commands[0] ?? null;
+}
+
 export async function createCommandRecord(params: {
   tenantId: string;
   requestedByUserId: string;

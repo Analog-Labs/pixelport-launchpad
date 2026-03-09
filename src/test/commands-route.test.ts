@@ -6,6 +6,7 @@ const errorResponse = vi.fn((res: MockResponse, error: unknown) =>
     error: error instanceof Error ? error.message : "Internal server error",
   })
 );
+const getActiveCommandByType = vi.fn();
 const getCommandByIdempotencyKey = vi.fn();
 const getActiveCommandByTarget = vi.fn();
 const createCommandRecord = vi.fn();
@@ -22,6 +23,7 @@ vi.mock("../../api/lib/auth", () => ({
 vi.mock("../../api/lib/commands", () => ({
   appendCommandEvent,
   createCommandRecord,
+  getActiveCommandByType,
   getActiveCommandByTarget,
   getCommandByIdempotencyKey,
   listCommands,
@@ -57,6 +59,7 @@ function createMockResponse(): MockResponse {
 describe("POST /api/commands", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getActiveCommandByType.mockResolvedValue(null);
     getActiveCommandByTarget.mockResolvedValue(null);
   });
 
@@ -225,7 +228,7 @@ describe("POST /api/commands", () => {
       userId: "user-1",
     });
     getCommandByIdempotencyKey.mockResolvedValue(null);
-    getActiveCommandByTarget.mockResolvedValue({
+    getActiveCommandByType.mockResolvedValue({
       id: "cmd-active",
       tenant_id: "tenant-1",
       status: "running",
@@ -256,6 +259,54 @@ describe("POST /api/commands", () => {
       command: expect.objectContaining({
         id: "cmd-active",
         status: "running",
+      }),
+    });
+  });
+
+  it("reuses an active vault_refresh command for another section in the same tenant", async () => {
+    const { default: handler } = await import("../../api/commands/index");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-1",
+        droplet_ip: "127.0.0.1",
+        gateway_token: "gw-token",
+      },
+      userId: "user-1",
+    });
+    getCommandByIdempotencyKey.mockResolvedValue(null);
+    getActiveCommandByType.mockResolvedValue({
+      id: "cmd-active-company",
+      tenant_id: "tenant-1",
+      status: "acknowledged",
+      command_type: "vault_refresh",
+      target_entity_type: "vault_section",
+      target_entity_id: "company_profile",
+    });
+
+    const req = {
+      method: "POST",
+      body: {
+        command_type: "vault_refresh",
+        target_entity_type: "vault_section",
+        target_entity_id: "brand_voice",
+        idempotency_key: "vault-refresh:tenant-1:brand_voice:attempt-2",
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(createCommandRecord).not.toHaveBeenCalled();
+    expect(dispatchAgentHookMessage).not.toHaveBeenCalled();
+    expect(res.body).toEqual({
+      idempotent: false,
+      reuse_reason: "active_command_type",
+      command: expect.objectContaining({
+        id: "cmd-active-company",
+        status: "acknowledged",
+        target_entity_id: "company_profile",
       }),
     });
   });

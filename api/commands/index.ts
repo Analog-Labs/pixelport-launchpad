@@ -4,6 +4,7 @@ import { buildCommandDispatchMessage } from '../lib/command-contract';
 import {
   appendCommandEvent,
   createCommandRecord,
+  getActiveCommandByType,
   getActiveCommandByTarget,
   getCommandByIdempotencyKey,
   listCommands,
@@ -101,22 +102,37 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
     });
   }
 
-  if (
-    commandInput.reuseActiveTarget &&
-    commandInput.targetEntityType &&
-    commandInput.targetEntityId
-  ) {
-    const activeCommand = await getActiveCommandByTarget({
-      tenantId: tenant.id,
-      commandType: commandInput.commandType,
-      targetEntityType: commandInput.targetEntityType,
-      targetEntityId: commandInput.targetEntityId,
-    });
+  if (commandInput.activeCommandReuseScope !== 'none') {
+    let activeCommand = null;
+
+    if (
+      commandInput.activeCommandReuseScope === 'target' &&
+      commandInput.targetEntityType &&
+      commandInput.targetEntityId
+    ) {
+      activeCommand = await getActiveCommandByTarget({
+        tenantId: tenant.id,
+        commandType: commandInput.commandType,
+        targetEntityType: commandInput.targetEntityType,
+        targetEntityId: commandInput.targetEntityId,
+      });
+    }
+
+    if (commandInput.activeCommandReuseScope === 'command_type') {
+      activeCommand = await getActiveCommandByType({
+        tenantId: tenant.id,
+        commandType: commandInput.commandType,
+      });
+    }
 
     if (activeCommand) {
+      const isSameTarget =
+        activeCommand.target_entity_type === commandInput.targetEntityType &&
+        activeCommand.target_entity_id === commandInput.targetEntityId;
+
       return res.status(200).json({
         idempotent: false,
-        reuse_reason: 'active_target',
+        reuse_reason: isSameTarget ? 'active_target' : 'active_command_type',
         command: activeCommand,
       });
     }
