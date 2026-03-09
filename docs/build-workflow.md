@@ -1,6 +1,6 @@
 # PixelPort — Build Workflow
 
-**Last Updated:** 2026-03-07
+**Last Updated:** 2026-03-09
 **Purpose:** Standardize how a planned change moves from founder Q&A to implementation, CTO review, release, and production QA.
 
 ---
@@ -45,6 +45,8 @@
 7. Copy Claude's full review output back into the active Codex build session.
 8. If Claude blocks the change, let Codex fix it and generate a follow-up review prompt.
 9. If Claude approves the change, let Codex merge, deploy, and run production smoke.
+
+If a build touches Slack, socials, analytics, inboxes, or other real external integrations, Codex may ask founder for the required test access or one-time auth/setup so end-to-end QA can actually be completed. See `docs/qa-policy.md`.
 
 ---
 
@@ -118,6 +120,7 @@ If Claude does not clearly approve, treat the review as not yet approved.
 - After CTO approval, Codex may merge/deploy unless a founder-only decision is still pending.
 - `main` remains the production branch and Vercel deploy source.
 - Same-session production smoke is the default release check.
+- Real QA expectations by build type live in `docs/qa-policy.md`.
 - Open a separate production QA session when:
   - the build is high-risk
   - auth/onboarding/provisioning changed
@@ -131,5 +134,6 @@ If Claude does not clearly approve, treat the review as not yet approved.
 
 - **Planning thread:** founder Q&A and decision-making
 - **Build brief:** `docs/build-briefs/<date>-<slug>.md`
+- **QA policy:** `docs/qa-policy.md`
 - **Formal audit or QA evidence:** `docs/qa/` when needed
 - **Live handoff tracking:** `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`

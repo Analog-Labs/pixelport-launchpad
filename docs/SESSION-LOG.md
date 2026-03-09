@@ -7,6 +7,24 @@
 
 ## Last Session
 
+- **Date:** 2026-03-09 (session 40)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then captured the founder-approved QA principle that PixelPort should validate important builds against real-world inputs instead of relying only on mocks or stale test tenants.
+  - Added the canonical QA guidance doc at `docs/qa-policy.md`.
+  - Defined four QA levels in the new policy:
+    - local/fixture QA
+    - fresh-tenant canary with real public data
+    - controlled integration QA
+    - production smoke
+  - Locked the rule that sessions may and should ask the founder for access when real integration QA needs Slack, social, analytics, inbox, OAuth, or admin-gated setup.
+  - Updated `docs/build-workflow.md` and `docs/project-coordination-system.md` so future sessions are pointed at the new QA policy and know they can request founder access for end-to-end integration checks when required.
+  - Added a matching live note to `docs/ACTIVE-PLAN.md`.
+- **What's next:**
+  - Use `docs/qa-policy.md` as the QA standard for future build briefs and execution sessions.
+  - Continue the approved next build from `docs/build-briefs/2026-03-09-vault-refresh-command-v1.md`.
+- **Blockers:** No blocker for the policy update itself. Controlled integration QA still depends on founder-provided access when those integrations are exercised end to end.
+
 - **Date:** 2026-03-09 (session 39)
 - **Who worked:** Codex
 - **What was done:**

@@ -1,6 +1,6 @@
 # PixelPort — Project Coordination System
 
-**Last Updated:** 2026-03-07
+**Last Updated:** 2026-03-09
 **Purpose:** Keep Founder, Codex, and CTO aligned across async sessions without relying on chat memory.
 **Source of Truth:** The GitHub repo.
 
@@ -177,6 +177,8 @@ Use the collaboration guide in `docs/lovable-collaboration-guide.md` for the day
 - Medium/high builds require Claude CTO review before merge.
 - Founder approval is still required before shipping major product, architecture, or UX changes.
 - After approval, Codex merges to `main`, monitors deploy, and runs production smoke in the same session by default.
+- Follow the QA rules in `docs/qa-policy.md` for when to use local validation, fresh-tenant canaries, controlled integration QA, and production smoke.
+- Sessions are allowed to ask founder for integration access or one-time setup when real Slack/social/analytics/inbox QA requires it.
 - Open a separate deep production QA session only for risky or ambiguous releases, or when the initial smoke reveals uncertainty.
 - Validation evidence should live in:
   - `docs/SESSION-LOG.md`
