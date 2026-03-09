@@ -1,0 +1,236 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { buildCommandDispatchMessage } from '../lib/command-contract';
+import {
+  appendCommandEvent,
+  createCommandRecord,
+  getCommandByIdempotencyKey,
+  listCommands,
+  updateCommandStatus,
+} from '../lib/commands';
+import { authenticateRequest, errorResponse } from '../lib/auth';
+import { dispatchAgentHookMessage } from '../lib/onboarding-bootstrap';
+
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonRecord
+  | JsonValue[];
+
+type JsonRecord = Record<string, JsonValue>;
+
+function normalizeString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function asJsonRecord(value: unknown): JsonRecord | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as JsonRecord) : null;
+}
+
+async function handleGet(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
+  const { tenant } = await authenticateRequest(req);
+  const status = normalizeString(req.query.status);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+  const { commands, total } = await listCommands({
+    tenantId: tenant.id,
+    status,
+    limit,
+    offset,
+  });
+
+  return res.status(200).json({
+    commands,
+    total,
+    limit,
+    offset,
+  });
+}
+
+async function handlePost(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
+  const { tenant, userId } = await authenticateRequest(req);
+
+  const commandType = normalizeString(req.body?.command_type);
+  const title = normalizeString(req.body?.title);
+  const instructions = normalizeString(req.body?.instructions);
+  const idempotencyKey = normalizeString(req.body?.idempotency_key);
+  const targetEntityType = normalizeString(req.body?.target_entity_type);
+  const targetEntityId = normalizeString(req.body?.target_entity_id);
+  const payload = req.body?.payload === undefined ? {} : asJsonRecord(req.body?.payload);
+
+  if (!commandType || !title || !instructions || !idempotencyKey) {
+    return res.status(400).json({
+      error: 'Missing required fields: command_type, title, instructions, idempotency_key',
+    });
+  }
+
+  if (req.body?.payload !== undefined && !payload) {
+    return res.status(400).json({ error: 'payload must be a JSON object when provided' });
+  }
+
+  const existing = await getCommandByIdempotencyKey(tenant.id, idempotencyKey);
+  if (existing) {
+    return res.status(200).json({
+      idempotent: true,
+      command: existing,
+    });
+  }
+
+  let command;
+  try {
+    command = await createCommandRecord({
+      tenantId: tenant.id,
+      requestedByUserId: userId,
+      source: 'dashboard',
+      commandType,
+      title,
+      instructions,
+      idempotencyKey,
+      targetEntityType,
+      targetEntityId,
+      payload,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'COMMAND_IDEMPOTENCY_CONFLICT') {
+      const conflict = await getCommandByIdempotencyKey(tenant.id, idempotencyKey);
+      if (conflict) {
+        return res.status(200).json({
+          idempotent: true,
+          command: conflict,
+        });
+      }
+    }
+
+    throw error;
+  }
+
+  await appendCommandEvent({
+    tenantId: tenant.id,
+    commandId: command.id,
+    eventType: 'created',
+    status: 'pending',
+    actorType: 'dashboard',
+    actorId: userId,
+    message: `Structured command created: ${title}`,
+    payload,
+  });
+
+  if (!tenant.droplet_ip || !tenant.gateway_token) {
+    const failedCommand = await updateCommandStatus({
+      command,
+      nextStatus: 'failed',
+      lastError: 'Agent infrastructure not ready',
+    });
+
+    await appendCommandEvent({
+      tenantId: tenant.id,
+      commandId: command.id,
+      eventType: 'dispatch_failed',
+      status: 'failed',
+      actorType: 'system',
+      actorId: null,
+      message: 'Command could not be dispatched because the tenant runtime is not ready.',
+      payload: {
+        reason: 'runtime_not_ready',
+      },
+    });
+
+    return res.status(503).json({
+      error: 'Agent infrastructure not ready',
+      command: failedCommand,
+    });
+  }
+
+  const dispatchResult = await dispatchAgentHookMessage({
+    gatewayUrl: `http://${tenant.droplet_ip}:18789`,
+    gatewayToken: tenant.gateway_token,
+    name: `PixelPort Command: ${title}`,
+    message: buildCommandDispatchMessage({
+      commandId: command.id,
+      commandType,
+      title,
+      instructions,
+      targetEntityType,
+      targetEntityId,
+      payload,
+    }),
+  });
+
+  if (!dispatchResult.ok) {
+    const failedCommand = await updateCommandStatus({
+      command,
+      nextStatus: 'failed',
+      lastError: dispatchResult.body,
+    });
+
+    await appendCommandEvent({
+      tenantId: tenant.id,
+      commandId: command.id,
+      eventType: 'dispatch_failed',
+      status: 'failed',
+      actorType: 'system',
+      actorId: null,
+      message: 'Runtime hook rejected the command dispatch.',
+      payload: {
+        gateway_status: dispatchResult.status,
+        body: dispatchResult.body,
+      },
+    });
+
+    return res.status(502).json({
+      error: 'Runtime hook rejected the command dispatch',
+      command: failedCommand,
+      gateway_status: dispatchResult.status,
+    });
+  }
+
+  const dispatchedCommand = await updateCommandStatus({
+    command,
+    nextStatus: 'dispatched',
+  });
+
+  await appendCommandEvent({
+    tenantId: tenant.id,
+    commandId: command.id,
+    eventType: 'dispatched',
+    status: 'dispatched',
+    actorType: 'system',
+    actorId: null,
+    message: 'Command dispatched to the Chief through the runtime hook.',
+    payload: {
+      gateway_status: dispatchResult.status,
+    },
+  });
+
+  return res.status(201).json({
+    idempotent: false,
+    command: dispatchedCommand,
+  });
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
+  if (req.method === 'GET') {
+    try {
+      return await handleGet(req, res);
+    } catch (error) {
+      return errorResponse(res, error);
+    }
+  }
+
+  if (req.method === 'POST') {
+    try {
+      return await handlePost(req, res);
+    } catch (error) {
+      return errorResponse(res, error);
+    }
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' });
+}

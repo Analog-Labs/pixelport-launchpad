@@ -328,6 +328,143 @@ export type Database = {
           },
         ]
       }
+      command_events: {
+        Row: {
+          actor_id: string | null
+          actor_type: string
+          command_id: string
+          created_at: string | null
+          event_type: string
+          id: string
+          message: string | null
+          occurred_at: string
+          payload: Json | null
+          status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type: string
+          command_id: string
+          created_at?: string | null
+          event_type: string
+          id?: string
+          message?: string | null
+          occurred_at?: string
+          payload?: Json | null
+          status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string
+          command_id?: string
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          message?: string | null
+          occurred_at?: string
+          payload?: Json | null
+          status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "command_events_command_id_fkey"
+            columns: ["command_id"]
+            isOneToOne: false
+            referencedRelation: "command_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "command_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      command_records: {
+        Row: {
+          acknowledged_at: string | null
+          cancelled_at: string | null
+          command_type: string
+          completed_at: string | null
+          created_at: string | null
+          dispatched_at: string | null
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          instructions: string
+          last_error: string | null
+          payload: Json | null
+          requested_by_user_id: string | null
+          source: string
+          started_at: string | null
+          status: string
+          target_entity_id: string | null
+          target_entity_type: string | null
+          tenant_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          cancelled_at?: string | null
+          command_type: string
+          completed_at?: string | null
+          created_at?: string | null
+          dispatched_at?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key: string
+          instructions: string
+          last_error?: string | null
+          payload?: Json | null
+          requested_by_user_id?: string | null
+          source?: string
+          started_at?: string | null
+          status?: string
+          target_entity_id?: string | null
+          target_entity_type?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          cancelled_at?: string | null
+          command_type?: string
+          completed_at?: string | null
+          created_at?: string | null
+          dispatched_at?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          instructions?: string
+          last_error?: string | null
+          payload?: Json | null
+          requested_by_user_id?: string | null
+          source?: string
+          started_at?: string | null
+          status?: string
+          target_entity_id?: string | null
+          target_entity_type?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "command_records_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       competitors: {
         Row: {
           analysis: Json | null
@@ -728,6 +865,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "vault_sections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_events: {
+        Row: {
+          agent_id: string | null
+          command_id: string | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          event_id: string
+          event_type: string
+          id: string
+          occurred_at: string
+          payload: Json | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          command_id?: string | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          event_id: string
+          event_type: string
+          id?: string
+          occurred_at?: string
+          payload?: Json | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          command_id?: string | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_events_command_id_fkey"
+            columns: ["command_id"]
+            isOneToOne: false
+            referencedRelation: "command_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

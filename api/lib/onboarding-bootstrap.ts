@@ -4,7 +4,7 @@ const GATEWAY_HOOKS_PATH = '/hooks/agent';
 
 type JsonRecord = Record<string, unknown>;
 
-export type BootstrapTriggerResult = {
+export type AgentHookDispatchResult = {
   ok: boolean;
   status: number;
   body: string;
@@ -94,11 +94,13 @@ export function buildOnboardingBootstrapMessage(params: {
     '',
     'Execution requirements:',
     '1. Mark any pending vault sections as "populating" before you work on them.',
-    '2. Create real task records in PixelPort for each major research activity so the dashboard shows backend-driven progress.',
-    '3. Update the vault with concrete findings, add competitor profiles when you have evidence, and create at least one completed strategy or report task summarizing your initial findings.',
-    '4. If you generate content ideas, save them as draft_content tasks that require approval.',
-    '5. If any information is missing, record what you learned and what you still need from the human instead of waiting silently.',
-    '6. Valid task_type values are exactly: draft_content, research, competitor_analysis, strategy, report. If you need a running status, use "running" instead of "in_progress".',
+    '2. Use the workspace contract files at the root plus the `pixelport/` namespace for durable runtime artifacts.',
+    '3. Create real task records in PixelPort for each major research activity so the dashboard shows backend-driven progress.',
+    '4. Update the vault with concrete findings, add competitor profiles when you have evidence, and create at least one completed strategy or report task summarizing your initial findings.',
+    '5. If you promote a runtime artifact or materially change command state, emit a matching `/api/agent/workspace-events` event.',
+    '6. If you generate content ideas, save them as draft_content tasks that require approval.',
+    '7. If any information is missing, record what you learned and what you still need from the human instead of waiting silently.',
+    '8. Valid task_type values are exactly: draft_content, research, competitor_analysis, strategy, report. If you need a running status, use "running" instead of "in_progress".',
     '',
     'Keep your final reply short. The important part is writing the work back into the PixelPort APIs.',
   ];
@@ -106,12 +108,13 @@ export function buildOnboardingBootstrapMessage(params: {
   return lines.join('\n');
 }
 
-export async function triggerOnboardingBootstrap(params: {
+export async function dispatchAgentHookMessage(params: {
   gatewayUrl: string;
   gatewayToken: string;
+  name: string;
   message: string;
   agentId?: string;
-}): Promise<BootstrapTriggerResult> {
+}): Promise<AgentHookDispatchResult> {
   const response = await fetch(`${params.gatewayUrl}${GATEWAY_HOOKS_PATH}`, {
     method: 'POST',
     headers: {
@@ -119,7 +122,7 @@ export async function triggerOnboardingBootstrap(params: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      name: 'Post-Onboarding Bootstrap',
+      name: params.name,
       agentId: params.agentId || 'main',
       message: params.message,
     }),
@@ -133,4 +136,16 @@ export async function triggerOnboardingBootstrap(params: {
     status: response.status,
     body,
   };
+}
+
+export async function triggerOnboardingBootstrap(params: {
+  gatewayUrl: string;
+  gatewayToken: string;
+  message: string;
+  agentId?: string;
+}): Promise<AgentHookDispatchResult> {
+  return dispatchAgentHookMessage({
+    ...params,
+    name: 'Post-Onboarding Bootstrap',
+  });
 }

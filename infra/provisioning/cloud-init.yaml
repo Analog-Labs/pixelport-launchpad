@@ -56,8 +56,10 @@ runcmd:
     docker build -t {{OPENCLAW_RUNTIME_IMAGE}} /opt/openclaw/image
 
     # 3. Write openclaw.json candidates (generated from buildOpenClawConfig)
-    # 4. Write workspace-main/SOUL.md (generated from buildSoulTemplate)
-    # 5. Write .env (OPENAI_API_KEY, OPENAI_BASE_URL, GEMINI_API_KEY, AGENTMAIL_API_KEY, SLACK_APP_TOKEN)
+    # 4. Write the workspace contract:
+    #    - root prompt files: SOUL.md, TOOLS.md, AGENTS.md, HEARTBEAT.md, BOOTSTRAP.md
+    #    - pixelport/ namespace for durable runtime artifacts and snapshots
+    # 5. Write .env (OPENAI_API_KEY, OPENAI_BASE_URL, GEMINI_API_KEY, AGENTMAIL_API_KEY, PIXELPORT_API_KEY, SLACK_APP_TOKEN)
 
     # 6. Set ownership (OpenClaw container runs as node:1000)
     chown -R 1000:1000 /opt/openclaw

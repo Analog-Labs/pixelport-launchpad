@@ -162,11 +162,21 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 
 ## Current Phase: Phase 3 — Integration Framework + Social Publishing
 
-**Status:** Paused pending workspace/control-plane architecture replacement review (session 34).
+**Status:** Old Phase 3 execution sequence remains paused. The approved foundation replacement slice is implemented on `codex/foundation-spine`; CTO review is approved, and the branch now needs the reviewed diff committed before merge/deploy (session 35).
 **Target:** March 2026 (Sessions 10–12+)
 **Goal:** Generic integration framework, first 4 integrations (PostHog, GA4, X, LinkedIn), social publishing + metrics
 
 **Full plan:** `.claude/plans/synthetic-inventing-cocoa.md`
+
+### Approved Replacement Track — Foundation Spine (session 35)
+
+- [x] 3.R1: Additive migration `008_foundation_spine.sql` — `command_records`, `command_events`, `workspace_events`
+- [x] 3.R2: Command ledger APIs — `POST /api/commands`, `GET /api/commands`, `GET /api/commands/:id`
+- [x] 3.R3: Additive runtime event ingest — `POST /api/agent/workspace-events`
+- [x] 3.R4: Provisioning/bootstrap scaffolds `SOUL.md`, `TOOLS.md`, `AGENTS.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`, and the `pixelport/` workspace namespace
+- [x] 3.R5: Validation passed — `npx tsc --noEmit`, targeted `npx eslint`, `npm test`, mocked route smoke
+- [x] 3.R6: Claude CTO review on branch `codex/foundation-spine`
+- [ ] 3.R7: Merge/deploy only after approval, then run same-session production smoke
 
 ### Session 10: Integration Framework — COMPLETE ✅
 
@@ -225,6 +235,8 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 ### Notes
 
 - **CTO architecture review approved (2026-03-08):** Claude CTO approved the replacement architecture and first foundation slice, with additive-rollout conditions: keep existing `/api/agent/*` and `/api/tasks/*` paths untouched in the first implementation session, keep the new command ledger and `workspace-events` ingest additive, and treat the bootstrap prompt-surface refresh as `SOUL.md` + `TOOLS.md` + `AGENTS.md` + `HEARTBEAT.md` + `BOOTSTRAP.md` work rather than directory scaffolding alone.
+- **Foundation spine implementation complete (2026-03-09, session 35):** The approved additive replacement slice is now implemented on branch `codex/foundation-spine`. It adds the command ledger migration/API spine, the `workspace-events` ingest endpoint, the full workspace prompt-surface bootstrap scaffolding, and matching schema/test updates without touching the protected existing `/api/agent/*`, `/api/tasks/*`, or current dashboard read paths. Next gate is Claude CTO review using `docs/build-briefs/2026-03-08-foundation-slice-cto-prompt.md`.
+- **CTO implementation review approved (2026-03-09, session 35):** Claude CTO returned `Verdict: APPROVED` for the foundation slice and found no blocking code issues. The only required follow-up before merge is process: the reviewed working-tree diff must be committed to `codex/foundation-spine` so the approved implementation actually exists on the review branch.
 - **Architecture replacement briefs drafted (2026-03-08, session 34):** The previous Supabase-canonical runtime/admin direction is now formally under redesign. New briefs exist at `docs/build-briefs/2026-03-08-workspace-canonical-architecture.md`, `docs/build-briefs/2026-03-08-foundation-slice.md`, and `docs/build-briefs/2026-03-08-workspace-canonical-cto-prompt.md`. Do not start Sessions 11-12 from the old Phase 3 sequence until the replacement architecture is CTO-reviewed and the new foundation slice is approved.
 - **Build workflow update (2026-03-07, session 31):** Future work now follows `planning thread -> repo build brief -> separate execution session`. Medium/high builds default to `codex/*` branches and require Claude CTO review before merge. After approval, Codex may merge/deploy and run same-session production smoke. Reference: `docs/build-workflow.md` and `docs/build-briefs/template.md`.
 - **Q&A research thread opened (2026-03-07, session 30):** A separate Codex session is now reserved for founder Q&A, targeted research, and drafting future implementation prompts. No checklist items changed from that session; use it to refine scope before starting execution sessions.

@@ -1,5 +1,5 @@
 {
-  "_comment": "OpenClaw configuration template for fresh PixelPort tenants. Matches buildOpenClawConfig() in api/inngest/functions/provision-tenant.ts.",
+  "_comment": "OpenClaw configuration template for fresh PixelPort tenants. Matches buildOpenClawConfig() in api/inngest/functions/provision-tenant.ts; the workspace contract itself is generated separately into workspace-main plus pixelport/.",
   "_note": "Gemini-backed web search is emitted only when GEMINI_API_KEY exists in the deploy environment.",
   "gateway": {
     "auth": {

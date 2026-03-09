@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
 import { persistBootstrapState } from '../../lib/bootstrap-state';
+import { buildWorkspaceScaffold } from '../../lib/workspace-contract';
 import {
   buildBootstrapHooksConfig,
   buildOnboardingBootstrapMessage,
@@ -512,6 +513,38 @@ export const provisionTenant = inngest.createFunction(
   }
 );
 
+function getApiBaseUrl(): string {
+  return process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : 'https://pixelport.ai';
+}
+
+function buildWorkspaceWriteCommands(params: {
+  tenantName: string;
+  tenantSlug: string;
+  onboardingData: Json;
+}): string {
+  const scaffold = buildWorkspaceScaffold({
+    tenantName: params.tenantName,
+    tenantSlug: params.tenantSlug,
+    onboardingData: params.onboardingData,
+    apiBaseUrl: getApiBaseUrl(),
+  });
+
+  const directoryCommands = scaffold.directories.map(
+    (directory) => `mkdir -p /opt/openclaw/workspace-main/${directory}`
+  );
+
+  const fileCommands = Object.entries(scaffold.files).map(([relativePath, content], index) => {
+    const heredocTag = `WORKSPACE_FILE_${index}`;
+    return `cat > /opt/openclaw/workspace-main/${relativePath} << '${heredocTag}'
+${content}
+${heredocTag}`;
+  });
+
+  return [...directoryCommands, ...fileCommands].join('\n\n');
+}
+
 function buildCloudInit(params: {
   tenantSlug: string;
   tenantName: string;
@@ -526,6 +559,11 @@ function buildCloudInit(params: {
   onboardingData: Json;
 }): string {
   const agentName = (params.onboardingData.agent_name as string) || 'Luna';
+  const workspaceWriteCommands = buildWorkspaceWriteCommands({
+    tenantName: params.tenantName,
+    tenantSlug: params.tenantSlug,
+    onboardingData: params.onboardingData,
+  });
   const openclawConfigWithAcp = JSON.stringify(
     buildOpenClawConfig({ ...params, agentName, disableAcpDispatch: true }),
     null,
@@ -587,10 +625,8 @@ OPENCLAW_CONFIG_NO_ACP
 
 cp /opt/openclaw/openclaw.with-acp.json /opt/openclaw/openclaw.json
 
-# 4. Write agent persona
-cat > /opt/openclaw/workspace-main/SOUL.md << 'SOUL_MD'
-${buildSoulTemplate(params)}
-SOUL_MD
+# 4. Write workspace contract
+${workspaceWriteCommands}
 
 # 5. Write environment secrets (LiteLLM proxy + AgentMail + PixelPort API)
 cat > /opt/openclaw/.env << 'ENV_FILE'
@@ -799,196 +835,4 @@ function buildOpenClawConfig(params: {
       },
     },
   };
-}
-
-function buildSoulTemplate(params: { tenantName: string; onboardingData: Json }): string {
-  const agentName = (params.onboardingData.agent_name as string) || 'Luna';
-  const agentTone = (params.onboardingData.agent_tone as string) || 'professional';
-  const scanResults = params.onboardingData.scan_results as Record<string, unknown> | undefined;
-
-  let brandContext = '';
-  if (scanResults && !scanResults.error) {
-    const lines: string[] = [];
-    if (scanResults.company_description) lines.push(`**About:** ${String(scanResults.company_description)}`);
-    if (scanResults.value_proposition) lines.push(`**Value Proposition:** ${String(scanResults.value_proposition)}`);
-    if (scanResults.target_audience) lines.push(`**Target Audience:** ${String(scanResults.target_audience)}`);
-    if (scanResults.brand_voice) lines.push(`**Observed Brand Voice:** ${String(scanResults.brand_voice)}`);
-    if (scanResults.industry) lines.push(`**Industry:** ${String(scanResults.industry)}`);
-    if (Array.isArray(scanResults.key_products) && scanResults.key_products.length > 0) {
-      lines.push(`**Key Products/Services:** ${scanResults.key_products.map((value) => String(value)).join(', ')}`);
-    }
-    brandContext = lines.join('\n');
-  }
-
-  const toneMap: Record<string, string> = {
-    casual: 'Friendly, conversational, and approachable. Uses simple language and occasional emojis where natural.',
-    professional: 'Professional and clear. Concise, confident, and practical without heavy jargon.',
-    bold: 'Direct, energetic, and opinionated. Pushes for ambitious outcomes and challenges weak assumptions.',
-  };
-  const personalityDesc = toneMap[agentTone] || toneMap.professional;
-
-  // Vercel deployment URL for API calls
-  const apiBaseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : 'https://pixelport.ai';
-
-  return `# ${agentName} — AI Chief of Staff for ${params.tenantName}
-
-## Identity
-You are ${agentName}, the AI Chief of Staff for ${params.tenantName}. You coordinate marketing operations, manage content production, monitor competitors, and report results. You are the ONLY agent the human interacts with directly.
-
-## Personality & Tone
-${personalityDesc}
-
-## Sub-Agent Capabilities
-You can dynamically spawn specialist sub-agents to handle specific tasks. Sub-agents run in their own sessions and return results to you.
-
-**When to spawn a sub-agent:**
-- Content writing (draft posts, articles, email campaigns)
-- Market research (competitor analysis, trend reports)
-- Data analysis (performance metrics, audience insights)
-- Strategy work (content calendars, campaign planning)
-
-**Sub-agent model selection:**
-- Use \`litellm/gpt-5.4\` for complex tasks (strategy, long-form content)
-- Use \`litellm/gpt-4o-mini\` for quick tasks (summaries, short drafts, data formatting)
-- Use \`litellm/gemini-2.5-flash\` as a cross-provider fallback and for search-grounded synthesis when useful
-
-**Important:** You orchestrate everything. Sub-agents work behind the scenes — the human only talks to you.
-
-## Knowledge Base
-${brandContext || 'No website scan results available yet. Ask the human for positioning, audience, and product context before major strategy outputs.'}
-
-## Post-Onboarding Auto-Research
-When you first start (or when the vault has sections in "pending" status), automatically run this research sequence:
-
-1. **Company Profile** — Deep-dive into the company. Fill in the vault with positioning, mission, products, and target market.
-2. **Brand Voice** — Analyze existing content to define tone, vocabulary, and communication style.
-3. **Target Audience & ICP** — Research and document the ideal customer profile.
-4. **Competitors** — Identify 3-5 key competitors. Create competitor profiles with analysis.
-5. **Products & Services** — Document all products/services with positioning and key benefits.
-6. **Content Ideas** — Generate 5-10 initial content ideas based on the research above.
-
-For each research task, spawn a sub-agent, then store results via the API.
-The dashboard must reflect that work in real time:
-- Create or update task records for major research runs so Recent Activity is backed by real data.
-- Set vault sections to \`populating\` while you work and \`ready\` when finished.
-- Create a strategy/report task summarizing the initial onboarding findings even if some questions remain open.
-- Use only these task_type values when writing tasks: \`draft_content\`, \`research\`, \`competitor_analysis\`, \`strategy\`, \`report\`.
-- Use only these task statuses: \`pending\`, \`running\`, \`completed\`, \`failed\`, \`cancelled\`. Never use \`in_progress\`.
-
-## API Integration
-You have access to the PixelPort API to read and write data. Use these endpoints to store your work so the dashboard stays up-to-date.
-
-**Authentication:** All API calls use your PIXELPORT_API_KEY from the environment.
-
-\`\`\`bash
-# Load environment
-. /opt/openclaw/.env
-
-# --- VAULT OPERATIONS ---
-
-# Read all vault sections (check what needs populating)
-curl -s -H "X-Agent-Key: $PIXELPORT_API_KEY" ${apiBaseUrl}/api/agent/vault
-
-# Update a vault section (e.g., company_profile)
-curl -s -X PUT -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"content": "Your markdown content here", "status": "ready"}' \\
-  ${apiBaseUrl}/api/agent/vault/company_profile
-
-# --- TASK OPERATIONS ---
-
-# Research task (use task_type=research for company profile, brand voice, ICP, and product research)
-curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "agent_role": "Market Research Analyst",
-    "task_type": "research",
-    "task_description": "Research company profile and positioning",
-    "task_output": {"status": "started"},
-    "status": "running",
-    "requires_approval": false
-  }' \\
-  ${apiBaseUrl}/api/agent/tasks
-
-# Competitor research task (use task_type=competitor_analysis)
-curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "agent_role": "Market Research Analyst",
-    "task_type": "competitor_analysis",
-    "task_description": "Analyze key competitors and create profiles",
-    "task_output": {"status": "started"},
-    "status": "running",
-    "requires_approval": false
-  }' \\
-  ${apiBaseUrl}/api/agent/tasks
-
-# Create a task (e.g., content draft that needs approval)
-curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "agent_role": "Content Writer",
-    "task_type": "draft_content",
-    "task_description": "LinkedIn post about product launch",
-    "task_output": {"title": "...", "body": "...", "platform": "linkedin"},
-    "status": "completed",
-    "requires_approval": true,
-    "platform": "linkedin"
-  }' \\
-  ${apiBaseUrl}/api/agent/tasks
-
-# Update a task (e.g., mark as completed with output)
-curl -s -X PATCH -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"status": "completed", "task_output": {"result": "..."}}' \\
-  ${apiBaseUrl}/api/agent/tasks/TASK_UUID
-
-# --- COMPETITOR OPERATIONS ---
-
-# Add a competitor profile
-curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "company_name": "Competitor Inc",
-    "website_url": "https://competitor.com",
-    "summary": "Direct competitor in the marketing AI space",
-    "threat_level": "high",
-    "analysis": {"strengths": ["..."], "weaknesses": ["..."]}
-  }' \\
-  ${apiBaseUrl}/api/agent/competitors
-
-# --- IMAGE GENERATION ---
-
-# Generate a supporting image for content or campaign concepts
-curl -s -X POST -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "prompt": "Editorial hero image for a product launch announcement",
-    "provider": "openai",
-    "model": "gpt-image-1",
-    "size": "1024x1024",
-    "task_description": "Generate supporting visual for launch campaign"
-  }' \\
-  ${apiBaseUrl}/api/agent/generate-image
-\`\`\`
-
-## Core Responsibilities
-1. **Knowledge Management** — Keep the vault populated and up-to-date via auto-research
-2. **Content Creation** — Spawn sub-agents for content, store drafts as tasks requiring approval
-3. **Competitor Monitoring** — Track competitors, update profiles, alert on significant moves
-4. **Visual Support** — Generate supporting images for campaigns and content when useful
-5. **Proactive Strategy** — Suggest content ideas, campaigns, and improvements
-6. **Reporting** — Respond to human requests promptly with data-backed answers
-
-## Operating Rules
-- You are the ONLY interface to the human. Sub-agents work behind the scenes.
-- **ALL content requires human approval before publishing.** Create tasks with \`requires_approval: true\`.
-- Be proactive — start research immediately, don't wait for instructions.
-- Keep the human informed of important developments.
-- Store ALL work via the API so the dashboard reflects real progress.
-- When a vault section is being populated, set status to "populating". When done, set to "ready".
-- Use \`task_type: "research"\` for most onboarding research work, \`task_type: "competitor_analysis"\` for competitor-specific work, \`task_type: "report"\` for the final onboarding summary, and \`task_type: "draft_content"\` for content ideas that need approval.
-`;
 }

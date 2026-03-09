@@ -7,6 +7,47 @@
 
 ## Last Session
 
+- **Date:** 2026-03-09 (session 35)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `AGENTS.md`, `docs/SESSION-LOG.md`, `docs/ACTIVE-PLAN.md`, `docs/build-workflow.md`, `docs/build-briefs/2026-03-08-workspace-canonical-architecture.md`, and `docs/build-briefs/2026-03-08-foundation-slice.md`, then executed the approved high-risk foundation slice on branch `codex/foundation-spine`.
+  - Added additive Supabase migration `008_foundation_spine.sql` with the new `command_records`, `command_events`, and `workspace_events` tables only. No existing tables were dropped, repurposed, or migrated in this session.
+  - Added the command/runtime foundation APIs:
+    - `POST /api/commands`
+    - `GET /api/commands`
+    - `GET /api/commands/:id`
+    - `POST /api/agent/workspace-events`
+  - Kept the protected live paths unchanged:
+    - existing `/api/agent/tasks`, `/api/agent/vault*`, `/api/agent/competitors`
+    - existing `/api/tasks/*`
+    - existing current dashboard read paths
+  - Added shared helper modules for the new foundation contract:
+    - command lifecycle status mapping and dispatch-message formatting
+    - command ledger storage/update helpers
+    - workspace prompt-surface and `pixelport/` scaffold generation
+  - Refactored `api/lib/onboarding-bootstrap.ts` only enough to expose a reusable generic hook dispatcher, while keeping the existing bootstrap token derivation and hook path intact.
+  - Extended fresh-tenant provisioning so the runtime now boots with the full prompt surface and workspace contract:
+    - root files `SOUL.md`, `TOOLS.md`, `AGENTS.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`
+    - `pixelport/` namespace scaffolding for deliverables, vault snapshots, jobs, runtime status, ops events, and sub-agent scratch
+    - bootstrap status snapshot and initial JSONL ops event
+  - Removed stale permanent `Spark` / `Scout` assumptions from the provisioning prompt surface and refreshed the repo reference files under `infra/provisioning/` so they match the live generator again.
+  - Updated `src/integrations/supabase/types.ts` so the repo schema/types reflect the new additive tables.
+  - Added tests for:
+    - command lifecycle helper logic
+    - workspace prompt-surface/scaffold generation
+    - mocked route smoke for `POST /api/commands`
+    - mocked route smoke for `POST /api/agent/workspace-events`
+  - Validation completed successfully:
+    - `npx tsc --noEmit`
+    - targeted `npx eslint` on all touched API/helper/test files
+    - `npm test` (`5` test files, `9` tests passed)
+  - Created the CTO handoff prompt at `docs/build-briefs/2026-03-08-foundation-slice-cto-prompt.md`.
+- **What's next:**
+  - Claude CTO review is now complete with `Verdict: APPROVED`.
+  - Commit the approved changes onto the actual `codex/foundation-spine` branch, since the review found the implementation still sitting as an uncommitted working tree.
+  - After the branch is committed, merge/deploy the additive foundation slice, apply the new migration, and run the required same-session production smoke.
+- **Blockers:** No code blocker remains. The only follow-up from CTO review was process: commit the approved diff to `codex/foundation-spine` before merge.
+
 - **Date:** 2026-03-08 (session 34)
 - **Who worked:** Codex
 - **What was done:**
