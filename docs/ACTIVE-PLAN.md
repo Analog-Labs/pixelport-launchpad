@@ -162,7 +162,7 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 
 ## Current Phase: Phase 3 — Integration Framework + Social Publishing
 
-**Status:** Old Phase 3 execution sequence remains paused. The approved foundation replacement slice is now merged, deployed, production-validated, and the fresh-tenant command-dispatch gate has passed. The old timeout is now classified as stale disposable test-tenant drift rather than a fresh-tenant runtime bug.
+**Status:** Old Phase 3 execution sequence remains paused. The approved foundation replacement slice is now merged, deployed, production-validated, and the fresh-tenant command-dispatch gate has passed. The first real dashboard command flow is now implemented and fresh-tenant validated on branch `codex/vault-refresh-command-v1`; the next gate is CTO review before merge.
 **Target:** March 2026 (Sessions 10–12+)
 **Goal:** Generic integration framework, first 4 integrations (PostHog, GA4, X, LinkedIn), social publishing + metrics
 
@@ -181,10 +181,10 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 
 ### Next Approved Build — First Real Dashboard Command Flow
 
-- [ ] 3.C1: Execute [2026-03-09-vault-refresh-command-v1.md](/Users/sanchal/pixelport-launchpad/docs/build-briefs/2026-03-09-vault-refresh-command-v1.md) on branch `codex/vault-refresh-command-v1`
-- [ ] 3.C2: Add a section-level `Refresh with Chief` action to the Knowledge Vault page using the existing command spine
-- [ ] 3.C3: Keep the final truth update on the existing live vault path while surfacing section-level command progress
-- [ ] 3.C4: Validate one real fresh-tenant vault refresh end to end before expanding command-backed UX anywhere else
+- [x] 3.C1: Execute [2026-03-09-vault-refresh-command-v1.md](/Users/sanchal/pixelport-launchpad/docs/build-briefs/2026-03-09-vault-refresh-command-v1.md) on branch `codex/vault-refresh-command-v1`
+- [x] 3.C2: Add a section-level `Refresh with Chief` action to the Knowledge Vault page using the existing command spine
+- [x] 3.C3: Keep the final truth update on the existing live vault path while surfacing section-level command progress
+- [x] 3.C4: Validate one real fresh-tenant vault refresh end to end before expanding command-backed UX anywhere else
 
 ### Session 10: Integration Framework — COMPLETE ✅
 
@@ -244,6 +244,7 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 
 - **Next command-dispatch gate (2026-03-09, planning):** Because the current timeout was observed on an older test tenant and the founder is willing to discard old test tenants, the next execution session should validate a brand-new tenant first. New brief: `docs/build-briefs/2026-03-09-fresh-tenant-command-dispatch-canary.md`. Only if the fresh-tenant canary fails should Codex spend time fixing provisioning/runtime reachability.
 - **Fresh-tenant command-dispatch gate passed (2026-03-09, session 38):** Brand-new production tenant `pixelport-fresh-command-20260309055402` (`650e3d26-1100-48b2-b77d-157d9efb73c5`, droplet `556921894` / `142.93.121.149`) reached `active`, exposed the public gateway on `18789`, completed bootstrap, and successfully ran a dashboard-originated command canary end to end. `POST /api/commands`, `GET /api/commands`, `GET /api/commands/:id`, and correlated `workspace_events` all behaved correctly, and the runtime wrote the canary artifact under `pixelport/runtime/snapshots/fresh-command-canary.json`. Result: the old `vidacious-ai-4` timeout is stale/disposable test-tenant drift, not a fresh-tenant production bug. No code change or CTO review was required.
+- **Vault refresh command v1 implemented and validated (2026-03-09, session 40):** Branch `codex/vault-refresh-command-v1` now ships the first real dashboard command flow: section-level `Refresh with Chief` on Knowledge Vault, typed `vault_refresh` command creation through the existing ledger, additive target reuse protection, and inline per-section progress/failure state with existing content preserved. Fresh-tenant validation passed on `vault-refresh-qa-20260309` (`1e45c138-0eca-4f08-a93e-ca817dced78b`, droplet `556931113` / `198.199.80.171`) using command `c69be644-fd37-4047-9883-512f90ff1637`, which advanced through `acknowledged -> running -> completed`, emitted correlated `workspace_events` including `runtime.artifact.promoted`, updated `pixelport/vault/snapshots/company_profile.md` on the droplet, and wrote final Company Profile truth through the existing live agent vault path. Manual vault editing and adjacent read APIs remained healthy on the same tenant. Next gate is CTO review via `docs/build-briefs/2026-03-09-vault-refresh-command-v1-cto-prompt.md`; do not merge before approval.
 - **CTO architecture review approved (2026-03-08):** Claude CTO approved the replacement architecture and first foundation slice, with additive-rollout conditions: keep existing `/api/agent/*` and `/api/tasks/*` paths untouched in the first implementation session, keep the new command ledger and `workspace-events` ingest additive, and treat the bootstrap prompt-surface refresh as `SOUL.md` + `TOOLS.md` + `AGENTS.md` + `HEARTBEAT.md` + `BOOTSTRAP.md` work rather than directory scaffolding alone.
 - **Foundation spine implementation complete (2026-03-09, session 35):** The approved additive replacement slice is now implemented on branch `codex/foundation-spine`. It adds the command ledger migration/API spine, the `workspace-events` ingest endpoint, the full workspace prompt-surface bootstrap scaffolding, and matching schema/test updates without touching the protected existing `/api/agent/*`, `/api/tasks/*`, or current dashboard read paths. Next gate is Claude CTO review using `docs/build-briefs/2026-03-08-foundation-slice-cto-prompt.md`.
 - **CTO implementation review approved (2026-03-09, session 35):** Claude CTO returned `Verdict: APPROVED` for the foundation slice and found no blocking code issues. The only required follow-up before merge is process: the reviewed working-tree diff must be committed to `codex/foundation-spine` so the approved implementation actually exists on the review branch.

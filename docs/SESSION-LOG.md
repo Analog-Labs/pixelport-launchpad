@@ -7,6 +7,54 @@
 
 ## Last Session
 
+- **Date:** 2026-03-09 (session 40)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `AGENTS.md`, `docs/SESSION-LOG.md`, `docs/ACTIVE-PLAN.md`, `docs/build-workflow.md`, `docs/build-briefs/2026-03-08-workspace-canonical-architecture.md`, and `docs/build-briefs/2026-03-09-vault-refresh-command-v1.md`, then executed the approved high-risk build on branch `codex/vault-refresh-command-v1`.
+  - Implemented the first typed product command on top of the additive command spine:
+    - added shared vault section contract helpers in `src/lib/vault-contract.ts`
+    - added typed command-definition resolution in `api/lib/command-definitions.ts`
+    - extended `POST /api/commands` to canonicalize and validate `vault_refresh` plus reuse active same-target commands with additive `reuse_reason`
+    - kept existing `/api/vault`, `/api/agent/vault*`, `/api/tasks/*`, and current dashboard read paths intact
+  - Extended the runtime contract for fresh tenants and command dispatch guidance:
+    - updated `api/lib/command-contract.ts`
+    - updated `api/lib/workspace-contract.ts`
+    - kept execution grounded in the existing hook path plus correlated `workspace-events`
+  - Implemented the Knowledge Vault UI flow in `src/pages/dashboard/Vault.tsx`:
+    - section-level `Refresh with Chief` on ready sections
+    - tenant-id-plus-section keyed browser persistence for active command IDs
+    - inline per-section progress and failure state while existing content stays visible
+    - section-scoped disablement of `Edit` and `Refresh with Chief` during active refresh
+    - success refetch and state clear on terminal completion
+  - Added and updated tests for the new command definition, route behavior, workspace scaffold guidance, command contract, and Vault page UI state.
+  - Local validation passed on the implementation branch:
+    - `npx tsc --noEmit`
+    - targeted `npx eslint`
+    - `npm test -- src/test/command-contract.test.ts src/test/command-definitions.test.ts src/test/commands-route.test.ts src/test/workspace-contract.test.ts src/pages/dashboard/Vault.test.tsx`
+  - Ran a fresh-tenant end-to-end canary against the branch code using the real control plane and runtime:
+    - created a brand-new QA auth user `codex.vault.refresh.1773039386655@example.com`
+    - created tenant `vault-refresh-qa-20260309` (`1e45c138-0eca-4f08-a93e-ca817dced78b`)
+    - new droplet `556931113` / `198.199.80.171`
+    - verified SSH reachability, `cloud-init` completion, Docker install, and `openclaw-gateway` startup on the droplet
+    - waited until bootstrap finished with real backend truth: tenant `active`, `bootstrap.status=completed`, `3` task rows, `3` competitor rows, and all `5` vault sections `ready`
+  - Validated the new `vault_refresh` flow end to end on that fresh tenant:
+    - authenticated into the branch UI locally and triggered `Refresh with Chief` for `company_profile`
+    - observed inline UI state transition from idle to `Refresh requested`, with existing content preserved and section actions disabled
+    - confirmed command `c69be644-fd37-4047-9883-512f90ff1637` was created as `vault_refresh` targeting `vault_section:company_profile`
+    - confirmed command lifecycle advanced through `dispatched -> acknowledged -> running -> completed`
+    - confirmed correlated `workspace_events` arrived for `command.acknowledged`, `command.running`, `runtime.artifact.promoted`, and `command.completed`
+    - confirmed the runtime updated `/opt/openclaw/workspace-main/pixelport/vault/snapshots/company_profile.md`
+    - confirmed the final `vault_sections` truth updated through the existing live agent vault path and the refreshed Company Profile content rendered on the Vault page
+  - Verified non-command behavior stayed healthy on the same fresh tenant:
+    - manual edit through `PUT /api/vault/brand_voice` still worked and was restored cleanly
+    - adjacent reads remained healthy with `200` on `/api/tenants/me`, `/api/tenants/status`, `/api/tasks`, `/api/vault`, and `/api/competitors`
+  - Created the CTO review handoff prompt at `docs/build-briefs/2026-03-09-vault-refresh-command-v1-cto-prompt.md`.
+- **What's next:**
+  - Send branch `codex/vault-refresh-command-v1` to CTO review using `docs/build-briefs/2026-03-09-vault-refresh-command-v1-cto-prompt.md`.
+  - Do not merge until CTO returns `Verdict: APPROVED`.
+  - After approval, merge/deploy and run same-session production smoke on the live Knowledge Vault flow.
+- **Blockers:** No code or validation blocker remains on the implementation branch. The only remaining gate is CTO review before merge.
+
 - **Date:** 2026-03-09 (session 39)
 - **Who worked:** Codex
 - **What was done:**
