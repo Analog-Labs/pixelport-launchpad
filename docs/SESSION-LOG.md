@@ -29,10 +29,10 @@
     - rejected droplet-only canonical media in favor of durable object storage with optional droplet caching
   - Updated `docs/ACTIVE-PLAN.md` so the old Phase 3 execution path is now explicitly paused pending CTO review of the replacement architecture and approval of the new foundation slice.
 - **What's next:**
-  - Hand the three new build-brief docs to Claude Code for CTO review using the generated prompt.
-  - If CTO approves, start the next separate Codex execution session from `docs/build-briefs/2026-03-08-foundation-slice.md`.
+  - CTO review is now complete and approved, with explicit additive-rollout conditions incorporated back into the briefs.
+  - Start the next separate Codex execution session from `docs/build-briefs/2026-03-08-foundation-slice.md`.
   - Do not resume the older Phase 3 social/integrations sequence until the replacement architecture is reviewed.
-- **Blockers:** No blocker for the docs-and-architecture session itself. The next gate is Claude CTO review of the replacement architecture and first foundation slice.
+- **Blockers:** No blocker for the docs-and-architecture session itself. The next gate is starting the separate foundation-slice implementation session under the additive-rollout constraints from CTO review.
 
 - **Date:** 2026-03-08 (session 33)
 - **Who worked:** Codex

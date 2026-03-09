@@ -37,6 +37,7 @@ This slice should not attempt to ship the full admin UI or rewrite the content p
   - full vault redesign
 - Not in scope:
   - trying to migrate every old task/content surface in the same slice
+  - replacing or removing current `/api/agent/*`, `/api/tasks/*`, or dashboard read paths
 
 ## Founder-Approved Decisions
 
@@ -45,6 +46,15 @@ This slice should not attempt to ship the full admin UI or rewrite the content p
 - The old Phase 3 execution order is paused pending this foundation.
 
 ## Implementation Notes
+
+### Coexistence rules
+
+This slice must be strictly additive:
+- existing tenants remain on the current direct-write model until a separate migration session
+- current `/api/agent/tasks`, `/api/agent/vault`, `/api/agent/competitors`, `/api/tasks/*`, and current dashboard pages stay untouched
+- the new `workspace-events` ingest supplements the current model; it does not replace existing agent write endpoints
+- command ledger tables are additive schema only
+- no existing tables are dropped, repurposed, or backfilled in this slice
 
 ### 1. Command ledger
 
@@ -79,11 +89,18 @@ Provisioning/bootstrap should:
 - create the `pixelport/` namespace in the workspace
 - scaffold the initial directories
 - seed any required JSON/Markdown placeholders
+- update the full runtime prompt surface so the Chief knows:
+  - `SOUL.md` for identity and decision posture
+  - `TOOLS.md` for tool and routine policy
+  - `AGENTS.md` for delegation and sub-agent behavior
+  - `HEARTBEAT.md` for proactive/recurring behavior
+  - `BOOTSTRAP.md` for first-run setup and workspace contract orientation
 - update runtime prompt files so the Chief knows:
   - where PixelPort-owned runtime artifacts live
   - where sub-agents may write scratch work
   - that final dashboard-facing manifests must be promoted by the Chief
   - which artifacts should emit projection events back to PixelPort
+- remove the stale `Spark` / `Scout` permanent-role assumptions from [soul-template.md](/Users/sanchal/pixelport-launchpad/infra/provisioning/soul-template.md) as part of the prompt-surface refresh
 
 ### 4. Minimal validation surface
 
@@ -100,6 +117,8 @@ Avoid building end-user UI unless a minimal debug/admin read is required for pro
 - [ ] The runtime can post a structured event back into PixelPort through the new ingest endpoint.
 - [ ] Supabase can persist enough projected data to show command state and at least one runtime-owned event.
 - [ ] Fresh bootstrap writes the `pixelport/` workspace contract and updated runtime instructions.
+- [ ] Existing `/api/agent/*`, `/api/tasks/*`, and current dashboard reads remain untouched and working.
+- [ ] The refreshed bootstrap prompt surface includes `SOUL.md`, `TOOLS.md`, `AGENTS.md`, `HEARTBEAT.md`, and `BOOTSTRAP.md`, and removes stale `Spark` / `Scout` permanent-role references.
 - [ ] TypeScript and any touched validation paths pass.
 
 ## CTO Handoff Prompt

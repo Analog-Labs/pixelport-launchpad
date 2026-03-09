@@ -65,7 +65,7 @@ The output of this brief is a replacement architecture, not feature code.
 | Chief trigger path | [api/lib/onboarding-bootstrap.ts](/Users/sanchal/pixelport-launchpad/api/lib/onboarding-bootstrap.ts) uses the existing external HTTP hook mapping at `/hooks/agent` | Proven dashboard/control-plane to Chief trigger exists already |
 | Runtime bridge | [api/lib/gateway.ts](/Users/sanchal/pixelport-launchpad/api/lib/gateway.ts) is plain HTTP fetch to gateway | No websocket/RPC bridge exists yet |
 | Chat route | [api/chat.ts](/Users/sanchal/pixelport-launchpad/api/chat.ts) still posts to `/openclaw/chat` | Chat transport is not a valid foundation for new command architecture |
-| Provisioning prompt surface | [infra/provisioning/soul-template.md](/Users/sanchal/pixelport-launchpad/infra/provisioning/soul-template.md) and provisioning write only `SOUL.md` today | Workspace contract is not bootstrapped as a product-level system yet |
+| Provisioning prompt surface | [infra/provisioning/soul-template.md](/Users/sanchal/pixelport-launchpad/infra/provisioning/soul-template.md) still references stale permanent `Spark` and `Scout` roles and provisioning writes only `SOUL.md` today | Workspace contract and full runtime prompt surface are not bootstrapped as a product-level system yet |
 
 ### OpenClaw reality that constrains the design
 
@@ -252,7 +252,25 @@ Projection should be push-first with repair:
 - periodic reconcile repairs drift when runtime and projection diverge
 - when drift is detected, workspace/runtime truth wins for runtime-owned entities
 
-### 11. Rejected alternatives
+This brief intentionally defers the exact reconciliation mechanism and cadence. The foundation slice should only create the ingest/projection spine, not a full drift-repair engine.
+
+### 11. Existing tenant coexistence
+
+This architecture is forward-looking. The first implementation slice must be additive:
+- existing active tenants remain on the current direct-write model until a separate migration brief exists
+- current `/api/agent/tasks`, `/api/agent/vault`, `/api/agent/competitors`, `/api/tasks/*`, and dashboard pages remain the live path
+- the new command ledger and `workspace-events` ingest are additive control-plane and runtime surfaces
+- no existing tables should be dropped or repurposed in the foundation slice
+
+### 12. Recovery posture
+
+This architecture assumes:
+- control-plane truth survives tenant droplet loss
+- runtime-authored workspace artifacts may need reconstruction after a rebuild
+
+Workspace reconstruction from control-plane state is a required future design, but is explicitly deferred out of the foundation slice.
+
+### 13. Rejected alternatives
 
 - **Pure workspace-canonical everything**
   - Rejected because approvals, deterministic human edits, and durable product audit do not fit cleanly on a tenant droplet alone.
@@ -279,6 +297,7 @@ Projection should be push-first with repair:
   - `api/chat.ts` is not a valid command path
   - current live dashboard remains task/vault-backed
   - current repo already has dormant `content_items` and `approvals` surfaces
+  - existing active tenants require coexistence before any migration
 - External dependencies:
   - official OpenClaw runtime behavior on pinned version
   - future object storage choice
