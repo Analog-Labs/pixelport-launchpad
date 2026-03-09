@@ -7,6 +7,43 @@
 
 ## Last Session
 
+- **Date:** 2026-03-09 (session 42)
+- **Who worked:** Codex
+- **What was done:**
+  - Merged the CTO-approved `codex/vault-refresh-command-v1` branch to `main` and deployed the live Knowledge Vault refresh flow.
+  - Ran same-session production smoke on `https://pixelport-launchpad.vercel.app` and found a real Vercel serverless regression in `POST /api/commands` / `GET /api/commands`:
+    - production returned `500 FUNCTION_INVOCATION_FAILED`
+    - Vercel logs showed `ERR_REQUIRE_ESM` because server code was importing the shared vault contract from outside `api/`
+  - Shipped the first production hotfix on `main`:
+    - moved the shared vault contract to `api/lib/vault-contract.ts`
+    - updated all server and dashboard imports to the new location
+    - validated locally with `npx tsc --noEmit`, targeted `npx eslint`, and focused Vitest
+    - deployed hotfix commit `9339ba4` and confirmed production `POST /api/commands` was restored
+  - Re-ran live production Vault refresh smoke on the real QA tenant `vault-refresh-qa-20260309` (`1e45c138-0eca-4f08-a93e-ca817dced78b`) and found one more real overlap bug:
+    - an API-triggered `products` refresh completed correctly as command `3c4644b3-6d66-41b8-a0f5-61806fa8ae5f`
+    - a second overlapping dashboard-triggered `brand_voice` refresh updated live vault truth and the droplet snapshot, but its command ledger entry `2a351c7d-15b4-42f7-aca7-11b171072fa8` remained stuck at `dispatched`
+  - Asked the founder for the product decision on overlap handling; founder approved option B: only one Vault refresh may be active per tenant at a time.
+  - Shipped the follow-up production guard on `main` in commit `33b75d1`:
+    - changed `vault_refresh` reuse policy from section-scoped to tenant-scoped
+    - added additive `reuse_reason: "active_command_type"` when another vault refresh is already active for the tenant
+    - updated browser storage and Vault page state so only one active refresh command is persisted per tenant
+    - disabled all `Refresh with Chief` buttons while any tenant-wide vault refresh is active
+    - taught the page to discover an existing active vault refresh on load through `GET /api/commands?limit=10` and continue polling the actual active command
+    - added route and Vault UI test coverage for the cross-section overlap case
+  - Final local validation for the overlap guard passed:
+    - `npx tsc --noEmit`
+    - targeted `npx eslint`
+    - `vitest run src/test/command-definitions.test.ts src/test/commands-route.test.ts src/pages/dashboard/Vault.test.tsx`
+  - Final production validation for the overlap guard passed on the same live QA tenant:
+    - existing stuck command `2a351c7d-15b4-42f7-aca7-11b171072fa8` remained visible as the tenant's active `brand_voice` refresh
+    - `POST /api/commands` for `products` returned `200` with `reuse_reason: "active_command_type"` and reused the existing `brand_voice` command instead of creating another row
+    - the live Vault page loaded `GET /api/commands?limit=10` plus `GET /api/commands/:id`, surfaced the active `brand_voice` refresh, and disabled all five `Refresh with Chief` buttons
+    - adjacent production reads remained healthy during smoke
+- **What's next:**
+  - Leave the single-active tenant guard in place for Vault refreshes.
+  - Add stale non-terminal command recovery or operator repair before expanding command-backed UX to broader dashboard surfaces, because old stuck commands can now intentionally block new refreshes for that tenant.
+- **Blockers:** No blocker remains for the shipped production guard. One follow-up hardening gap remains: recovery for stale non-terminal command rows created before or outside the new guard.
+
 - **Date:** 2026-03-09 (session 41)
 - **Who worked:** Codex
 - **What was done:**
