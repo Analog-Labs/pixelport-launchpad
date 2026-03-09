@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { supabase } from '../lib/supabase';
-import { VAULT_SECTION_KEYS, isVaultSectionKey } from '../../lib/vault-contract';
+import { VAULT_SECTION_KEYS, isVaultSectionKey } from '../lib/vault-contract';
 
 /**
  * PUT /api/vault/:key — User edits a vault section from the dashboard

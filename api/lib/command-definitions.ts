@@ -3,7 +3,7 @@ import {
   getVaultSectionTitle,
   isVaultSectionKey,
   type VaultSectionKey,
-} from "../../lib/vault-contract";
+} from "./vault-contract";
 
 type JsonValue =
   | string
