@@ -32,7 +32,7 @@ const HeroSection = () => (
         className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-[1.1] text-center animate-fade-in-up"
         style={{ animationDelay: "0.1s" }}
       >
-        My AI Chief of Staff
+        Your AI Chief of Staff
       </h1>
 
       {/* Subtitle */}
