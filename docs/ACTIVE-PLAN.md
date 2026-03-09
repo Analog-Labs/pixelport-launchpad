@@ -179,6 +179,13 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 - [x] 3.R7: Merge/deploy after approval, apply remote migration `008_foundation_spine.sql`, and run same-session production smoke
 - [x] 3.R8: Run a fresh-tenant command-dispatch canary to determine whether the current hook reachability issue is only a stale old-tenant problem or a real fresh-tenant provisioning/runtime bug
 
+### Next Approved Build — First Real Dashboard Command Flow
+
+- [ ] 3.C1: Execute [2026-03-09-vault-refresh-command-v1.md](/Users/sanchal/pixelport-launchpad/docs/build-briefs/2026-03-09-vault-refresh-command-v1.md) on branch `codex/vault-refresh-command-v1`
+- [ ] 3.C2: Add a section-level `Refresh with Chief` action to the Knowledge Vault page using the existing command spine
+- [ ] 3.C3: Keep the final truth update on the existing live vault path while surfacing section-level command progress
+- [ ] 3.C4: Validate one real fresh-tenant vault refresh end to end before expanding command-backed UX anywhere else
+
 ### Session 10: Integration Framework — COMPLETE ✅
 
 - [x] 3.F1: Delete `api/analytics/track.ts` (replaced by tenant PostHog integration)

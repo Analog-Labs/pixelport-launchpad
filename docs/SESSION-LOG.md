@@ -7,6 +7,20 @@
 
 ## Last Session
 
+- **Date:** 2026-03-09 (session 39)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then confirmed the fresh-tenant canary result showed the timeout was only stale disposable old-tenant drift rather than a fresh-tenant provisioning/runtime bug.
+  - Fast-forward merged the docs-only canary result from branch `codex/fresh-tenant-command-dispatch` into `main` and pushed `main` so the live repo history now records the passed fresh-tenant dispatch gate.
+  - Prepared the next smallest real product build on top of the new foundation spine: one command-backed dashboard action instead of jumping straight into broader admin or publishing work.
+  - Created the next execution brief at `docs/build-briefs/2026-03-09-vault-refresh-command-v1.md`.
+  - Founder approved `Knowledge Vault -> Refresh with Chief` as the next build choice over content draft generation or competitor sweep.
+  - Updated `docs/ACTIVE-PLAN.md` so the next approved build is now the first real dashboard command flow: a section-level `Refresh with Chief` action on the Knowledge Vault page that uses the additive command spine and existing live vault truth path.
+- **What's next:**
+  - Start a separate Codex execution session from `docs/build-briefs/2026-03-09-vault-refresh-command-v1.md`.
+  - Keep the first command-backed product slice narrow: one bounded Vault refresh action, fresh-tenant validation, then CTO review before merge.
+- **Blockers:** No blocker for the planning/docs step. The next execution session needs a reachable fresh tenant runtime for end-to-end validation.
+
 - **Date:** 2026-03-09 (session 38)
 - **Who worked:** Codex
 - **What was done:**
