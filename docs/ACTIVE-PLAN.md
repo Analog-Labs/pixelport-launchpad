@@ -177,7 +177,7 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 - [x] 3.R5: Validation passed — `npx tsc --noEmit`, targeted `npx eslint`, `npm test`, mocked route smoke
 - [x] 3.R6: Claude CTO review on branch `codex/foundation-spine`
 - [x] 3.R7: Merge/deploy after approval, apply remote migration `008_foundation_spine.sql`, and run same-session production smoke
-- [ ] 3.R8: Investigate runtime hook reachability for existing tenant droplets so dashboard-originated commands can dispatch instead of failing cleanly with `502/504`
+- [ ] 3.R8: Run a fresh-tenant command-dispatch canary to determine whether the current hook reachability issue is only a stale old-tenant problem or a real fresh-tenant provisioning/runtime bug
 
 ### Session 10: Integration Framework — COMPLETE ✅
 
@@ -235,6 +235,7 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 
 ### Notes
 
+- **Next command-dispatch gate (2026-03-09, planning):** Because the current timeout was observed on an older test tenant and the founder is willing to discard old test tenants, the next execution session should validate a brand-new tenant first. New brief: `docs/build-briefs/2026-03-09-fresh-tenant-command-dispatch-canary.md`. Only if the fresh-tenant canary fails should Codex spend time fixing provisioning/runtime reachability.
 - **CTO architecture review approved (2026-03-08):** Claude CTO approved the replacement architecture and first foundation slice, with additive-rollout conditions: keep existing `/api/agent/*` and `/api/tasks/*` paths untouched in the first implementation session, keep the new command ledger and `workspace-events` ingest additive, and treat the bootstrap prompt-surface refresh as `SOUL.md` + `TOOLS.md` + `AGENTS.md` + `HEARTBEAT.md` + `BOOTSTRAP.md` work rather than directory scaffolding alone.
 - **Foundation spine implementation complete (2026-03-09, session 35):** The approved additive replacement slice is now implemented on branch `codex/foundation-spine`. It adds the command ledger migration/API spine, the `workspace-events` ingest endpoint, the full workspace prompt-surface bootstrap scaffolding, and matching schema/test updates without touching the protected existing `/api/agent/*`, `/api/tasks/*`, or current dashboard read paths. Next gate is Claude CTO review using `docs/build-briefs/2026-03-08-foundation-slice-cto-prompt.md`.
 - **CTO implementation review approved (2026-03-09, session 35):** Claude CTO returned `Verdict: APPROVED` for the foundation slice and found no blocking code issues. The only required follow-up before merge is process: the reviewed working-tree diff must be committed to `codex/foundation-spine` so the approved implementation actually exists on the review branch.

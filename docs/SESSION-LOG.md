@@ -7,6 +7,21 @@
 
 ## Last Session
 
+- **Date:** 2026-03-09 (session 37)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md`, then reviewed the freshly deployed foundation-spine outcome and the remaining runtime-hook follow-up tracked from session 36.
+  - Reframed the next decision based on founder guidance that old test tenants are disposable: the immediate question is no longer “repair the old timed-out tenant first,” but “do fresh tenants created now dispatch commands successfully?”
+  - Created the next execution brief at `docs/build-briefs/2026-03-09-fresh-tenant-command-dispatch-canary.md`.
+  - Updated `docs/ACTIVE-PLAN.md` so the next replacement-track item now explicitly requires a fresh-tenant command-dispatch canary before spending engineering time on backward repair of older test droplets.
+  - Locked the decision rule for the next session:
+    - if a fresh tenant can dispatch commands successfully, treat the current old-tenant timeout as a stale/disposable test-tenant issue and move on
+    - if a fresh tenant also fails, treat it as a real provisioning/runtime bug and fix the minimum thing required for fresh tenants
+- **What's next:**
+  - Start a separate Codex execution session from `docs/build-briefs/2026-03-09-fresh-tenant-command-dispatch-canary.md`.
+  - Use the fresh-tenant result to decide whether old tenants can be ignored or whether runtime/provisioning repair is actually required.
+- **Blockers:** No blocker for the planning/docs step itself. The next dependency is the result of the fresh-tenant canary.
+
 - **Date:** 2026-03-09 (session 36)
 - **Who worked:** Codex
 - **What was done:**
