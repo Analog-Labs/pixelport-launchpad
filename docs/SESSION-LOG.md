@@ -7,6 +7,48 @@
 
 ## Last Session
 
+- **Date:** 2026-03-08 (session 34)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `AGENTS.md`, `docs/SESSION-LOG.md`, `docs/ACTIVE-PLAN.md`, `docs/build-workflow.md`, `docs/pixelport-master-plan-v2.md`, and `docs/openclaw-reference.md`, then audited the current repo/runtime surfaces that the founder wanted re-architected.
+  - Re-confirmed the live repo mismatch that motivated the redesign:
+    - dashboard Content + Calendar still run on `agent_tasks`
+    - Vault is already human-editable through `vault_sections`
+    - legacy `content_items` + `approvals` APIs still exist but are not the active product path
+    - `api/chat.ts` still targets the invalid old `/openclaw/chat` route
+    - the proven dashboard/control-plane -> Chief trigger is still the existing external HTTP hook mapping used by onboarding bootstrap
+    - no websocket/runtime-admin bridge exists yet beyond the plain HTTP gateway helper
+  - Grounded the replacement direction against official OpenClaw docs and the local compiled reference, including the current runtime roles of `SOUL.md`, `TOOLS.md`, `AGENTS.md`, `HEARTBEAT.md`, hook mappings, sub-agents, cron, and workspace structure.
+  - Created the replacement architecture brief at `docs/build-briefs/2026-03-08-workspace-canonical-architecture.md`.
+  - Created the first implementation-ready foundation brief at `docs/build-briefs/2026-03-08-foundation-slice.md`.
+  - Created the strict Claude CTO review handoff prompt at `docs/build-briefs/2026-03-08-workspace-canonical-cto-prompt.md`.
+  - Explicitly redesigned several earlier assumptions in the new brief instead of preserving them by default:
+    - recommended a three-plane architecture (`Supabase control plane` + `OpenClaw runtime/workspace plane` + `object storage asset plane`) instead of forcing one source of truth for everything
+    - kept workspace-first runtime artifacts where that fits the Chief product model
+    - moved deterministic human edits, approvals, and command truth back to the control plane where product truthfulness requires it
+    - rejected droplet-only canonical media in favor of durable object storage with optional droplet caching
+  - Updated `docs/ACTIVE-PLAN.md` so the old Phase 3 execution path is now explicitly paused pending CTO review of the replacement architecture and approval of the new foundation slice.
+- **What's next:**
+  - Hand the three new build-brief docs to Claude Code for CTO review using the generated prompt.
+  - If CTO approves, start the next separate Codex execution session from `docs/build-briefs/2026-03-08-foundation-slice.md`.
+  - Do not resume the older Phase 3 social/integrations sequence until the replacement architecture is reviewed.
+- **Blockers:** No blocker for the docs-and-architecture session itself. The next gate is Claude CTO review of the replacement architecture and first foundation slice.
+
+- **Date:** 2026-03-08 (session 33)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `docs/SESSION-LOG.md` and `docs/ACTIVE-PLAN.md` per session protocol, then diagnosed the reported Playwright MCP instability on the local Codex desktop setup.
+  - Found the recurring local failure mode from prior sessions again: stale `@playwright/mcp` processes and a locked shared Chrome profile under `~/Library/Caches/ms-playwright/mcp-chrome`.
+  - Added repo-tracked wrapper `tools/mcp/playwright-mcp.sh` to launch a pinned `@playwright/mcp@0.0.68` with `npx -y`, `--isolated`, and `--headless` so new Codex sessions stop sharing the persistent `mcp-chrome` profile.
+  - Updated the active Codex desktop MCP registry at `~/.codex/config.toml` so `playwright` now uses that wrapper instead of the bare `npx @playwright/mcp@latest` entry.
+  - Cleared the stale local Playwright MCP processes so the old locked browser/profile state is no longer held open.
+  - Restored the missing repo wrapper `tools/mcp/github-mcp.sh` after the fresh-session verification exposed that the global GitHub MCP path was broken.
+  - Verified in fresh `codex exec` sessions that MCP startup now reports `github`, `digitalocean`, and `playwright` all `ready`, and that the Playwright MCP browser successfully opened `https://example.com` and returned page title `Example Domain`.
+- **What's next:**
+  - Restart or open a fresh Codex desktop session if any already-open window is still attached to the pre-fix Playwright server.
+  - Use the new wrapper-backed Playwright MCP path for future browser checks.
+- **Blockers:** No blocker for this request. Existing project blockers remain tracked in `docs/ACTIVE-PLAN.md`.
+
 - **Date:** 2026-03-07 (session 31)
 - **Who worked:** Codex
 - **What was done:**

@@ -141,6 +141,7 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 - **MCP follow-up (2026-03-07, session 21):** GitHub MCP is now attached far enough to attempt startup, but it still fails in the active session because `GITHUB_PERSONAL_ACCESS_TOKEN` is not set. DigitalOcean MCP is working and returned live account metadata successfully.
 - **MCP re-check (2026-03-07, session 22):** GitHub MCP and DigitalOcean MCP both responded successfully in the active Codex session. GitHub `get_me` returned authenticated user `sanchalr`, and DigitalOcean `droplet-list` returned live droplet data including active droplet `555041719` in `sgp1`.
 - **MCP fix (2026-03-07, session 23):** Codex desktop now uses the actual global MCP registry in `~/.codex/config.toml` for both servers. GitHub MCP was switched from the broken remote HTTP attempt to a local official `github-mcp-server` binary launched through `tools/mcp/github-mcp.sh`, which reuses the machine's existing `gh` auth. A fresh isolated `codex exec` agent confirmed both GitHub MCP and DigitalOcean MCP come up and answer live requests. The three PixelPort skills remain usable and unchanged.
+- **Playwright MCP fix (2026-03-08, session 33):** Diagnosed the recurring local Playwright MCP issue as stale shared-browser state under `~/Library/Caches/ms-playwright/mcp-chrome`, added repo wrapper `tools/mcp/playwright-mcp.sh` to launch a pinned `@playwright/mcp@0.0.68` with `--isolated --headless`, updated `~/.codex/config.toml` to use it, cleared the stale local Playwright processes, restored the missing `tools/mcp/github-mcp.sh` wrapper, and re-verified in a fresh `codex exec` session that `github`, `digitalocean`, and `playwright` all start cleanly and Playwright can open `https://example.com`.
 - **Frontend track complete (2026-03-05, session 7):** Founder built all 5 dashboard pages + global dark theme in Lovable. All pages wired to real APIs.
 - **Phase 2 deferred items built (session 9):** Image gen, Mem0, PostHog endpoints all built. Awaiting API keys for Mem0 + PostHog activation.
 - **Codex MCP integration (session 8):** Codex CLI v0.111.0 integrated via MCP. GPT-5.4 xhigh reasoning. Dual QA pattern established.
@@ -161,6 +162,7 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 
 ## Current Phase: Phase 3 — Integration Framework + Social Publishing
 
+**Status:** Paused pending workspace/control-plane architecture replacement review (session 34).
 **Target:** March 2026 (Sessions 10–12+)
 **Goal:** Generic integration framework, first 4 integrations (PostHog, GA4, X, LinkedIn), social publishing + metrics
 
@@ -222,6 +224,7 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 
 ### Notes
 
+- **Architecture replacement briefs drafted (2026-03-08, session 34):** The previous Supabase-canonical runtime/admin direction is now formally under redesign. New briefs exist at `docs/build-briefs/2026-03-08-workspace-canonical-architecture.md`, `docs/build-briefs/2026-03-08-foundation-slice.md`, and `docs/build-briefs/2026-03-08-workspace-canonical-cto-prompt.md`. Do not start Sessions 11-12 from the old Phase 3 sequence until the replacement architecture is CTO-reviewed and the new foundation slice is approved.
 - **Build workflow update (2026-03-07, session 31):** Future work now follows `planning thread -> repo build brief -> separate execution session`. Medium/high builds default to `codex/*` branches and require Claude CTO review before merge. After approval, Codex may merge/deploy and run same-session production smoke. Reference: `docs/build-workflow.md` and `docs/build-briefs/template.md`.
 - **Q&A research thread opened (2026-03-07, session 30):** A separate Codex session is now reserved for founder Q&A, targeted research, and drafting future implementation prompts. No checklist items changed from that session; use it to refine scope before starting execution sessions.
 - **Operating model changed (2026-03-06):** Codex is now the Technical Lead and primary owner of repo implementation across frontend, backend, infra, and integrations. Founder approves major product, architecture, and UX decisions. CTO is now an occasional QA/reviewer rather than a routine gate.
