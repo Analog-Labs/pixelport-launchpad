@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { supabase } from '../lib/supabase';
-
-const VALID_KEYS = ['company_profile', 'brand_voice', 'icp', 'competitors', 'products'];
+import { VAULT_SECTION_KEYS, isVaultSectionKey } from '../../src/lib/vault-contract';
 
 /**
  * PUT /api/vault/:key — User edits a vault section from the dashboard
@@ -17,8 +16,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const { tenant } = await authenticateRequest(req);
     const sectionKey = req.query.key as string;
 
-    if (!sectionKey || !VALID_KEYS.includes(sectionKey)) {
-      return res.status(400).json({ error: `Invalid section key. Must be one of: ${VALID_KEYS.join(', ')}` });
+    if (!sectionKey || !isVaultSectionKey(sectionKey)) {
+      return res.status(400).json({ error: `Invalid section key. Must be one of: ${VAULT_SECTION_KEYS.join(', ')}` });
     }
 
     const { content } = req.body || {};

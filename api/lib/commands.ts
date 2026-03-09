@@ -1,5 +1,6 @@
 import {
   type CommandStatus,
+  NON_TERMINAL_COMMAND_STATUSES,
   getCommandStatusForRuntimeEvent,
   getCommandTimestampField,
   shouldAdvanceCommandStatus,
@@ -107,6 +108,31 @@ export async function getCommandByIdempotencyKey(
   }
 
   return (data as CommandRecordRow | null) ?? null;
+}
+
+export async function getActiveCommandByTarget(params: {
+  tenantId: string;
+  commandType: string;
+  targetEntityType: string;
+  targetEntityId: string;
+}): Promise<CommandRecordRow | null> {
+  const { data, error } = await supabase
+    .from('command_records')
+    .select('*')
+    .eq('tenant_id', params.tenantId)
+    .eq('command_type', params.commandType)
+    .eq('target_entity_type', params.targetEntityType)
+    .eq('target_entity_id', params.targetEntityId)
+    .in('status', NON_TERMINAL_COMMAND_STATUSES)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw new Error(`Failed to load active command by target: ${error.message}`);
+  }
+
+  const commands = (data as CommandRecordRow[] | null) ?? [];
+  return commands[0] ?? null;
 }
 
 export async function createCommandRecord(params: {

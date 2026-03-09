@@ -1,8 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { resolveCommandInput } from '../lib/command-definitions';
 import { buildCommandDispatchMessage } from '../lib/command-contract';
 import {
   appendCommandEvent,
   createCommandRecord,
+  getActiveCommandByTarget,
   getCommandByIdempotencyKey,
   listCommands,
   updateCommandStatus,
@@ -65,9 +67,9 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
   const targetEntityId = normalizeString(req.body?.target_entity_id);
   const payload = req.body?.payload === undefined ? {} : asJsonRecord(req.body?.payload);
 
-  if (!commandType || !title || !instructions || !idempotencyKey) {
+  if (!commandType || !idempotencyKey) {
     return res.status(400).json({
-      error: 'Missing required fields: command_type, title, instructions, idempotency_key',
+      error: 'Missing required fields: command_type, idempotency_key',
     });
   }
 
@@ -75,12 +77,49 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
     return res.status(400).json({ error: 'payload must be a JSON object when provided' });
   }
 
+  const resolvedCommand = resolveCommandInput({
+    commandType,
+    title,
+    instructions,
+    targetEntityType,
+    targetEntityId,
+    payload: payload ?? {},
+  });
+
+  if (!resolvedCommand.ok) {
+    return res.status(resolvedCommand.status).json({ error: resolvedCommand.error });
+  }
+
+  const commandInput = resolvedCommand.command;
+
   const existing = await getCommandByIdempotencyKey(tenant.id, idempotencyKey);
   if (existing) {
     return res.status(200).json({
       idempotent: true,
+      reuse_reason: 'idempotency_key',
       command: existing,
     });
+  }
+
+  if (
+    commandInput.reuseActiveTarget &&
+    commandInput.targetEntityType &&
+    commandInput.targetEntityId
+  ) {
+    const activeCommand = await getActiveCommandByTarget({
+      tenantId: tenant.id,
+      commandType: commandInput.commandType,
+      targetEntityType: commandInput.targetEntityType,
+      targetEntityId: commandInput.targetEntityId,
+    });
+
+    if (activeCommand) {
+      return res.status(200).json({
+        idempotent: false,
+        reuse_reason: 'active_target',
+        command: activeCommand,
+      });
+    }
   }
 
   let command;
@@ -89,13 +128,13 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
       tenantId: tenant.id,
       requestedByUserId: userId,
       source: 'dashboard',
-      commandType,
-      title,
-      instructions,
+      commandType: commandInput.commandType,
+      title: commandInput.title,
+      instructions: commandInput.instructions,
       idempotencyKey,
-      targetEntityType,
-      targetEntityId,
-      payload,
+      targetEntityType: commandInput.targetEntityType,
+      targetEntityId: commandInput.targetEntityId,
+      payload: commandInput.payload,
     });
   } catch (error) {
     if (error instanceof Error && error.message === 'COMMAND_IDEMPOTENCY_CONFLICT') {
@@ -103,6 +142,7 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
       if (conflict) {
         return res.status(200).json({
           idempotent: true,
+          reuse_reason: 'idempotency_key',
           command: conflict,
         });
       }
@@ -118,8 +158,8 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
     status: 'pending',
     actorType: 'dashboard',
     actorId: userId,
-    message: `Structured command created: ${title}`,
-    payload,
+    message: `Structured command created: ${commandInput.title}`,
+    payload: commandInput.payload,
   });
 
   if (!tenant.droplet_ip || !tenant.gateway_token) {
@@ -151,15 +191,16 @@ async function handlePost(req: VercelRequest, res: VercelResponse): Promise<Verc
   const dispatchResult = await dispatchAgentHookMessage({
     gatewayUrl: `http://${tenant.droplet_ip}:18789`,
     gatewayToken: tenant.gateway_token,
-    name: `PixelPort Command: ${title}`,
+    name: `PixelPort Command: ${commandInput.title}`,
     message: buildCommandDispatchMessage({
       commandId: command.id,
-      commandType,
-      title,
-      instructions,
-      targetEntityType,
-      targetEntityId,
-      payload,
+      commandType: commandInput.commandType,
+      title: commandInput.title,
+      instructions: commandInput.instructions,
+      targetEntityType: commandInput.targetEntityType,
+      targetEntityId: commandInput.targetEntityId,
+      payload: commandInput.payload,
+      commandSpecificRequirements: commandInput.dispatchRequirements,
     }),
   });
 

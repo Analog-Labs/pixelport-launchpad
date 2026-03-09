@@ -7,6 +7,7 @@ const errorResponse = vi.fn((res: MockResponse, error: unknown) =>
   })
 );
 const getCommandByIdempotencyKey = vi.fn();
+const getActiveCommandByTarget = vi.fn();
 const createCommandRecord = vi.fn();
 const appendCommandEvent = vi.fn();
 const updateCommandStatus = vi.fn();
@@ -21,6 +22,7 @@ vi.mock("../../api/lib/auth", () => ({
 vi.mock("../../api/lib/commands", () => ({
   appendCommandEvent,
   createCommandRecord,
+  getActiveCommandByTarget,
   getCommandByIdempotencyKey,
   listCommands,
   updateCommandStatus,
@@ -55,6 +57,7 @@ function createMockResponse(): MockResponse {
 describe("POST /api/commands", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getActiveCommandByTarget.mockResolvedValue(null);
   });
 
   it("creates and dispatches a new command", async () => {
@@ -143,6 +146,7 @@ describe("POST /api/commands", () => {
     expect(dispatchAgentHookMessage).not.toHaveBeenCalled();
     expect(res.body).toEqual({
       idempotent: true,
+      reuse_reason: "idempotency_key",
       command: expect.objectContaining({
         id: "cmd-existing",
       }),
@@ -206,6 +210,147 @@ describe("POST /api/commands", () => {
         status: "failed",
       }),
       gateway_status: 504,
+    });
+  });
+
+  it("reuses an active vault_refresh command for the same section", async () => {
+    const { default: handler } = await import("../../api/commands/index");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-1",
+        droplet_ip: "127.0.0.1",
+        gateway_token: "gw-token",
+      },
+      userId: "user-1",
+    });
+    getCommandByIdempotencyKey.mockResolvedValue(null);
+    getActiveCommandByTarget.mockResolvedValue({
+      id: "cmd-active",
+      tenant_id: "tenant-1",
+      status: "running",
+      command_type: "vault_refresh",
+      target_entity_type: "vault_section",
+      target_entity_id: "company_profile",
+    });
+
+    const req = {
+      method: "POST",
+      body: {
+        command_type: "vault_refresh",
+        target_entity_type: "vault_section",
+        target_entity_id: "company_profile",
+        idempotency_key: "vault-refresh:tenant-1:company_profile:attempt-2",
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(createCommandRecord).not.toHaveBeenCalled();
+    expect(dispatchAgentHookMessage).not.toHaveBeenCalled();
+    expect(res.body).toEqual({
+      idempotent: false,
+      reuse_reason: "active_target",
+      command: expect.objectContaining({
+        id: "cmd-active",
+        status: "running",
+      }),
+    });
+  });
+
+  it("canonicalizes vault_refresh commands from the typed target", async () => {
+    const { default: handler } = await import("../../api/commands/index");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-1",
+        droplet_ip: "127.0.0.1",
+        gateway_token: "gw-token",
+      },
+      userId: "user-1",
+    });
+    getCommandByIdempotencyKey.mockResolvedValue(null);
+    createCommandRecord.mockResolvedValue({
+      id: "cmd-vault",
+      tenant_id: "tenant-1",
+      status: "pending",
+    });
+    appendCommandEvent.mockResolvedValue({});
+    dispatchAgentHookMessage.mockResolvedValue({
+      ok: true,
+      status: 202,
+      body: "accepted",
+    });
+    updateCommandStatus.mockResolvedValue({
+      id: "cmd-vault",
+      tenant_id: "tenant-1",
+      status: "dispatched",
+    });
+
+    const req = {
+      method: "POST",
+      body: {
+        command_type: "vault_refresh",
+        target_entity_type: "vault_section",
+        target_entity_id: "company_profile",
+        idempotency_key: "vault-refresh:tenant-1:company_profile:attempt-1",
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(createCommandRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commandType: "vault_refresh",
+        title: "Refresh Company Profile with Chief",
+        targetEntityType: "vault_section",
+        targetEntityId: "company_profile",
+        payload: {
+          section_key: "company_profile",
+          section_title: "Company Profile",
+          snapshot_path: "pixelport/vault/snapshots/company_profile.md",
+        },
+      })
+    );
+    expect(dispatchAgentHookMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "PixelPort Command: Refresh Company Profile with Chief",
+        message: expect.stringContaining('entity_id "company_profile"'),
+      })
+    );
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("rejects invalid vault_refresh section targets", async () => {
+    const { default: handler } = await import("../../api/commands/index");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-1",
+      },
+      userId: "user-1",
+    });
+
+    const req = {
+      method: "POST",
+      body: {
+        command_type: "vault_refresh",
+        target_entity_type: "vault_section",
+        target_entity_id: "bad-section",
+        idempotency_key: "vault-refresh:tenant-1:bad-section:attempt-1",
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(400);
+    expect(createCommandRecord).not.toHaveBeenCalled();
+    expect(res.body).toEqual({
+      error: "vault_refresh requires a valid target_entity_id vault section key",
     });
   });
 });

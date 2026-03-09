@@ -55,5 +55,8 @@ describe("workspace contract", () => {
     expect(combinedContent).toContain("/api/agent/tasks");
     expect(combinedContent).toContain("/api/agent/workspace-events");
     expect(combinedContent).toContain("pixelport/scratch/subagents");
+    expect(combinedContent).toContain("## Vault Refresh Commands");
+    expect(combinedContent).toContain("pixelport/vault/snapshots/<section_key>.md");
+    expect(combinedContent).toContain('restore the prior content with `status: "ready"`');
   });
 });
