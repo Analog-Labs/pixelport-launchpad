@@ -7,6 +7,49 @@
 
 ## Last Session
 
+- **Date:** 2026-03-09 (session 38)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `AGENTS.md`, `docs/SESSION-LOG.md`, `docs/ACTIVE-PLAN.md`, `docs/build-workflow.md`, and `docs/build-briefs/2026-03-09-fresh-tenant-command-dispatch-canary.md`, then executed the fresh-tenant command-dispatch canary on branch `codex/fresh-tenant-command-dispatch`.
+  - Reconfirmed the old failing baseline before touching any code:
+    - tenant row `vidacious-ai-4` still points to `droplet_id=556504015` / `165.227.200.246`
+    - DigitalOcean now returns `404` for droplet `556504015`
+    - public `http://165.227.200.246:18789/` times out
+    - `ssh root@165.227.200.246` times out
+  - Created a brand-new production QA user and tenant through the real app after the foundation-spine deploy:
+    - auth email: `codex.fresh.command.20260309055402@gmail.com`
+    - tenant id: `650e3d26-1100-48b2-b77d-157d9efb73c5`
+    - slug: `pixelport-fresh-command-20260309055402`
+    - droplet id: `556921894`
+    - droplet ip: `142.93.121.149`
+  - Hit the known Supabase signup email throttle on the real signup path (`email rate limit exceeded`), then used the allowed service-role fallback to create+confirm that same QA auth user so the production canary could continue. No product code was changed for this.
+  - Validated fresh provisioning and runtime reachability end to end on the new tenant:
+    - tenant reached `active`
+    - bootstrap progressed from `accepted` to `completed`
+    - public `http://142.93.121.149:18789/` returned `200`
+    - `ssh root@142.93.121.149` succeeded
+    - `cloud-init status --long` returned `status: done`
+    - `openclaw-gateway` started on the droplet and the workspace contract files/directories were present under `/opt/openclaw/workspace-main/`
+    - `/opt/openclaw/openclaw.json` contained hooks enabled at `/hooks`
+  - Verified the required live read paths on the same fresh tenant:
+    - `GET /api/tenants/me`
+    - `GET /api/tenants/status`
+    - `GET /api/tasks`
+    - `GET /api/vault`
+    - `GET /api/competitors`
+  - Dispatched a deterministic fresh-tenant command canary through the authenticated user session with `POST /api/commands`, using command id `1d3653e1-a63e-499a-8e27-1115fcc92b48` and idempotency key `fresh-command-dispatch-20260309055402`.
+  - Verified the fresh command progressed successfully through the command ledger without any fix:
+    - `POST /api/commands` returned a real `dispatched` command, not a `502`
+    - `GET /api/commands/:id` showed `command.acknowledged`, `command.running`, `runtime.artifact.promoted`, and `command.completed`
+    - `GET /api/commands?limit=5` returned the completed command in the list view
+    - the runtime wrote `/opt/openclaw/workspace-main/pixelport/runtime/snapshots/fresh-command-canary.json` with result `fresh_tenant_dispatch_ok`
+  - Classified the issue as a stale/disposable old-tenant problem, not a fresh-tenant provisioning/runtime bug. No repo code changes, tests, deploy, or CTO handoff were required in this session.
+- **What's next:**
+  - Treat fresh-tenant command dispatch as passing on production after the foundation-spine deploy.
+  - Ignore `vidacious-ai-4` as dead disposable test infrastructure unless there is a separate reason to clean up stale tenant rows later.
+  - Resume the next highest-priority Phase 3 work without spending engineering time repairing old test tenants by default.
+- **Blockers:** None for fresh-tenant command dispatch. Separate non-command issues like signup email throttling or optional stale-tenant cleanup remain outside this canary result.
+
 - **Date:** 2026-03-09 (session 37)
 - **Who worked:** Codex
 - **What was done:**
