@@ -52,12 +52,40 @@
   - Recorded the formal branch handoff artifacts:
     - `docs/build-briefs/2026-03-10-bootstrap-persistence-truth.md`
     - `docs/build-briefs/2026-03-10-bootstrap-persistence-truth-cto-prompt.md`
+  - Received Claude CTO review for `codex/bootstrap-persistence-truth`; verdict was `APPROVED` with no required code changes before merge.
+  - Corrected the local branch workflow state after the review:
+    - moved the uncommitted fix off local `main` and onto `codex/bootstrap-persistence-truth`
+    - committed the approved implementation as `5fb577a` (`Fix bootstrap persistence truth`)
+    - pushed `origin/codex/bootstrap-persistence-truth`
+  - Merged the approved branch into `main` as merge commit `63d4585` and pushed `main` to GitHub.
+  - Monitored the production Vercel deployment:
+    - deployment id `dpl_95ZcsYCvVvbkduyDcYUm9FFUv9Vy`
+    - production alias `https://pixelport-launchpad.vercel.app`
+    - deployment reached `Ready`
+  - Ran same-session production smoke on the live alias using the controlled QA tenant from the fresh canary:
+    - tenant slug: `bootstrap-truth-qa-20260310054029`
+    - tenant id: `39a234b7-3ca5-4668-af9f-b188f2e5ec34`
+    - confirmed live authenticated `200` responses from:
+      - `/api/tenants/me`
+      - `/api/tenants/status`
+      - `/api/tasks`
+      - `/api/vault`
+      - `/api/competitors`
+    - confirmed live production truth matched Supabase exactly:
+      - tenant `status: active`
+      - bootstrap `status: completed`
+      - `tasks: 5`
+      - `competitors: 4`
+      - `vault_ready: 5/5`
+    - confirmed the production tenant retained the intended durable bootstrap timestamps:
+      - `requested_at: 2026-03-10T05:46:21.999Z`
+      - `accepted_at: 2026-03-10T05:46:22.917Z`
+      - `completed_at: 2026-03-10T05:47:38.491Z`
 - **What's next:**
-  - Submit `codex/bootstrap-persistence-truth` for Claude CTO review using the new handoff prompt.
-  - Do not merge or deploy this branch until CTO review returns `APPROVED`.
-  - After approval, merge to `main`, monitor the deploy, and run targeted production smoke on `/api/tenants/me`, `/api/tenants/status`, `/api/tasks`, `/api/vault`, and `/api/competitors`.
-  - Do not repair `analog-2` in this build; treat any repair or replay as a separate post-deploy approval step.
-- **Blockers:** Waiting on CTO review before merge/deploy. No new founder decision is needed for the implemented scope.
+  - Treat bootstrap persistence and truthfulness as shipped to production.
+  - If the founder wants `analog-2` repaired, open a separate approved post-deploy repair session rather than extending this shipped fix session.
+  - Watch for any read-path latency regression from bootstrap reconciliation on `/api/tenants/me` and `/api/tenants/status`; optimize later only if it becomes a real dashboard issue.
+- **Blockers:** None for this shipped fix. Any `analog-2` replay/repair remains a separate approval step.
 
 - **Date:** 2026-03-09 (session 44)
 - **Who worked:** Codex
