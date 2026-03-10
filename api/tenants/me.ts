@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
+import { reconcileBootstrapState } from '../lib/bootstrap-state';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
   if (req.method !== 'GET') {
@@ -8,8 +9,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   try {
     const { tenant } = await authenticateRequest(req);
+    const bootstrap = await reconcileBootstrapState({
+      tenantId: tenant.id,
+      fallbackOnboardingData: tenant.onboarding_data,
+    });
     const { gateway_token, ...safeTenant } = tenant;
-    return res.status(200).json(safeTenant);
+    return res.status(200).json({
+      ...safeTenant,
+      onboarding_data: bootstrap.snapshot.onboardingData,
+      updated_at: bootstrap.snapshot.updatedAt,
+    });
   } catch (error) {
     return errorResponse(res, error);
   }

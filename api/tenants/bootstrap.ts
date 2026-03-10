@@ -1,28 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { repairBootstrapHooksOnDroplet } from '../lib/bootstrap-hooks-repair';
-import { getBootstrapState, loadBootstrapSnapshot, transitionBootstrapState } from '../lib/bootstrap-state';
+import { loadBootstrapSnapshot, reconcileBootstrapState, transitionBootstrapState } from '../lib/bootstrap-state';
 import { buildOnboardingBootstrapMessage, triggerOnboardingBootstrap } from '../lib/onboarding-bootstrap';
-import { supabase } from '../lib/supabase';
-
-async function countRows(table: 'agent_tasks' | 'competitors' | 'vault_sections', tenantId: string, extra?: {
-  column: string;
-  value: string;
-}): Promise<number> {
-  let query = supabase.from(table).select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId);
-
-  if (extra) {
-    query = query.eq(extra.column, extra.value);
-  }
-
-  const { count, error } = await query;
-
-  if (error) {
-    throw new Error(`Failed to inspect ${table}: ${error.message}`);
-  }
-
-  return count ?? 0;
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
   if (req.method !== 'POST') {
@@ -37,7 +17,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       fallbackOnboardingData: tenant.onboarding_data,
     });
     let onboardingData = bootstrapSnapshot.onboardingData;
-    let bootstrapState = bootstrapSnapshot.state;
 
     if (tenant.status !== 'active') {
       return res.status(409).json({
@@ -50,31 +29,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(503).json({ error: 'Agent infrastructure not ready' });
     }
 
-    const [taskCount, competitorCount, agentUpdatedVaultCount] = await Promise.all([
-      countRows('agent_tasks', tenant.id),
-      countRows('competitors', tenant.id),
-      countRows('vault_sections', tenant.id, { column: 'last_updated_by', value: 'agent' }),
-    ]);
-
-    const hasExistingAgentOutput =
-      taskCount > 0 ||
-      competitorCount > 0 ||
-      agentUpdatedVaultCount > 0;
-
-    if (hasExistingAgentOutput && bootstrapState.status !== 'completed') {
-      const transition = await transitionBootstrapState({
-        tenantId: tenant.id,
-        fallbackOnboardingData: onboardingData,
-        allowedCurrentStatuses: ['not_started', 'dispatching', 'accepted', 'failed'],
-        update: {
-          status: 'completed',
-          source: bootstrapState.source ?? 'provisioning',
-        },
-      });
-      bootstrapSnapshot = transition.snapshot;
-      onboardingData = bootstrapSnapshot.onboardingData;
-      bootstrapState = bootstrapSnapshot.state;
-    }
+    const bootstrap = await reconcileBootstrapState({
+      tenantId: tenant.id,
+      fallbackOnboardingData: onboardingData,
+    });
+    bootstrapSnapshot = bootstrap.snapshot;
+    onboardingData = bootstrapSnapshot.onboardingData;
+    const bootstrapState = bootstrap.effectiveState;
+    const { taskCount, competitorCount, agentUpdatedVaultCount, hasAgentOutput } = bootstrap.progress;
 
     if (!force && (bootstrapState.status === 'dispatching' || bootstrapState.status === 'accepted')) {
       return res.status(409).json({
@@ -87,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    if (!force && (bootstrapState.status === 'completed' || hasExistingAgentOutput)) {
+    if (!force && bootstrapState.status === 'completed') {
       return res.status(409).json({
         error: 'Bootstrap already appears to have run. Pass force=true to replay it.',
         reason: 'bootstrap_already_completed',
@@ -112,16 +74,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     });
     bootstrapSnapshot = dispatchTransition.snapshot;
     onboardingData = bootstrapSnapshot.onboardingData;
-    bootstrapState = bootstrapSnapshot.state;
+    const persistedBootstrapState = bootstrapSnapshot.state;
 
     if (!dispatchTransition.changed) {
-      const inProgress = bootstrapState.status === 'dispatching' || bootstrapState.status === 'accepted';
+      const inProgress =
+        persistedBootstrapState.status === 'dispatching' || persistedBootstrapState.status === 'accepted';
       return res.status(409).json({
         error: inProgress
           ? 'Bootstrap is already in progress.'
           : 'Bootstrap already appears to have run. Pass force=true to replay it.',
         reason: inProgress ? 'bootstrap_in_progress' : 'bootstrap_already_completed',
-        bootstrap_status: bootstrapState.status,
+        bootstrap_status: persistedBootstrapState.status,
         task_count: taskCount,
         competitor_count: competitorCount,
         agent_updated_vault_count: agentUpdatedVaultCount,
@@ -215,7 +178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return res.status(202).json({
       accepted: true,
       gateway_status: result.status,
-      existing_output_present: hasExistingAgentOutput,
+      existing_output_present: hasAgentOutput,
       hooks_repaired: hooksRepaired,
       bootstrap_status: bootstrapSnapshot.state.status,
     });

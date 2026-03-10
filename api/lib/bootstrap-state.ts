@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { VAULT_SECTION_KEYS } from './vault-contract';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -22,6 +23,25 @@ export type BootstrapSnapshot = {
   state: BootstrapState;
   updatedAt: string;
 };
+
+export type BootstrapDurableProgress = {
+  taskCount: number;
+  competitorCount: number;
+  totalVaultSectionCount: number;
+  readyVaultSectionCount: number;
+  agentUpdatedVaultCount: number;
+  latestAgentActivityAt: string | null;
+  hasAgentOutput: boolean;
+  durableComplete: boolean;
+};
+
+export type BootstrapDerivedState = {
+  status: BootstrapStatus;
+  last_error: string | null;
+};
+
+export const BOOTSTRAP_DISPATCH_TIMEOUT_MS = 10 * 60 * 1000;
+export const BOOTSTRAP_ACCEPTED_TIMEOUT_MS = 15 * 60 * 1000;
 
 type BootstrapStateUpdate = {
   status: Exclude<BootstrapStatus, 'not_started'>;
@@ -88,7 +108,7 @@ export function buildOnboardingDataWithBootstrapState(
     nextBootstrap.last_error = null;
   } else if (update.status === 'accepted') {
     nextBootstrap.requested_at = currentState.requested_at ?? now;
-    nextBootstrap.accepted_at = now;
+    nextBootstrap.accepted_at = currentState.accepted_at ?? now;
     nextBootstrap.completed_at = null;
     nextBootstrap.last_error = null;
   } else if (update.status === 'completed') {
@@ -98,7 +118,7 @@ export function buildOnboardingDataWithBootstrapState(
     nextBootstrap.last_error = null;
   } else if (update.status === 'failed') {
     nextBootstrap.requested_at = currentState.requested_at ?? now;
-    nextBootstrap.accepted_at = null;
+    nextBootstrap.accepted_at = currentState.accepted_at;
     nextBootstrap.completed_at = null;
     nextBootstrap.last_error = update.lastError ?? 'Unknown bootstrap error';
   }
@@ -225,14 +245,289 @@ export async function persistBootstrapState(params: {
   return snapshot.onboardingData;
 }
 
-export async function markBootstrapCompletedIfInProgress(params: {
+function parseDateMs(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function formatBootstrapTimeoutMessage(kind: 'dispatching' | 'accepted'): string {
+  return kind === 'dispatching'
+    ? 'Bootstrap timed out before the Chief acknowledged the run.'
+    : 'Bootstrap timed out before durable dashboard truth was written.';
+}
+
+function latestTimestamp(values: Array<string | null | undefined>): string | null {
+  let latestValue: string | null = null;
+  let latestMs: number | null = null;
+
+  for (const value of values) {
+    const parsed = parseDateMs(value ?? null);
+    if (parsed === null) {
+      continue;
+    }
+
+    if (latestMs === null || parsed > latestMs) {
+      latestMs = parsed;
+      latestValue = value ?? null;
+    }
+  }
+
+  return latestValue;
+}
+
+async function countRows(
+  table: 'agent_tasks' | 'competitors' | 'vault_sections',
+  tenantId: string,
+  extra?: { column: string; value: string }
+): Promise<number> {
+  let query = supabase.from(table).select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId);
+
+  if (extra) {
+    query = query.eq(extra.column, extra.value);
+  }
+
+  const { count, error } = await query;
+
+  if (error) {
+    throw new Error(`Failed to inspect ${table}: ${error.message}`);
+  }
+
+  return count ?? 0;
+}
+
+async function getLatestUpdatedAt(
+  table: 'agent_tasks' | 'competitors' | 'vault_sections',
+  tenantId: string,
+  extra?: { column: string; value: string }
+): Promise<string | null> {
+  let query = supabase
+    .from(table)
+    .select('updated_at')
+    .eq('tenant_id', tenantId)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+
+  if (extra) {
+    query = query.eq(extra.column, extra.value);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Failed to inspect latest ${table} activity: ${error.message}`);
+  }
+
+  const firstRow = Array.isArray(data) ? data[0] : null;
+  if (!firstRow || typeof firstRow.updated_at !== 'string') {
+    return null;
+  }
+
+  return firstRow.updated_at;
+}
+
+export async function inspectBootstrapDurableProgress(params: {
   tenantId: string;
+}): Promise<BootstrapDurableProgress> {
+  const [taskCount, competitorCount, totalVaultSectionCount, readyVaultSectionCount, agentUpdatedVaultCount, latestTaskAt, latestCompetitorAt, latestVaultAt] =
+    await Promise.all([
+      countRows('agent_tasks', params.tenantId),
+      countRows('competitors', params.tenantId),
+      countRows('vault_sections', params.tenantId),
+      countRows('vault_sections', params.tenantId, { column: 'status', value: 'ready' }),
+      countRows('vault_sections', params.tenantId, { column: 'last_updated_by', value: 'agent' }),
+      getLatestUpdatedAt('agent_tasks', params.tenantId),
+      getLatestUpdatedAt('competitors', params.tenantId),
+      getLatestUpdatedAt('vault_sections', params.tenantId, { column: 'last_updated_by', value: 'agent' }),
+    ]);
+
+  const latestAgentActivityAt = latestTimestamp([latestTaskAt, latestCompetitorAt, latestVaultAt]);
+  const hasAgentOutput = taskCount > 0 || competitorCount > 0 || agentUpdatedVaultCount > 0;
+  const durableComplete =
+    taskCount >= 1 &&
+    competitorCount >= 1 &&
+    totalVaultSectionCount >= VAULT_SECTION_KEYS.length &&
+    readyVaultSectionCount >= VAULT_SECTION_KEYS.length;
+
+  return {
+    taskCount,
+    competitorCount,
+    totalVaultSectionCount,
+    readyVaultSectionCount,
+    agentUpdatedVaultCount,
+    latestAgentActivityAt,
+    hasAgentOutput,
+    durableComplete,
+  };
+}
+
+export function deriveBootstrapState(params: {
+  state: BootstrapState;
+  progress: BootstrapDurableProgress;
+  now?: string;
+}): BootstrapDerivedState {
+  const nowMs = parseDateMs(params.now ?? new Date().toISOString()) ?? Date.now();
+
+  if (params.progress.durableComplete) {
+    return {
+      status: 'completed',
+      last_error: null,
+    };
+  }
+
+  if (params.state.status === 'failed') {
+    return {
+      status: 'failed',
+      last_error: params.state.last_error ?? formatBootstrapTimeoutMessage('accepted'),
+    };
+  }
+
+  if (params.state.status === 'not_started') {
+    return {
+      status: 'not_started',
+      last_error: null,
+    };
+  }
+
+  if (params.state.status === 'dispatching') {
+    const requestedAtMs = parseDateMs(params.state.requested_at);
+    const timedOut = requestedAtMs !== null && nowMs - requestedAtMs > BOOTSTRAP_DISPATCH_TIMEOUT_MS;
+
+    return timedOut
+      ? {
+          status: 'failed',
+          last_error: formatBootstrapTimeoutMessage('dispatching'),
+        }
+      : {
+          status: 'dispatching',
+          last_error: null,
+        };
+  }
+
+  const activeReferenceAt = latestTimestamp([
+    params.progress.latestAgentActivityAt,
+    params.state.accepted_at,
+    params.state.requested_at,
+  ]);
+  const activeReferenceMs = parseDateMs(activeReferenceAt);
+  const timedOut = activeReferenceMs !== null && nowMs - activeReferenceMs > BOOTSTRAP_ACCEPTED_TIMEOUT_MS;
+
+  return timedOut
+    ? {
+        status: 'failed',
+        last_error: formatBootstrapTimeoutMessage('accepted'),
+      }
+    : {
+        status: 'accepted',
+        last_error: null,
+      };
+}
+
+export async function reconcileBootstrapState(params: {
+  tenantId: string;
+  fallbackOnboardingData?: JsonRecord | null | undefined;
+  now?: string;
+  persistFailure?: boolean;
+}): Promise<{
+  snapshot: BootstrapSnapshot;
+  progress: BootstrapDurableProgress;
+  effectiveState: BootstrapDerivedState;
+  changed: boolean;
+}> {
+  let snapshot = await loadBootstrapSnapshot({
+    tenantId: params.tenantId,
+    fallbackOnboardingData: params.fallbackOnboardingData,
+  });
+  const progress = await inspectBootstrapDurableProgress({
+    tenantId: params.tenantId,
+  });
+  const effectiveState = deriveBootstrapState({
+    state: snapshot.state,
+    progress,
+    now: params.now,
+  });
+  const persistFailure = params.persistFailure ?? true;
+  const shouldPersistFailure =
+    effectiveState.status === 'failed' &&
+    persistFailure &&
+    snapshot.state.status !== 'failed';
+  const shouldPersistAcceptedCorrection =
+    effectiveState.status === 'accepted' && snapshot.state.status === 'completed';
+  const shouldPersistCompletion = effectiveState.status === 'completed' && snapshot.state.status !== 'completed';
+  const shouldPersistLastErrorChange =
+    effectiveState.status === 'failed' &&
+    effectiveState.last_error !== snapshot.state.last_error &&
+    persistFailure;
+
+  if (
+    !shouldPersistFailure &&
+    !shouldPersistAcceptedCorrection &&
+    !shouldPersistCompletion &&
+    !shouldPersistLastErrorChange
+  ) {
+    return {
+      snapshot,
+      progress,
+      effectiveState,
+      changed: false,
+    };
+  }
+
+  const transition = await transitionBootstrapState({
+    tenantId: params.tenantId,
+    fallbackOnboardingData: snapshot.onboardingData,
+    preserveCurrentState: false,
+    update: {
+      status: effectiveState.status === 'not_started' ? 'failed' : effectiveState.status,
+      source: snapshot.state.source ?? 'provisioning',
+      lastError: effectiveState.last_error,
+      at: params.now,
+    },
+  });
+
+  snapshot = transition.snapshot;
+
+  return {
+    snapshot,
+    progress,
+    effectiveState,
+    changed: transition.changed,
+  };
+}
+
+export async function syncBootstrapStateAfterAgentWrite(params: {
+  tenantId: string;
+  fallbackOnboardingData?: JsonRecord | null | undefined;
+  now?: string;
 }): Promise<void> {
+  const snapshot = await loadBootstrapSnapshot({
+    tenantId: params.tenantId,
+    fallbackOnboardingData: params.fallbackOnboardingData,
+  });
+
+  if (snapshot.state.status === 'not_started') {
+    return;
+  }
+
+  const progress = await inspectBootstrapDurableProgress({
+    tenantId: params.tenantId,
+  });
+
+  if (!progress.durableComplete) {
+    return;
+  }
+
   await transitionBootstrapState({
     tenantId: params.tenantId,
-    allowedCurrentStatuses: ['dispatching', 'accepted'],
+    fallbackOnboardingData: snapshot.onboardingData,
+    preserveCurrentState: false,
     update: {
       status: 'completed',
+      source: snapshot.state.source ?? 'provisioning',
+      at: params.now,
     },
   });
 }
