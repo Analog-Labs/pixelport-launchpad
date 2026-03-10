@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHmac, createCipheriv, randomBytes } from 'crypto';
 import { Inngest } from 'inngest';
 import { supabase } from '../../lib/supabase';
+import { normalizeSlackScopes } from '../../lib/slack-connection';
 
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
 const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
@@ -167,6 +168,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     const encryptedToken = encrypt(tokenData.access_token);
+    const normalizedScopes = normalizeSlackScopes(tokenData.scope);
 
     const { error: upsertError } = await supabase
       .from('slack_connections')
@@ -178,7 +180,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           bot_token: encryptedToken,
           bot_user_id: tokenData.bot_user_id || null,
           installer_user_id: tokenData.authed_user?.id || null,
-          scopes: tokenData.scope ? tokenData.scope.split(',') : [],
+          scopes: normalizedScopes,
           is_active: false,
           connected_at: new Date().toISOString(),
         },
