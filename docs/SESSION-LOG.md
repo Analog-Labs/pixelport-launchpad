@@ -7,6 +7,58 @@
 
 ## Last Session
 
+- **Date:** 2026-03-10 (session 45)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `AGENTS.md`, `docs/SESSION-LOG.md`, `docs/ACTIVE-PLAN.md`, `docs/build-workflow.md`, and `docs/qa-policy.md`, then executed the founder-approved high-risk bootstrap truth fix on branch `codex/bootstrap-persistence-truth`.
+  - Implemented the narrow onboarding/runtime fix:
+    - updated `api/lib/workspace-contract.ts` so generated `TOOLS.md` no longer tells the runtime to source `/opt/openclaw/.env` from inside the container
+    - switched the generated tooling contract to rely on already-injected runtime env vars and added fail-fast checks for `PIXELPORT_API_KEY` plus direct-model env vars where needed
+    - replaced the old implicit single-write completion behavior in `api/lib/bootstrap-state.ts` with durable bootstrap evaluation based on real backend truth
+    - updated `/api/agent/tasks`, `/api/agent/competitors`, and `/api/agent/vault/:key` so successful writes only complete bootstrap after durable criteria are satisfied
+    - updated `/api/tenants/me`, `/api/tenants/status`, and `/api/tenants/bootstrap` so partial-output tenants stay truthful as `dispatching` or `accepted`, can fail only on clear timeout/error, and do not get treated as completed solely because some agent output exists
+  - Added targeted coverage for the new truth rules and runtime contract:
+    - `src/test/bootstrap-state.test.ts`
+    - `src/test/tenants-status-route.test.ts`
+    - `src/test/tenants-bootstrap-route.test.ts`
+    - `src/test/agent-bootstrap-sync-route.test.ts`
+    - updated `src/test/workspace-contract.test.ts`
+  - Validation passed on the branch:
+    - `npx vitest run src/test/bootstrap-state.test.ts src/test/tenants-status-route.test.ts src/test/tenants-bootstrap-route.test.ts src/test/agent-bootstrap-sync-route.test.ts src/test/workspace-contract.test.ts`
+    - `npx vitest run src/test/onboarding-bootstrap.test.ts src/test/commands-route.test.ts src/test/command-detail-route.test.ts src/test/workspace-events-route.test.ts src/test/workspace-contract.test.ts`
+    - `npx tsc --noEmit`
+  - Ran a real fresh-tenant canary against the branch code through local `vercel dev` and the live control plane:
+    - QA auth email: `codex.bootstrap.truth.20260310053742@example.com`
+    - tenant slug: `bootstrap-truth-qa-20260310054029`
+    - tenant id: `39a234b7-3ca5-4668-af9f-b188f2e5ec34`
+    - droplet id: `557163621`
+    - droplet ip: `142.93.117.18`
+    - observed truthful in-progress state while durable output was incomplete:
+      - `bootstrap_status: accepted`
+      - `tasks: 0`
+      - `competitors: 0`
+      - `vault_ready: 2/5`
+    - observed truthful durable completion on the same tenant:
+      - `bootstrap_status: completed`
+      - `tasks: 5`
+      - `competitors: 4`
+      - `vault_ready: 5/5`
+    - adjacent authenticated reads stayed healthy throughout:
+      - `/api/tenants/me`
+      - `/api/tenants/status`
+      - `/api/tasks`
+      - `/api/vault`
+      - `/api/competitors`
+  - Recorded the formal branch handoff artifacts:
+    - `docs/build-briefs/2026-03-10-bootstrap-persistence-truth.md`
+    - `docs/build-briefs/2026-03-10-bootstrap-persistence-truth-cto-prompt.md`
+- **What's next:**
+  - Submit `codex/bootstrap-persistence-truth` for Claude CTO review using the new handoff prompt.
+  - Do not merge or deploy this branch until CTO review returns `APPROVED`.
+  - After approval, merge to `main`, monitor the deploy, and run targeted production smoke on `/api/tenants/me`, `/api/tenants/status`, `/api/tasks`, `/api/vault`, and `/api/competitors`.
+  - Do not repair `analog-2` in this build; treat any repair or replay as a separate post-deploy approval step.
+- **Blockers:** Waiting on CTO review before merge/deploy. No new founder decision is needed for the implemented scope.
+
 - **Date:** 2026-03-09 (session 44)
 - **Who worked:** Codex
 - **What was done:**

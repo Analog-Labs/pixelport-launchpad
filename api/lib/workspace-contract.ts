@@ -233,8 +233,17 @@ function buildToolsFile(params: {
 
 ## Setup
 \`\`\`bash
-. /opt/openclaw/.env
 API_BASE_URL="${params.apiBaseUrl}"
+: "\${PIXELPORT_API_KEY:?PIXELPORT_API_KEY must already be injected into the running container}"
+\`\`\`
+
+The running OpenClaw container already receives its environment variables at startup. Do not source a host env file from inside the container.
+
+## Direct Model Access Checks
+\`\`\`bash
+# Only needed when you are making direct model or gateway calls from the shell.
+: "\${OPENAI_API_KEY:?OPENAI_API_KEY is required for direct model access}"
+: "\${OPENAI_BASE_URL:?OPENAI_BASE_URL is required for direct model access}"
 \`\`\`
 
 ## Live Product Writes

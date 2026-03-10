@@ -58,5 +58,8 @@ describe("workspace contract", () => {
     expect(combinedContent).toContain("## Vault Refresh Commands");
     expect(combinedContent).toContain("pixelport/vault/snapshots/<section_key>.md");
     expect(combinedContent).toContain('restore the prior content with `status: "ready"`');
+    expect(combinedContent).not.toContain("/opt/openclaw/.env");
+    expect(combinedContent).toContain("PIXELPORT_API_KEY must already be injected into the running container");
+    expect(combinedContent).toContain("OPENAI_BASE_URL is required for direct model access");
   });
 });

@@ -163,7 +163,7 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 
 ## Current Phase: Phase 3 — Integration Framework + Social Publishing
 
-**Status:** Old Phase 3 execution sequence remains paused. The approved foundation replacement slice is merged, deployed, production-validated, and the fresh-tenant command-dispatch gate has passed. The first real dashboard command flow is now merged and live on production, the tenant-wide single-active Vault refresh guard is deployed, and the stale non-terminal Vault refresh recovery hardening is now also merged, deployed, and production-smoked. Vault refresh command hardening is complete; broader command-backed UX should wait for the next founder-approved build brief.
+**Status:** Old Phase 3 execution sequence remains paused. The approved foundation replacement slice is merged, deployed, production-validated, and the fresh-tenant command-dispatch gate has passed. The first real dashboard command flow is now merged and live on production, the tenant-wide single-active Vault refresh guard is deployed, and the stale non-terminal Vault refresh recovery hardening is now also merged, deployed, and production-smoked. The next high-risk onboarding truth fix has now been implemented and fresh-tenant validated on branch `codex/bootstrap-persistence-truth`; it is waiting on CTO review before merge/deploy. Broader command-backed UX should still wait for the next founder-approved build brief.
 **Target:** March 2026 (Sessions 10–12+)
 **Goal:** Generic integration framework, first 4 integrations (PostHog, GA4, X, LinkedIn), social publishing + metrics
 
@@ -190,6 +190,12 @@ Founder may keep using Lovable for visual/UI-only work. Technical Lead owns repo
 - [x] 3.C6: Ship the founder-approved tenant-wide single-active Vault refresh guard after production overlap smoke exposed a second-command ledger mismatch
 - [x] 3.C7: Execute [2026-03-09-vault-refresh-recovery.md](/Users/sanchal/pixelport-launchpad/docs/build-briefs/2026-03-09-vault-refresh-recovery.md) on branch `codex/vault-refresh-recovery` and validate stale non-terminal Vault refresh recovery on the real QA tenant
 - [x] 3.C8: Complete CTO review for `codex/vault-refresh-recovery`, merge to `main`, deploy, and run same-session production smoke after approval
+
+### Current High-Risk Fix — Bootstrap Persistence And Truthfulness
+
+- [x] 3.C9: Execute [2026-03-10-bootstrap-persistence-truth.md](/Users/sanchal/pixelport-launchpad/docs/build-briefs/2026-03-10-bootstrap-persistence-truth.md) on branch `codex/bootstrap-persistence-truth`
+- [x] 3.C10: Validate the bootstrap persistence/truth fix on a real fresh tenant and confirm partial output stays `accepted` until durable rows exist
+- [ ] 3.C11: Complete CTO review for `codex/bootstrap-persistence-truth`, then merge to `main`, deploy, and run same-session production smoke after approval
 
 ### Session 10: Integration Framework — COMPLETE ✅
 
@@ -242,6 +248,10 @@ Founder may continue UI exploration in Lovable. Technical Lead owns implementati
 | X Developer App credentials | X integration (Session 11) | Founder registers at developer.x.com |
 | LinkedIn App credentials | LinkedIn integration (Session 11) | Founder registers at developer.linkedin.com |
 | Google OAuth credentials | GA4 integration (Session 12) | Founder configures at Google Cloud Console |
+
+### Live Notes
+
+- **Bootstrap truth fix in flight (2026-03-10, session 45):** Branch `codex/bootstrap-persistence-truth` now uses injected runtime env vars directly in generated `TOOLS.md`, derives bootstrap completion from durable backend truth (`tasks >= 1`, `competitors >= 1`, `vault_ready = 5/5`), and leaves partial-output tenants `dispatching` or `accepted` until those criteria are met. Fresh tenant `bootstrap-truth-qa-20260310054029` (`39a234b7-3ca5-4668-af9f-b188f2e5ec34`) validated the intended behavior: it showed `accepted` at `tasks=0`, `competitors=0`, `vault_ready=2/5`, then moved to `completed` only after durable truth reached `tasks=5`, `competitors=4`, `vault_ready=5/5`. This branch is awaiting CTO review and must not repair `analog-2` as part of the same build.
 
 ---
 
