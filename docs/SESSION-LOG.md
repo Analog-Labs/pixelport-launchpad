@@ -7,6 +7,31 @@
 
 ## Last Session
 
+- **Date:** 2026-03-10 (session 46)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `AGENTS.md`, `docs/SESSION-LOG.md`, `docs/ACTIVE-PLAN.md`, `docs/build-workflow.md`, and `docs/qa-policy.md`, then treated the session as a rescue/cleanup pass for broken Slack thread `019cd686-bfed-79d2-8bda-2e2813097f5a`.
+  - Audited the dirty local `main` diff and classified the touched files into:
+    - Slack-scoped: `api/agent/capabilities.ts`, `api/connections/index.ts`, `api/connections/slack/callback.ts`, `api/connections/slack/install.ts`, `api/inngest/functions/activate-slack.ts`, `api/lib/slack-activation.ts`, `api/lib/slack-connection.ts`, `src/pages/dashboard/Connections.tsx`, `src/pages/dashboard/Home.tsx`, `src/pages/dashboard/Connections.test.tsx`, `src/test/connections-route.test.ts`, `src/test/slack-activation.test.ts`, `src/test/slack-connection.test.ts`, `src/test/slack-install-route.test.ts`
+    - validated-baseline contamination: `api/inngest/functions/provision-tenant.ts`, `api/lib/provisioning-env.ts`, `src/test/provision-tenant.test.ts`
+    - unrelated tooling noise checkpointed only on the rescue branch: `.playwright-cli/*`, `tools/mcp/github-mcp.sh`, `tools/mcp/playwright-mcp.sh`
+  - Proved the provisioning-side change was contamination rather than a Slack requirement:
+    - the dirty `provision-tenant` diff removed `SLACK_APP_TOKEN` from `/opt/openclaw/.env`
+    - the same dirty Slack activation flow still writes `appToken: \`${SLACK_APP_TOKEN}\`` into the OpenClaw Slack config and depends on the gateway container receiving that env var
+    - result: a fresh tenant provisioned with the dirty provisioning diff would lose the app token needed for Slack Socket Mode, so the broken fresh-tenant/provisioning failure was caused by baseline contamination, not by a necessary Slack-only change
+  - Preserved the full dirty state on new branch `codex/slack-rescue` and committed it as `1b7883a` (`chore: checkpoint slack rescue state`) so nothing from the broken session was lost.
+  - Switched to `codex/slack-chief-online`, restored only the Slack-scoped files from the rescue branch, and committed the isolated Slack work as `664010a` (`feat: recover slack chief online flow`).
+  - Kept the validated provisioning/bootstrap paths frozen on the Slack branch by excluding all provisioning/env helper changes from `codex/slack-chief-online`.
+  - Ran targeted local validation only on the recovered Slack branch:
+    - `npx vitest run src/test/slack-connection.test.ts src/test/slack-install-route.test.ts src/test/connections-route.test.ts src/test/slack-activation.test.ts src/pages/dashboard/Connections.test.tsx`
+    - `npx tsc --noEmit`
+  - Did not run a fresh-tenant provisioning canary, did not merge, and did not deploy.
+- **What's next:**
+  - Start the real Slack execution session from branch `codex/slack-chief-online` at commit `664010a`.
+  - Treat `codex/slack-rescue` commit `1b7883a` as the full forensic checkpoint if anything from the broken session needs to be re-checked.
+  - Keep `api/inngest/functions/provision-tenant.ts` and other validated bootstrap/provisioning paths identical to `main` unless a future Slack session can prove a specific Slack requirement and gets explicit approval for that deviation.
+- **Blockers:** No code blocker for the rescue itself. End-to-end Slack QA still requires a separate controlled integration session and any needed founder-provided Slack access.
+
 - **Date:** 2026-03-10 (session 45)
 - **Who worked:** Codex
 - **What was done:**
