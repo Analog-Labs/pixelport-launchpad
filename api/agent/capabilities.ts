@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateAgentRequest, errorResponse } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { getIntegrationDef } from '../lib/integrations/registry';
+import { deriveSlackConnection } from '../lib/slack-connection';
 
 /**
  * GET /api/agent/capabilities
@@ -34,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // Also check Slack (legacy table)
     const { data: slackConn } = await supabase
       .from('slack_connections')
-      .select('is_active, team_name')
+      .select('team_id, team_name, is_active, connected_at, scopes, installer_user_id')
       .eq('tenant_id', tenant.id)
       .maybeSingle();
 
@@ -46,11 +47,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }> = [];
 
     // Add Slack if connected
-    if (slackConn?.is_active) {
+    const slack = deriveSlackConnection(slackConn);
+
+    if (slack.active) {
       integrations.push({
         service: 'slack',
         status: 'active',
-        account_name: slackConn.team_name,
+        account_name: slack.team_name ?? null,
         capabilities: ['send_message', 'read_channels'],
       });
     }

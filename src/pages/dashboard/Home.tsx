@@ -159,7 +159,7 @@ const Home = () => {
         });
         if (res.ok) {
           const data = await res.json();
-          setSlackConnected(data.integrations?.slack?.connected === true);
+          setSlackConnected(data.integrations?.slack?.status === "active");
         }
       } catch { /* fail gracefully */ }
     })();

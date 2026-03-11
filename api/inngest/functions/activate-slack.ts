@@ -1,7 +1,16 @@
 import { Inngest } from 'inngest';
 import { createClient } from '@supabase/supabase-js';
 import { createDecipheriv } from 'crypto';
-import { Client as SSHClient } from 'ssh2';
+import { reconcileBootstrapState } from '../../lib/bootstrap-state';
+import { sshExec } from '../../lib/droplet-ssh';
+import {
+  buildSlackConfig,
+  buildSlackWelcomeMessage,
+  isSlackConfigCurrent,
+  parseSlackConfigState,
+  runtimeLogsSuggestSlackReady,
+} from '../../lib/slack-activation';
+import { deriveSlackConnection } from '../../lib/slack-connection';
 
 const inngest = new Inngest({
   id: 'pixelport',
@@ -11,24 +20,32 @@ const inngest = new Inngest({
 const SUPABASE_PROJECT_URL = process.env.SUPABASE_PROJECT_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const API_KEY_ENCRYPTION_KEY = process.env.API_KEY_ENCRYPTION_KEY;
-// Vercel may store multiline env vars with literal \n — restore real newlines
 const SSH_PRIVATE_KEY = process.env.SSH_PRIVATE_KEY?.replace(/\\n/g, '\n');
 const SLACK_APP_TOKEN = process.env.SLACK_APP_TOKEN;
+const BOOTSTRAP_READY_MAX_ATTEMPTS = 20;
+const BOOTSTRAP_READY_WAIT = '30s';
+const GATEWAY_HEALTH_MAX_ATTEMPTS = 6;
+const GATEWAY_HEALTH_WAIT = '10s';
 
 type EventData = { tenantId?: string };
+type JsonRecord = Record<string, unknown>;
 
 type TenantRow = {
   id: string;
   slug: string;
   status: string;
   droplet_ip: string | null;
+  onboarding_data: JsonRecord | null;
 };
 
 type SlackConnectionRow = {
   tenant_id: string;
   team_id: string;
+  team_name: string | null;
   bot_token: string;
   is_active: boolean;
+  scopes: string[] | null;
+  installer_user_id: string | null;
 };
 
 function getSupabaseClient() {
@@ -56,79 +73,9 @@ function decryptToken(encrypted: string): string {
   return decrypted;
 }
 
-function sshExec(host: string, command: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (!SSH_PRIVATE_KEY) {
-      reject(new Error('SSH_PRIVATE_KEY env var is not set'));
-      return;
-    }
-
-    const conn = new SSHClient();
-    const timeout = setTimeout(() => {
-      conn.end();
-      reject(new Error('SSH connection timeout (30s)'));
-    }, 30_000);
-
-    conn.on('ready', () => {
-      conn.exec(command, (err, stream) => {
-        if (err) {
-          clearTimeout(timeout);
-          conn.end();
-          reject(err);
-          return;
-        }
-
-        let stdout = '';
-        let stderr = '';
-        stream.on('data', (chunk: Buffer) => {
-          stdout += chunk.toString();
-        });
-        stream.stderr.on('data', (chunk: Buffer) => {
-          stderr += chunk.toString();
-        });
-
-        stream.on('close', (code: number) => {
-          clearTimeout(timeout);
-          conn.end();
-          if (code !== 0) {
-            reject(new Error(`SSH command failed (code ${code}): ${stderr.trim()}`));
-            return;
-          }
-          resolve(stdout);
-        });
-      });
-    });
-
-    conn.on('error', (error) => {
-      clearTimeout(timeout);
-      reject(error);
-    });
-
-    conn.connect({
-      host,
-      port: 22,
-      username: 'root',
-      privateKey: SSH_PRIVATE_KEY,
-      readyTimeout: 15_000,
-    });
-  });
-}
-
-function buildSlackConfig(botToken: string): string {
-  // OpenClaw 2026.2.24 validated schema — no capitalized action keys or allowBotMessages
-  return JSON.stringify(
-    {
-      enabled: true,
-      botToken,
-      appToken: '${SLACK_APP_TOKEN}',
-      dmPolicy: 'open',
-      allowFrom: ['*'],
-      replyToMode: 'first',
-      configWrites: true,
-    },
-    null,
-    2
-  );
+function getAgentName(onboardingData: JsonRecord | null | undefined): string {
+  const value = onboardingData?.agent_name;
+  return typeof value === 'string' && value.trim() ? value.trim() : 'your Chief';
 }
 
 function buildConfigPatchScript(botToken: string): string {
@@ -168,19 +115,78 @@ echo "SLACK_CONFIG_UPDATED"
 `.trim();
 }
 
-// Use python3 — node is not installed on the host
-const CONFIG_CHECK_SCRIPT = `
+function buildConfigCheckScript(botToken: string): string {
+  return `
 set -euo pipefail
-python3 -c "
-import json, sys
+python3 << 'PYEOF'
+import json
 config = json.load(open('/opt/openclaw/openclaw.json'))
 slack = config.get('channels', {}).get('slack', {})
-if slack.get('enabled') is True and isinstance(slack.get('botToken', ''), str) and len(slack.get('botToken', '')) > 0:
-    sys.stdout.write('ACTIVE')
-else:
-    sys.stdout.write('MISSING')
-"
+print(json.dumps({
+    'enabled': slack.get('enabled') is True,
+    'botTokenPresent': isinstance(slack.get('botToken', ''), str) and len(slack.get('botToken', '')) > 0,
+    'botTokenMatches': slack.get('botToken') == ${JSON.stringify(botToken)},
+    'appTokenMatches': slack.get('appToken') == '${'${SLACK_APP_TOKEN}'}',
+    'dmPolicy': slack.get('dmPolicy'),
+    'allowFromAll': slack.get('allowFrom') == ['*'],
+    'replyToMode': slack.get('replyToMode'),
+    'configWrites': slack.get('configWrites'),
+}))
+PYEOF
 `.trim();
+}
+
+function buildRuntimeLogProbeScript(since: string): string {
+  return `
+set -euo pipefail
+docker logs openclaw-gateway --since ${JSON.stringify(since)} 2>&1 | tail -n 120 || true
+`.trim();
+}
+
+const RESTART_GATEWAY_SCRIPT = `
+set -euo pipefail
+docker restart openclaw-gateway >/dev/null
+docker inspect -f '{{.State.Running}}' openclaw-gateway
+`.trim();
+
+async function verifyGatewayHealth(host: string): Promise<{ healthy: boolean; status?: number; error?: string }> {
+  try {
+    const response = await fetch(`http://${host}:18789/`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    return { healthy: response.ok, status: response.status };
+  } catch (error) {
+    return { healthy: false, error: error instanceof Error ? error.message : 'Gateway check failed' };
+  }
+}
+
+async function postSlackWelcomeMessage(params: {
+  botToken: string;
+  installerUserId: string;
+  agentName: string;
+}): Promise<{ sent: boolean; error?: string }> {
+  const response = await fetch('https://slack.com/api/chat.postMessage', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${params.botToken}`,
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+    body: JSON.stringify({
+      channel: params.installerUserId,
+      text: buildSlackWelcomeMessage(params.agentName),
+    }),
+  });
+
+  const payload = (await response.json()) as { ok?: boolean; error?: string };
+  if (!response.ok || !payload.ok) {
+    return {
+      sent: false,
+      error: payload.error ?? `HTTP ${response.status}`,
+    };
+  }
+
+  return { sent: true };
+}
 
 export const activateSlack = inngest.createFunction(
   {
@@ -197,36 +203,39 @@ export const activateSlack = inngest.createFunction(
 
     const supabase = getSupabaseClient();
 
-    const { tenant, slackConn } = await step.run('load-tenant-and-slack', async () => {
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('id, slug, status, droplet_ip')
-        .eq('id', tenantId)
-        .single();
+    const { tenant, slackConn } = await step.run(
+      'load-tenant-and-slack',
+      async (): Promise<{ tenant: TenantRow; slackConn: SlackConnectionRow }> => {
+        const { data: tenantData, error: tenantError } = await supabase
+          .from('tenants')
+          .select('id, slug, status, droplet_ip, onboarding_data')
+          .eq('id', tenantId)
+          .single();
 
-      if (tenantError || !tenantData) {
-        throw new Error(`Tenant not found: ${tenantId}`);
+        if (tenantError || !tenantData) {
+          throw new Error(`Tenant not found: ${tenantId}`);
+        }
+
+        if (!tenantData.droplet_ip) {
+          throw new Error(`Tenant ${tenantData.slug} has no droplet_ip`);
+        }
+
+        const { data: slackData, error: slackError } = await supabase
+          .from('slack_connections')
+          .select('tenant_id, team_id, team_name, bot_token, is_active, scopes, installer_user_id')
+          .eq('tenant_id', tenantId)
+          .single();
+
+        if (slackError || !slackData) {
+          throw new Error(`Slack connection not found for tenant ${tenantId}`);
+        }
+
+        return {
+          tenant: tenantData as TenantRow,
+          slackConn: slackData as SlackConnectionRow,
+        };
       }
-
-      if (!tenantData.droplet_ip) {
-        throw new Error(`Tenant ${tenantData.slug} has no droplet_ip`);
-      }
-
-      const { data: slackData, error: slackError } = await supabase
-        .from('slack_connections')
-        .select('tenant_id, team_id, bot_token, is_active')
-        .eq('tenant_id', tenantId)
-        .single();
-
-      if (slackError || !slackData) {
-        throw new Error(`Slack connection not found for tenant ${tenantId}`);
-      }
-
-      return {
-        tenant: tenantData as TenantRow,
-        slackConn: slackData as SlackConnectionRow,
-      };
-    });
+    );
 
     if (!SLACK_APP_TOKEN) {
       throw new Error('SLACK_APP_TOKEN env var is not set');
@@ -236,41 +245,105 @@ export const activateSlack = inngest.createFunction(
     }
 
     const botToken = await step.run('decrypt-bot-token', async () => decryptToken(slackConn.bot_token));
+    const slackState = deriveSlackConnection(slackConn);
+
+    if (slackState.reauthorization_required) {
+      throw new Error(
+        `Slack connection for tenant ${tenant.slug} is missing required scopes: ${slackState.missing_scopes.join(', ')}`
+      );
+    }
+
+    let bootstrapReady = false;
+    for (let attempt = 0; attempt < BOOTSTRAP_READY_MAX_ATTEMPTS; attempt += 1) {
+      const bootstrap = await step.run(`check-bootstrap-ready-${attempt + 1}`, async () => {
+        const state = await reconcileBootstrapState({
+          tenantId,
+          fallbackOnboardingData: tenant.onboarding_data,
+        });
+        return state.effectiveState;
+      });
+
+      if (bootstrap.status === 'completed') {
+        bootstrapReady = true;
+        break;
+      }
+
+      if (bootstrap.status === 'failed') {
+        throw new Error(`Tenant ${tenant.slug} bootstrap is not ready for Slack activation: ${bootstrap.last_error}`);
+      }
+
+      if (attempt < BOOTSTRAP_READY_MAX_ATTEMPTS - 1) {
+        await step.sleep(`wait-for-bootstrap-ready-${attempt + 1}`, BOOTSTRAP_READY_WAIT);
+      }
+    }
+
+    if (!bootstrapReady) {
+      throw new Error(`Tenant ${tenant.slug} did not reach truthful bootstrap completion before Slack activation timeout.`);
+    }
 
     const existingConfig = await step.run('check-existing-config', async () => {
-      if (!slackConn.is_active) return { alreadyConfigured: false };
-      try {
-        const output = await sshExec(tenant.droplet_ip!, CONFIG_CHECK_SCRIPT);
-        return { alreadyConfigured: output.includes('ACTIVE') };
-      } catch {
-        return { alreadyConfigured: false };
-      }
+      const output = await sshExec(tenant.droplet_ip!, buildConfigCheckScript(botToken));
+      const state = parseSlackConfigState(output);
+      return {
+        state,
+        alreadyConfigured: isSlackConfigCurrent(state),
+      };
     });
 
     if (!existingConfig.alreadyConfigured) {
+      const configPatchedAt = new Date().toISOString();
+
       await step.run('ssh-update-config', async () => {
         const output = await sshExec(tenant.droplet_ip!, buildConfigPatchScript(botToken));
         return { output };
       });
       await step.sleep('wait-hot-reload', '15s');
+
+      const verifiedConfig = await step.run('verify-config-after-patch', async () => {
+        const output = await sshExec(tenant.droplet_ip!, buildConfigCheckScript(botToken));
+        const state = parseSlackConfigState(output);
+        return {
+          state,
+          current: isSlackConfigCurrent(state),
+        };
+      });
+
+      if (!verifiedConfig.current) {
+        throw new Error(`Slack config patch did not persist correctly for tenant ${tenant.slug}.`);
+      }
+
+      const hotReloadLogs = await step.run('probe-hot-reload-logs', async () => {
+        return await sshExec(tenant.droplet_ip!, buildRuntimeLogProbeScript(configPatchedAt));
+      });
+
+      if (!runtimeLogsSuggestSlackReady(hotReloadLogs)) {
+        await step.run('restart-openclaw-gateway', async () => {
+          const output = await sshExec(tenant.droplet_ip!, RESTART_GATEWAY_SCRIPT);
+          return { output };
+        });
+      }
     }
 
-    const gatewayHealth = await step.run('verify-gateway-health', async () => {
-      try {
-        const response = await fetch(`http://${tenant.droplet_ip}:18789/`, {
-          signal: AbortSignal.timeout(5000),
-        });
-        return { healthy: response.ok, status: response.status };
-      } catch (error) {
-        return { healthy: false, error: error instanceof Error ? error.message : 'Gateway check failed' };
+    let gatewayHealth: { healthy: boolean; status?: number; error?: string } = { healthy: false };
+    for (let attempt = 0; attempt < GATEWAY_HEALTH_MAX_ATTEMPTS; attempt += 1) {
+      gatewayHealth = await step.run(
+        `verify-gateway-health-${attempt + 1}`,
+        async (): Promise<{ healthy: boolean; status?: number; error?: string }> => {
+          return await verifyGatewayHealth(tenant.droplet_ip!);
+        }
+      );
+
+      if (gatewayHealth.healthy) {
+        break;
       }
-    });
+
+      if (attempt < GATEWAY_HEALTH_MAX_ATTEMPTS - 1) {
+        await step.sleep(`wait-for-gateway-health-${attempt + 1}`, GATEWAY_HEALTH_WAIT);
+      }
+    }
 
     if (!gatewayHealth.healthy) {
-      const gatewayStatus = 'status' in gatewayHealth ? gatewayHealth.status : undefined;
-      throw new Error(
-        `Gateway unhealthy on ${tenant.droplet_ip} (status: ${gatewayStatus ?? 'unreachable'}). Inngest will retry.`
-      );
+      throw new Error(`Gateway unhealthy on ${tenant.droplet_ip} (status: ${gatewayHealth.status ?? 'unreachable'}).`);
     }
 
     await step.run('mark-slack-active', async () => {
@@ -289,12 +362,55 @@ export const activateSlack = inngest.createFunction(
       return { activated: true };
     });
 
+    const welcomeDm = await step.run('send-slack-welcome-dm', async () => {
+      if (!slackConn.installer_user_id) {
+        return {
+          sent: false,
+          skipped: true,
+          reason: 'missing_installer_user_id',
+        };
+      }
+
+      try {
+        const result = await postSlackWelcomeMessage({
+          botToken,
+          installerUserId: slackConn.installer_user_id,
+          agentName: getAgentName(tenant.onboarding_data),
+        });
+
+        if (!result.sent) {
+          console.error('Slack welcome DM failed', {
+            tenantId,
+            error: result.error,
+          });
+        }
+
+        return {
+          sent: result.sent,
+          skipped: false,
+          error: result.error,
+        };
+      } catch (error) {
+        console.error('Slack welcome DM threw', {
+          tenantId,
+          error,
+        });
+
+        return {
+          sent: false,
+          skipped: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    });
+
     return {
       success: true,
       tenantId,
       teamId: slackConn.team_id,
       dropletIp: tenant.droplet_ip,
       alreadyConfigured: existingConfig.alreadyConfigured,
+      welcomeDm,
     };
   }
 );

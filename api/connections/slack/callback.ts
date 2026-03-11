@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHmac, createCipheriv, randomBytes } from 'crypto';
 import { Inngest } from 'inngest';
 import { supabase } from '../../lib/supabase';
+import { normalizeSlackScopes } from '../../lib/slack-connection';
 
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
 const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
@@ -13,6 +14,13 @@ const inngest = new Inngest({
   id: 'pixelport',
   eventKey: process.env.INNGEST_EVENT_KEY,
 });
+
+function getForwardedProto(req: VercelRequest): string {
+  const protoHeader = req.headers['x-forwarded-proto'];
+  const rawProto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
+  const normalized = rawProto?.split(',')[0]?.trim();
+  return normalized || 'https';
+}
 
 function getHexKey(): Buffer {
   if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
@@ -40,9 +48,7 @@ function buildRedirectUri(req: VercelRequest): string {
     throw new Error('Missing host header for redirect URI');
   }
 
-  const protoHeader = req.headers['x-forwarded-proto'];
-  const proto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
-  const scheme = proto || 'https';
+  const scheme = getForwardedProto(req);
 
   return `${scheme}://${host}/api/connections/slack/callback`;
 }
@@ -57,9 +63,7 @@ function dashboardUrl(req: VercelRequest): string {
     return DEFAULT_APP_URL;
   }
 
-  const protoHeader = req.headers['x-forwarded-proto'];
-  const proto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
-  const scheme = proto || 'https';
+  const scheme = getForwardedProto(req);
   return `${scheme}://${host}`;
 }
 
@@ -167,6 +171,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     const encryptedToken = encrypt(tokenData.access_token);
+    const normalizedScopes = normalizeSlackScopes(tokenData.scope);
 
     const { error: upsertError } = await supabase
       .from('slack_connections')
@@ -178,7 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           bot_token: encryptedToken,
           bot_user_id: tokenData.bot_user_id || null,
           installer_user_id: tokenData.authed_user?.id || null,
-          scopes: tokenData.scope ? tokenData.scope.split(',') : [],
+          scopes: normalizedScopes,
           is_active: false,
           connected_at: new Date().toISOString(),
         },

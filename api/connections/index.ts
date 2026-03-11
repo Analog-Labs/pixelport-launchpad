@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { getPublicRegistry } from '../lib/integrations/registry';
+import { deriveSlackConnection } from '../lib/slack-connection';
 
 /**
  * GET /api/connections
@@ -56,16 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const integrations: Record<string, unknown> = {};
 
     // Slack (from legacy table)
-    integrations.slack = slackConn
-      ? {
-          connected: true,
-          active: slackConn.is_active,
-          team_id: slackConn.team_id,
-          team_name: slackConn.team_name,
-          connected_at: slackConn.connected_at,
-          scopes: slackConn.scopes || [],
-        }
-      : { connected: false, active: false };
+    integrations.slack = deriveSlackConnection(slackConn);
 
     // Email (from tenants table)
     integrations.email = {

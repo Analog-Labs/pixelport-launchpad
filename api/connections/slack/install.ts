@@ -1,20 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHmac } from 'crypto';
 import { authenticateRequest, errorResponse } from '../../lib/auth';
+import { REQUIRED_SLACK_BOT_SCOPES } from '../../lib/slack-connection';
 
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
 const STATE_SECRET = process.env.SLACK_STATE_SECRET || process.env.API_KEY_ENCRYPTION_KEY;
 
-const BOT_SCOPES = [
-  'app_mentions:read',
-  'channels:history',
-  'channels:read',
-  'chat:write',
-  'im:history',
-  'im:read',
-  'im:write',
-  'users:read',
-].join(',');
+const BOT_SCOPES = REQUIRED_SLACK_BOT_SCOPES.join(',');
+
+function getForwardedProto(req: VercelRequest): string {
+  const protoHeader = req.headers['x-forwarded-proto'];
+  const rawProto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
+  const normalized = rawProto?.split(',')[0]?.trim();
+  return normalized || 'https';
+}
 
 function getConfig(): { clientId: string; stateSecret: string } {
   if (!SLACK_CLIENT_ID) {
@@ -41,9 +40,7 @@ function buildRedirectUri(req: VercelRequest): string {
     throw new Error('Missing host header for redirect URI');
   }
 
-  const protoHeader = req.headers['x-forwarded-proto'];
-  const proto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
-  const scheme = proto || 'https';
+  const scheme = getForwardedProto(req);
   return `${scheme}://${host}/api/connections/slack/callback`;
 }
 
@@ -58,19 +55,11 @@ function generateState(tenantId: string, stateSecret: string): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
-  if (req.method !== 'GET') {
+  if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Browser redirects (window.location.href) cannot carry Authorization headers.
-    // Accept the Supabase JWT as a query parameter for OAuth initiation.
-    // The token is short-lived and only consumed by our server — never forwarded to Slack.
-    const queryToken = typeof req.query.token === 'string' ? req.query.token : undefined;
-    if (queryToken && !req.headers.authorization) {
-      req.headers.authorization = `Bearer ${queryToken}`;
-    }
-
     const { tenant } = await authenticateRequest(req);
     const { clientId, stateSecret } = getConfig();
 
@@ -83,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     slackAuthUrl.searchParams.set('redirect_uri', redirectUri);
     slackAuthUrl.searchParams.set('state', state);
 
-    return res.redirect(302, slackAuthUrl.toString());
+    return res.status(200).json({ authorize_url: slackAuthUrl.toString() });
   } catch (error) {
     return errorResponse(res, error);
   }

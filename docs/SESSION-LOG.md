@@ -7,6 +7,102 @@
 
 ## Last Session
 
+- **Date:** 2026-03-10 (session 48)
+- **Who worked:** Codex
+- **What was done:**
+  - Applied the single CTO-required pre-merge fix on `codex/slack-chief-online` after the review verdict of `APPROVED with 1 required fix`.
+  - Updated [activate-slack.ts](/Users/sanchal/pixelport-launchpad/api/inngest/functions/activate-slack.ts) so the `send-slack-welcome-dm` step is fully best-effort:
+    - wrapped the entire welcome DM attempt in `try/catch`
+    - preserved `mark-slack-active` as the activation gate
+    - ensured Slack network failures or non-JSON responses now log and return a failed DM result instead of failing the whole Inngest function
+  - Expanded [slack-activation.test.ts](/Users/sanchal/pixelport-launchpad/src/test/slack-activation.test.ts) with a focused function-level regression test proving activation still returns success when Slack welcome DM parsing throws on an HTML response.
+  - Re-ran the exact CTO-requested verification:
+    - `npx vitest run src/test/slack-activation.test.ts`
+    - `npx tsc --noEmit`
+    - both passed
+  - Updated the Slack QA evidence and active plan to record that the required review fix is complete and the branch is ready for merge/deploy once the founder wants to proceed with the approved post-deploy production Slack QA.
+- **What's next:**
+  - Merge `codex/slack-chief-online` only when ready to immediately deploy and run the controlled production Slack QA on tenant `bootstrap-truth-qa-20260310054029`.
+  - After deploy, run the founder-led production Slack check:
+    - connect Slack from the real dashboard
+    - send one DM
+    - invite the Chief into one disposable test channel
+    - verify dashboard truth, Supabase truth, droplet Slack config truth, welcome DM, DM reply, and invited-channel reply
+- **Blockers:** No code blocker remains from CTO review. Merge/deploy is still waiting on explicit release execution and the planned founder-led production Slack QA.
+
+- **Date:** 2026-03-10 (session 47)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read the governing docs, stayed on branch `codex/slack-chief-online` from commit `1ed362e`, and explicitly pivoted away from the abandoned `vercel dev` + `localtunnel` + local Inngest Slack QA path.
+  - Re-audited the recovered Slack branch against `main` and confirmed the branch diff still stays inside the approved Slack slice:
+    - `api/agent/capabilities.ts`
+    - `api/connections/index.ts`
+    - `api/connections/slack/callback.ts`
+    - `api/connections/slack/install.ts`
+    - `api/inngest/functions/activate-slack.ts`
+    - `api/lib/slack-activation.ts`
+    - `api/lib/slack-connection.ts`
+    - `src/pages/dashboard/Connections.tsx`
+    - `src/pages/dashboard/Home.tsx`
+    - Slack tests and session/build docs only
+  - Reconfirmed the frozen baseline stayed untouched:
+    - `api/inngest/functions/provision-tenant.ts` was not modified
+    - no fresh-tenant reprovisioning was run
+    - no tenant creation, droplet bootstrap, durable bootstrap truth, or existing dashboard read truth file was changed
+  - Kept the only new code change strictly Slack-only:
+    - hardened Slack install/callback redirect generation to normalize multi-value `x-forwarded-proto` headers before building callback URLs
+    - added focused route coverage in `src/test/slack-callback-route.test.ts`
+    - added matching install-route coverage in `src/test/slack-install-route.test.ts`
+  - Removed the stray `.playwright-cli/` local artifact directory so the working tree stayed limited to the Slack code/test/docs delta.
+  - Rewrote the Slack handoff artifacts to match the new execution strategy:
+    - `docs/build-briefs/2026-03-10-slack-chief-online.md`
+    - `docs/qa/2026-03-10-slack-chief-online.md`
+    - `docs/build-briefs/2026-03-10-slack-chief-online-cto-prompt.md`
+    - all now treat the branch as code-review-ready first, with controlled production Slack QA deferred until after CTO approval, merge, and deploy on the stable QA tenant `bootstrap-truth-qa-20260310054029` (`39a234b7-3ca5-4668-af9f-b188f2e5ec34`)
+  - Committed and pushed the review-ready branch state:
+    - `6b9ba1d` (`fix: normalize slack oauth proxy redirects`)
+    - `e4af10c` (`docs: prep slack chief online review`)
+    - pushed `origin/codex/slack-chief-online`
+  - Ran the targeted Slack validation on the branch:
+    - `npx vitest run src/test/slack-connection.test.ts src/test/slack-install-route.test.ts src/test/slack-callback-route.test.ts src/test/connections-route.test.ts src/test/slack-activation.test.ts src/pages/dashboard/Connections.test.tsx`
+    - `npx tsc --noEmit`
+    - both passed
+- **What's next:**
+  - Submit `codex/slack-chief-online` for CTO review using `docs/build-briefs/2026-03-10-slack-chief-online-cto-prompt.md`.
+  - Do not merge or deploy until CTO review is complete.
+  - After CTO approval, merge and deploy, then run controlled production Slack QA on the stable QA tenant with the founder:
+    - founder completes Slack connect from the real dashboard
+    - founder sends one DM
+    - founder invites the Chief into one disposable test channel
+    - verify dashboard truth, Supabase truth, droplet Slack config truth, welcome DM, DM reply, and invited-channel reply
+  - If production Slack QA finds a real bug, fix it narrowly on the Slack branch or immediate follow-up Slack-only branch.
+- **Blockers:** Waiting on CTO review before merge/deploy. Controlled live Slack QA now intentionally waits until after deployment and founder participation on production.
+
+- **Date:** 2026-03-10 (session 46)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read `AGENTS.md`, `docs/SESSION-LOG.md`, `docs/ACTIVE-PLAN.md`, `docs/build-workflow.md`, and `docs/qa-policy.md`, then treated the session as a rescue/cleanup pass for broken Slack thread `019cd686-bfed-79d2-8bda-2e2813097f5a`.
+  - Audited the dirty local `main` diff and classified the touched files into:
+    - Slack-scoped: `api/agent/capabilities.ts`, `api/connections/index.ts`, `api/connections/slack/callback.ts`, `api/connections/slack/install.ts`, `api/inngest/functions/activate-slack.ts`, `api/lib/slack-activation.ts`, `api/lib/slack-connection.ts`, `src/pages/dashboard/Connections.tsx`, `src/pages/dashboard/Home.tsx`, `src/pages/dashboard/Connections.test.tsx`, `src/test/connections-route.test.ts`, `src/test/slack-activation.test.ts`, `src/test/slack-connection.test.ts`, `src/test/slack-install-route.test.ts`
+    - validated-baseline contamination: `api/inngest/functions/provision-tenant.ts`, `api/lib/provisioning-env.ts`, `src/test/provision-tenant.test.ts`
+    - unrelated tooling noise checkpointed only on the rescue branch: `.playwright-cli/*`, `tools/mcp/github-mcp.sh`, `tools/mcp/playwright-mcp.sh`
+  - Proved the provisioning-side change was contamination rather than a Slack requirement:
+    - the dirty `provision-tenant` diff removed `SLACK_APP_TOKEN` from `/opt/openclaw/.env`
+    - the same dirty Slack activation flow still writes `appToken: \`${SLACK_APP_TOKEN}\`` into the OpenClaw Slack config and depends on the gateway container receiving that env var
+    - result: a fresh tenant provisioned with the dirty provisioning diff would lose the app token needed for Slack Socket Mode, so the broken fresh-tenant/provisioning failure was caused by baseline contamination, not by a necessary Slack-only change
+  - Preserved the full dirty state on new branch `codex/slack-rescue` and committed it as `1b7883a` (`chore: checkpoint slack rescue state`) so nothing from the broken session was lost.
+  - Switched to `codex/slack-chief-online`, restored only the Slack-scoped files from the rescue branch, and committed the isolated Slack work as `664010a` (`feat: recover slack chief online flow`).
+  - Kept the validated provisioning/bootstrap paths frozen on the Slack branch by excluding all provisioning/env helper changes from `codex/slack-chief-online`.
+  - Ran targeted local validation only on the recovered Slack branch:
+    - `npx vitest run src/test/slack-connection.test.ts src/test/slack-install-route.test.ts src/test/connections-route.test.ts src/test/slack-activation.test.ts src/pages/dashboard/Connections.test.tsx`
+    - `npx tsc --noEmit`
+  - Did not run a fresh-tenant provisioning canary, did not merge, and did not deploy.
+- **What's next:**
+  - Start the real Slack execution session from branch `codex/slack-chief-online` at commit `664010a`.
+  - Treat `codex/slack-rescue` commit `1b7883a` as the full forensic checkpoint if anything from the broken session needs to be re-checked.
+  - Keep `api/inngest/functions/provision-tenant.ts` and other validated bootstrap/provisioning paths identical to `main` unless a future Slack session can prove a specific Slack requirement and gets explicit approval for that deviation.
+- **Blockers:** No code blocker for the rescue itself. End-to-end Slack QA still requires a separate controlled integration session and any needed founder-provided Slack access.
+
 - **Date:** 2026-03-10 (session 45)
 - **Who worked:** Codex
 - **What was done:**
