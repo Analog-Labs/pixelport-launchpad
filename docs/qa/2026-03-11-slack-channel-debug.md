@@ -97,5 +97,10 @@
 
 - Final verdict:
   - the active production tenant now proves DM plus invited-channel thread replies after the explicit Slack channel policy correction
+- Release state:
+  - founder approved merge/deploy
+  - `main` now includes commit `7202c36`
+  - GitHub/Vercel marked the deployment `success` for `7202c36`
+  - same-session post-deploy smoke confirmed production debug truth, droplet config truth, runtime health, and retained invited-channel reply evidence on `vidacious-4`
 - Remaining gate:
-  - branch `codex/slack-channel-debug` still requires CTO review before merge/deploy
+  - none for this Slack-only fix

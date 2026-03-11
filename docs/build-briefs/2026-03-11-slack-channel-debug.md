@@ -52,8 +52,8 @@ Use the companion prompt file:
 - [x] Changed Slack runtime config works on production tenant `vidacious-4`
 - [x] No obvious DM regression on the active Slack install
 - [x] Invited-channel mention behavior is proven on one clean channel
-- [ ] Branch code is not yet deployed from Vercel; do not merge before CTO approval
-- [ ] After merge/deploy, run a short same-session Slack smoke on the active tenant
+- [x] Branch code was merged to `main` and Vercel marked commit `7202c36` deployed successfully
+- [x] Same-session post-deploy smoke on the active tenant matched the expected Slack control-plane and droplet truth
 
 ## Blockers / Required Credentials
 

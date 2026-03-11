@@ -7,6 +7,28 @@
 
 ## Last Session
 
+- **Date:** 2026-03-11 (session 51)
+- **Who worked:** Codex
+- **What was done:**
+  - Received explicit founder confirmation that `codex/slack-channel-debug` at `7202c36` was approved to merge and deploy.
+  - Pushed `origin/codex/slack-channel-debug`, fast-forwarded `main` to `7202c36`, and pushed `main`.
+  - Monitored the GitHub/Vercel integration for commit `7202c36` and confirmed the production deployment reached `success` with Vercel target URL `https://vercel.com/sanchalrs-projects/pixelport-launchpad/6zyqSS8epF3M6dU3zUdg2mqeUozz`.
+  - Ran same-session production smoke focused on the shipped Slack-only surface for tenant `vidacious-4` (`6c6ae22c-d682-4af6-83ff-79913d267aea`):
+    - production debug endpoint `GET /api/debug/slack-status` returned `200` and showed tenant `vidacious-4` active on droplet `137.184.56.1`
+    - production debug truth showed exactly one active `slack_connections` row for Analog workspace `TS7V7KT35`
+    - direct Supabase verification still showed the full 13-scope install set on that single active row
+    - droplet `/opt/openclaw/openclaw.json` still contained the intended Slack config including `groupPolicy: "open"`
+    - runtime logs still showed the hot-reloaded Slack channel healthy with `socket mode connected`
+    - droplet session-store evidence still proved the real invited-channel reply in `#vidacious-new-registrations`:
+      - initial mention `<@U0AJE9BSERZ> there?`
+      - assistant reply `Yep — I’m here. What do you need?`
+      - same thread captured under channel `C0A9C605ELD`
+  - Updated the live docs to reflect that the branch is merged, deployed, and production-smoked.
+- **What's next:**
+  - No immediate follow-up is required for this Slack-only fix.
+  - Keep the earlier Slack Web API/private-channel enumeration mismatch as a non-blocking diagnostic nuance unless it causes a future operational issue.
+- **Blockers:** None for this fix. The code is merged, deployed, and production-smoked.
+
 - **Date:** 2026-03-11 (session 50)
 - **Who worked:** Codex
 - **What was done:**
