@@ -7,6 +7,29 @@
 
 ## Last Session
 
+- **Date:** 2026-03-10 (session 48)
+- **Who worked:** Codex
+- **What was done:**
+  - Applied the single CTO-required pre-merge fix on `codex/slack-chief-online` after the review verdict of `APPROVED with 1 required fix`.
+  - Updated [activate-slack.ts](/Users/sanchal/pixelport-launchpad/api/inngest/functions/activate-slack.ts) so the `send-slack-welcome-dm` step is fully best-effort:
+    - wrapped the entire welcome DM attempt in `try/catch`
+    - preserved `mark-slack-active` as the activation gate
+    - ensured Slack network failures or non-JSON responses now log and return a failed DM result instead of failing the whole Inngest function
+  - Expanded [slack-activation.test.ts](/Users/sanchal/pixelport-launchpad/src/test/slack-activation.test.ts) with a focused function-level regression test proving activation still returns success when Slack welcome DM parsing throws on an HTML response.
+  - Re-ran the exact CTO-requested verification:
+    - `npx vitest run src/test/slack-activation.test.ts`
+    - `npx tsc --noEmit`
+    - both passed
+  - Updated the Slack QA evidence and active plan to record that the required review fix is complete and the branch is ready for merge/deploy once the founder wants to proceed with the approved post-deploy production Slack QA.
+- **What's next:**
+  - Merge `codex/slack-chief-online` only when ready to immediately deploy and run the controlled production Slack QA on tenant `bootstrap-truth-qa-20260310054029`.
+  - After deploy, run the founder-led production Slack check:
+    - connect Slack from the real dashboard
+    - send one DM
+    - invite the Chief into one disposable test channel
+    - verify dashboard truth, Supabase truth, droplet Slack config truth, welcome DM, DM reply, and invited-channel reply
+- **Blockers:** No code blocker remains from CTO review. Merge/deploy is still waiting on explicit release execution and the planned founder-led production Slack QA.
+
 - **Date:** 2026-03-10 (session 47)
 - **Who worked:** Codex
 - **What was done:**

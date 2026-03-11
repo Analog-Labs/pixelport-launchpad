@@ -371,25 +371,37 @@ export const activateSlack = inngest.createFunction(
         };
       }
 
-      const result = await postSlackWelcomeMessage({
-        botToken,
-        installerUserId: slackConn.installer_user_id,
-        agentName: getAgentName(tenant.onboarding_data),
-      });
-
-      if (!result.sent) {
-        console.error('Slack welcome DM failed', {
-          tenantId,
+      try {
+        const result = await postSlackWelcomeMessage({
+          botToken,
           installerUserId: slackConn.installer_user_id,
-          error: result.error,
+          agentName: getAgentName(tenant.onboarding_data),
         });
-      }
 
-      return {
-        sent: result.sent,
-        skipped: false,
-        error: result.error,
-      };
+        if (!result.sent) {
+          console.error('Slack welcome DM failed', {
+            tenantId,
+            error: result.error,
+          });
+        }
+
+        return {
+          sent: result.sent,
+          skipped: false,
+          error: result.error,
+        };
+      } catch (error) {
+        console.error('Slack welcome DM threw', {
+          tenantId,
+          error,
+        });
+
+        return {
+          sent: false,
+          skipped: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
     });
 
     return {

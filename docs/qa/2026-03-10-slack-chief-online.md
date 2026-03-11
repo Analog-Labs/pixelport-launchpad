@@ -91,6 +91,7 @@
 ## Result
 
 - Final verdict:
-  - branch audit complete; ready for CTO review
+  - branch audit complete; CTO-required pre-merge fix applied; ready for merge/deploy when production Slack QA can follow immediately
 - Follow-up fixes required:
-  - production Slack QA after CTO approval, merge, and deploy
+  - none before merge
+  - production Slack QA after deploy
