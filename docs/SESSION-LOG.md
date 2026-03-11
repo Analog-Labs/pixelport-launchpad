@@ -7,6 +7,50 @@
 
 ## Last Session
 
+- **Date:** 2026-03-10 (session 47)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read the governing docs, stayed on branch `codex/slack-chief-online` from commit `1ed362e`, and explicitly pivoted away from the abandoned `vercel dev` + `localtunnel` + local Inngest Slack QA path.
+  - Re-audited the recovered Slack branch against `main` and confirmed the branch diff still stays inside the approved Slack slice:
+    - `api/agent/capabilities.ts`
+    - `api/connections/index.ts`
+    - `api/connections/slack/callback.ts`
+    - `api/connections/slack/install.ts`
+    - `api/inngest/functions/activate-slack.ts`
+    - `api/lib/slack-activation.ts`
+    - `api/lib/slack-connection.ts`
+    - `src/pages/dashboard/Connections.tsx`
+    - `src/pages/dashboard/Home.tsx`
+    - Slack tests and session/build docs only
+  - Reconfirmed the frozen baseline stayed untouched:
+    - `api/inngest/functions/provision-tenant.ts` was not modified
+    - no fresh-tenant reprovisioning was run
+    - no tenant creation, droplet bootstrap, durable bootstrap truth, or existing dashboard read truth file was changed
+  - Kept the only new code change strictly Slack-only:
+    - hardened Slack install/callback redirect generation to normalize multi-value `x-forwarded-proto` headers before building callback URLs
+    - added focused route coverage in `src/test/slack-callback-route.test.ts`
+    - added matching install-route coverage in `src/test/slack-install-route.test.ts`
+  - Removed the stray `.playwright-cli/` local artifact directory so the working tree stayed limited to the Slack code/test/docs delta.
+  - Rewrote the Slack handoff artifacts to match the new execution strategy:
+    - `docs/build-briefs/2026-03-10-slack-chief-online.md`
+    - `docs/qa/2026-03-10-slack-chief-online.md`
+    - `docs/build-briefs/2026-03-10-slack-chief-online-cto-prompt.md`
+    - all now treat the branch as code-review-ready first, with controlled production Slack QA deferred until after CTO approval, merge, and deploy on the stable QA tenant `bootstrap-truth-qa-20260310054029` (`39a234b7-3ca5-4668-af9f-b188f2e5ec34`)
+  - Ran the targeted Slack validation on the branch:
+    - `npx vitest run src/test/slack-connection.test.ts src/test/slack-install-route.test.ts src/test/slack-callback-route.test.ts src/test/connections-route.test.ts src/test/slack-activation.test.ts src/pages/dashboard/Connections.test.tsx`
+    - `npx tsc --noEmit`
+    - both passed
+- **What's next:**
+  - Submit `codex/slack-chief-online` for CTO review using `docs/build-briefs/2026-03-10-slack-chief-online-cto-prompt.md`.
+  - Do not merge or deploy until CTO review is complete.
+  - After CTO approval, merge and deploy, then run controlled production Slack QA on the stable QA tenant with the founder:
+    - founder completes Slack connect from the real dashboard
+    - founder sends one DM
+    - founder invites the Chief into one disposable test channel
+    - verify dashboard truth, Supabase truth, droplet Slack config truth, welcome DM, DM reply, and invited-channel reply
+  - If production Slack QA finds a real bug, fix it narrowly on the Slack branch or immediate follow-up Slack-only branch.
+- **Blockers:** Waiting on CTO review before merge/deploy. Controlled live Slack QA now intentionally waits until after deployment and founder participation on production.
+
 - **Date:** 2026-03-10 (session 46)
 - **Who worked:** Codex
 - **What was done:**
