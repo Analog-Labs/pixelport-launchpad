@@ -74,6 +74,34 @@ describe("POST /api/connections/slack/install", () => {
     });
   });
 
+  it("uses the first forwarded proto token when proxy headers contain multiple values", async () => {
+    const { default: handler } = await import("../../api/connections/slack/install");
+
+    const req = {
+      method: "POST",
+      headers: {
+        authorization: "Bearer token-1",
+        host: "pixelport-launchpad.vercel.app",
+        "x-forwarded-proto": "https,http",
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      authorize_url: expect.stringContaining(
+        encodeURIComponent("https://pixelport-launchpad.vercel.app/api/connections/slack/callback")
+      ),
+    });
+    expect(res.body).not.toEqual({
+      authorize_url: expect.stringContaining(
+        encodeURIComponent("https,http://pixelport-launchpad.vercel.app/api/connections/slack/callback")
+      ),
+    });
+  });
+
   it("rejects the old GET install path", async () => {
     const { default: handler } = await import("../../api/connections/slack/install");
 

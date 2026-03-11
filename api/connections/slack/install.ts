@@ -8,6 +8,13 @@ const STATE_SECRET = process.env.SLACK_STATE_SECRET || process.env.API_KEY_ENCRY
 
 const BOT_SCOPES = REQUIRED_SLACK_BOT_SCOPES.join(',');
 
+function getForwardedProto(req: VercelRequest): string {
+  const protoHeader = req.headers['x-forwarded-proto'];
+  const rawProto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
+  const normalized = rawProto?.split(',')[0]?.trim();
+  return normalized || 'https';
+}
+
 function getConfig(): { clientId: string; stateSecret: string } {
   if (!SLACK_CLIENT_ID) {
     throw new Error('Missing SLACK_CLIENT_ID');
@@ -33,9 +40,7 @@ function buildRedirectUri(req: VercelRequest): string {
     throw new Error('Missing host header for redirect URI');
   }
 
-  const protoHeader = req.headers['x-forwarded-proto'];
-  const proto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
-  const scheme = proto || 'https';
+  const scheme = getForwardedProto(req);
   return `${scheme}://${host}/api/connections/slack/callback`;
 }
 

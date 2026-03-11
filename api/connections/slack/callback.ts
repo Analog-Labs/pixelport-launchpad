@@ -15,6 +15,13 @@ const inngest = new Inngest({
   eventKey: process.env.INNGEST_EVENT_KEY,
 });
 
+function getForwardedProto(req: VercelRequest): string {
+  const protoHeader = req.headers['x-forwarded-proto'];
+  const rawProto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
+  const normalized = rawProto?.split(',')[0]?.trim();
+  return normalized || 'https';
+}
+
 function getHexKey(): Buffer {
   if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
     throw new Error('API_KEY_ENCRYPTION_KEY must be a 64-char hex string');
@@ -41,9 +48,7 @@ function buildRedirectUri(req: VercelRequest): string {
     throw new Error('Missing host header for redirect URI');
   }
 
-  const protoHeader = req.headers['x-forwarded-proto'];
-  const proto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
-  const scheme = proto || 'https';
+  const scheme = getForwardedProto(req);
 
   return `${scheme}://${host}/api/connections/slack/callback`;
 }
@@ -58,9 +63,7 @@ function dashboardUrl(req: VercelRequest): string {
     return DEFAULT_APP_URL;
   }
 
-  const protoHeader = req.headers['x-forwarded-proto'];
-  const proto = Array.isArray(protoHeader) ? protoHeader[0] : protoHeader;
-  const scheme = proto || 'https';
+  const scheme = getForwardedProto(req);
   return `${scheme}://${host}`;
 }
 
