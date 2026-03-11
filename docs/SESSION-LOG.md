@@ -7,6 +7,50 @@
 
 ## Last Session
 
+- **Date:** 2026-03-10 (session 49)
+- **Who worked:** Codex
+- **What was done:**
+  - Received final CTO approval for `codex/slack-chief-online` at commit `cc68614`, merged the branch into `main` as merge commit `3b6b401`, and pushed `main`.
+  - Monitored deployment through the GitHub/Vercel integration and confirmed the Vercel status for commit `3b6b401` reached `success`.
+  - Ran same-session production Slack smoke on stable QA tenant `bootstrap-truth-qa-20260310054029` (`39a234b7-3ca5-4668-af9f-b188f2e5ec34`, droplet `142.93.117.18`) without touching any provisioning/baseline flow:
+    - production `/api/connections` showed Slack `not_connected`
+    - production `POST /api/connections/slack/install` returned the expected 13-scope authorize URL
+    - droplet health on `142.93.117.18:18789` was `200`
+    - droplet Slack config was absent before install, as expected
+  - Because the founder did not have QA dashboard credentials, used the controlled QA auth fixture to mint a direct production Slack authorize URL for the same tenant, and the founder completed the real Analog install from that URL.
+  - Verified production install truth after callback:
+    - new `slack_connections` row created for tenant `39a234b7-3ca5-4668-af9f-b188f2e5ec34`
+    - `team_id = TS7V7KT35`
+    - all 13 required scopes present
+    - `installer_user_id = U02FN3RU0KV`
+    - dashboard truth showed `connected: true`, `active: false`, `status: activating`
+  - Observed one production dispatch issue during smoke:
+    - activation did not begin immediately after install
+    - production `/api/inngest` was then registered out-of-band with `PUT /api/inngest`
+    - resent `pixelport/slack.connected` once against the already-created production row
+    - activation then completed successfully
+  - Verified production activation truth after the resend:
+    - `slack_connections.is_active = true`
+    - dashboard truth moved to `status: active`
+    - `/opt/openclaw/openclaw.json` on `142.93.117.18` contained the intended Slack config:
+      - `dmPolicy: open`
+      - `allowFrom: ["*"]`
+      - `replyToMode: first`
+      - `configWrites: false`
+  - Founder completed the live Slack behavior check in Analog:
+    - welcome DM delivered, though duplicate welcome text was observed during the smoke after the manual resend
+    - direct DM reply from Pixel passed
+    - invited-channel behavior did **not** pass cleanly
+  - Confirmed the invited-channel failure is a real workspace collision risk, not a missing-scope/runtime-config problem:
+    - old tenants `vidacious` and `vidacious-1` still have active `slack_connections` rows for the same Analog workspace `TS7V7KT35`
+    - both old rows still use the earlier 8-scope install set
+    - in the invited channel `#vidacious-bot`, another existing Analog-linked app (`Florence by Pocodot`) replied instead of the newly activated Pixel tenant
+- **What's next:**
+  - Stop before any remediation that deactivates old Analog Slack rows or changes same-workspace routing strategy.
+  - Open a separate Slack-only follow-up if the founder wants invited-channel behavior fixed for shared-workspace collisions.
+  - That follow-up must decide, explicitly, how PixelPort should handle multiple active tenants installed into the same Slack workspace.
+- **Blockers:** Production DM path is working, but invited-channel behavior is blocked by confirmed same-workspace tenant collisions on Analog. Fixing that requires a separate explicit founder-approved Slack follow-up before making any data/routing changes.
+
 - **Date:** 2026-03-10 (session 48)
 - **Who worked:** Codex
 - **What was done:**

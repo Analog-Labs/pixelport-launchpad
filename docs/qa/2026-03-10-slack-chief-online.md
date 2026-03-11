@@ -64,19 +64,37 @@
 ## Deferred Runtime QA
 
 - Local tunnel QA path was intentionally abandoned for this session and is not part of the final evidence gate.
-- Required live validation is deferred until after CTO approval, merge, and deploy.
+- Required live validation was run after CTO approval, merge, and deploy.
 - Production QA target remains the stable completed tenant `bootstrap-truth-qa-20260310054029` (`39a234b7-3ca5-4668-af9f-b188f2e5ec34`) on droplet `142.93.117.18`.
-- Founder-driven production QA checklist after deploy:
-  - connect Slack from the real production Connections page
-  - confirm all required scopes on install or reinstall
-  - verify dashboard truth transitions through `not_connected`, `activating`, `active`, or `reauthorization_required`
-  - verify Supabase `slack_connections` truth including scopes and `is_active`
-  - verify droplet Slack config truth:
-    - `dmPolicy: open`
-    - `allowFrom: ["*"]`
-    - `replyToMode: first`
-    - `configWrites: false`
-  - verify welcome DM, DM reply, and invited-channel reply in Analog
+- Production QA execution:
+  - merged `codex/slack-chief-online` to `main` as `3b6b401`
+  - Vercel deployment for commit `3b6b401` reached `success`
+  - production pre-connect smoke on the QA tenant passed:
+    - tenant stayed `active`
+    - `/api/connections` showed Slack `not_connected`
+    - `POST /api/connections/slack/install` returned the expected 13-scope authorize URL with the production callback
+    - droplet `142.93.117.18` returned `200` on port `18789`
+    - `/opt/openclaw/openclaw.json` had no Slack config before install
+  - founder completed production Slack install from the direct authorize URL in Analog
+  - post-install production truth:
+    - `slack_connections` row created for tenant `39a234b7-3ca5-4668-af9f-b188f2e5ec34`
+    - `team_id = TS7V7KT35`
+    - all 13 required scopes present
+    - dashboard truth showed `activating`
+  - activation completion:
+    - production `/api/inngest` was re-registered out-of-band during same-session smoke
+    - `pixelport/slack.connected` was resent once against the already-installed row
+    - `slack_connections.is_active` flipped to `true`
+    - dashboard truth moved to `active`
+    - droplet Slack config became:
+      - `dmPolicy: open`
+      - `allowFrom: ["*"]`
+      - `replyToMode: first`
+      - `configWrites: false`
+  - live Slack behavior:
+    - welcome DM: delivered, but duplicate welcome message observed during smoke after manual resend
+    - DM reply: passed
+    - invited-channel reply: failed cleanly for the new QA tenant; another existing Analog-linked app replied instead of Pixel
 
 ## Collision Watch
 
@@ -87,11 +105,16 @@
   - duplicate replies
   - wrong-tenant routing
   - stale old-workspace installs masking the new QA tenant state
+- Observed in production QA:
+  - both old tenants still have active `slack_connections` rows on `team_id = TS7V7KT35`
+  - both old rows still carry the older 8-scope install set
+  - the invited test channel `#vidacious-bot` produced a reply from the older `Florence by Pocodot` app, not from the newly activated Pixel tenant
+  - result: real workspace collision confirmed; invited-channel behavior is not yet isolated to the new QA tenant
 
 ## Result
 
 - Final verdict:
-  - branch audit complete; CTO-required pre-merge fix applied; ready for merge/deploy when production Slack QA can follow immediately
+  - merge/deploy complete; production QA passed for install, truthful status, activation, droplet config, and DM reply
 - Follow-up fixes required:
-  - none before merge
-  - production Slack QA after deploy
+  - invited-channel behavior remains blocked by existing same-workspace tenant collisions
+  - do not deactivate old Analog Slack rows or change workspace/tenant routing strategy without a separate explicit founder-approved Slack follow-up
