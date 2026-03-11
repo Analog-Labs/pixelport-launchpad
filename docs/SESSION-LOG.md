@@ -36,6 +36,10 @@
     - `docs/qa/2026-03-10-slack-chief-online.md`
     - `docs/build-briefs/2026-03-10-slack-chief-online-cto-prompt.md`
     - all now treat the branch as code-review-ready first, with controlled production Slack QA deferred until after CTO approval, merge, and deploy on the stable QA tenant `bootstrap-truth-qa-20260310054029` (`39a234b7-3ca5-4668-af9f-b188f2e5ec34`)
+  - Committed and pushed the review-ready branch state:
+    - `6b9ba1d` (`fix: normalize slack oauth proxy redirects`)
+    - `e4af10c` (`docs: prep slack chief online review`)
+    - pushed `origin/codex/slack-chief-online`
   - Ran the targeted Slack validation on the branch:
     - `npx vitest run src/test/slack-connection.test.ts src/test/slack-install-route.test.ts src/test/slack-callback-route.test.ts src/test/connections-route.test.ts src/test/slack-activation.test.ts src/pages/dashboard/Connections.test.tsx`
     - `npx tsc --noEmit`
