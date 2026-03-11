@@ -128,6 +128,7 @@ print(json.dumps({
     'botTokenMatches': slack.get('botToken') == ${JSON.stringify(botToken)},
     'appTokenMatches': slack.get('appToken') == '${'${SLACK_APP_TOKEN}'}',
     'dmPolicy': slack.get('dmPolicy'),
+    'groupPolicy': slack.get('groupPolicy'),
     'allowFromAll': slack.get('allowFrom') == ['*'],
     'replyToMode': slack.get('replyToMode'),
     'configWrites': slack.get('configWrites'),

@@ -6,6 +6,7 @@ export type SlackConfigState = {
   botTokenMatches: boolean;
   appTokenMatches: boolean;
   dmPolicy: string | null;
+  groupPolicy: string | null;
   allowFromAll: boolean;
   replyToMode: string | null;
   configWrites: boolean | null;
@@ -17,6 +18,7 @@ export function buildSlackConfigObject(botToken: string) {
     botToken,
     appToken: SLACK_APP_TOKEN_ENV_REF,
     dmPolicy: 'open',
+    groupPolicy: 'open',
     allowFrom: ['*'],
     replyToMode: 'first',
     configWrites: false,
@@ -36,6 +38,7 @@ export function parseSlackConfigState(output: string): SlackConfigState {
     botTokenMatches: parsed.botTokenMatches === true,
     appTokenMatches: parsed.appTokenMatches === true,
     dmPolicy: typeof parsed.dmPolicy === 'string' ? parsed.dmPolicy : null,
+    groupPolicy: typeof parsed.groupPolicy === 'string' ? parsed.groupPolicy : null,
     allowFromAll: parsed.allowFromAll === true,
     replyToMode: typeof parsed.replyToMode === 'string' ? parsed.replyToMode : null,
     configWrites: typeof parsed.configWrites === 'boolean' ? parsed.configWrites : null,
@@ -49,6 +52,7 @@ export function isSlackConfigCurrent(state: SlackConfigState): boolean {
     state.botTokenMatches &&
     state.appTokenMatches &&
     state.dmPolicy === 'open' &&
+    state.groupPolicy === 'open' &&
     state.allowFromAll &&
     state.replyToMode === 'first' &&
     state.configWrites === false

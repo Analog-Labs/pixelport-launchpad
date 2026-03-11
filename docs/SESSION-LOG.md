@@ -7,6 +7,52 @@
 
 ## Last Session
 
+- **Date:** 2026-03-11 (session 50)
+- **Who worked:** Codex
+- **What was done:**
+  - Re-read the governing docs, started from `main`, and created branch `codex/slack-channel-debug` for a Slack-only diagnostic/fix session.
+  - Re-verified the live production control-plane truth for the active tenant `vidacious-4` (`6c6ae22c-d682-4af6-83ff-79913d267aea`):
+    - tenant `active`
+    - droplet `557399795` / `137.184.56.1`
+    - exactly one active `slack_connections` row for Analog workspace `TS7V7KT35`
+    - all 13 required Slack bot scopes present on that row
+  - Re-verified the live runtime truth on `137.184.56.1`:
+    - image `pixelport-openclaw:2026.3.2-chromium`
+    - OpenClaw `2026.3.2`
+    - gateway health `200`
+    - Slack Socket Mode connected
+  - Isolated the active root cause as an OpenClaw `2026.3.2` Slack policy default, not Slack app config or workspace collision:
+    - founder confirmed Event Subscriptions stayed enabled with `app_mention`, `message.channels`, `message.groups`, and `message.im`
+    - live container resolved `channels.slack.groupPolicy = allowlist`
+    - no Slack channel allowlist was configured
+    - result fit the observed production truth exactly: DM worked while invited-channel traffic failed
+  - Implemented the minimum repo fix on `codex/slack-channel-debug`:
+    - updated `api/lib/slack-activation.ts` so activation writes explicit `groupPolicy: "open"` and treats configs missing that field as stale
+    - updated `api/inngest/functions/activate-slack.ts` to verify `groupPolicy` from the droplet config
+    - expanded `src/test/slack-activation.test.ts` with the new helper expectations and a regression proving the old DM-only config is no longer treated as current
+  - Re-ran local Slack validation:
+    - `npx vitest run src/test/slack-activation.test.ts src/test/slack-connection.test.ts src/test/slack-install-route.test.ts src/test/slack-callback-route.test.ts src/test/connections-route.test.ts src/pages/dashboard/Connections.test.tsx`
+    - `npx tsc --noEmit`
+    - both passed
+  - Applied the same explicit config correction directly on the active production droplet for live proof without touching onboarding/provisioning/baseline code:
+    - backup created at `/opt/openclaw/openclaw.json.bak.20260311-045843`
+    - `channels.slack.groupPolicy` changed to `open`
+    - hot reload restarted the Slack channel cleanly and reconnected Socket Mode
+  - Completed real production validation with founder participation:
+    - founder-provided screenshot showed Pixel replying in private channel `#vidacious-new-registrations`
+    - droplet session-store truth proved the active runtime processed that exact channel thread on channel `C0A9C605ELD`
+    - session file `830f9a38-9330-4a44-84f6-59df5acf7bcd.jsonl` captured the initial mention `<@U0AJE9BSERZ> there?` and Pixel’s reply `Yep — I’m here. What do you need?`
+    - follow-up thread session `cf001847-93a2-4eab-ad2b-56fa86db2a5b-topic-1773205571.525419.jsonl` captured the later thread replies in the same channel
+  - Prepared the Slack-only review artifacts:
+    - `docs/build-briefs/2026-03-11-slack-channel-debug.md`
+    - `docs/qa/2026-03-11-slack-channel-debug.md`
+    - `docs/build-briefs/2026-03-11-slack-channel-debug-cto-prompt.md`
+- **What's next:**
+  - Submit `codex/slack-channel-debug` for CTO review using `docs/build-briefs/2026-03-11-slack-channel-debug-cto-prompt.md`.
+  - Do not merge until CTO review is complete and explicitly approved.
+  - After CTO approval, merge/deploy the branch so the explicit `groupPolicy: "open"` behavior is codified in production rather than relying on the manual droplet correction for `vidacious-4`.
+- **Blockers:** No blocker remains on the active root cause. Merge is waiting on CTO review. One non-blocking diagnostic nuance remains: Slack Web API enumeration with the bot token did not surface the private validation channel even though the live runtime session store and founder screenshot proved the channel-thread replies.
+
 - **Date:** 2026-03-10 (session 49)
 - **Who worked:** Codex
 - **What was done:**

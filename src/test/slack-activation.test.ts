@@ -15,6 +15,7 @@ describe("slack activation helpers", () => {
       botToken: "xoxb-test",
       appToken: "${SLACK_APP_TOKEN}",
       dmPolicy: "open",
+      groupPolicy: "open",
       allowFrom: ["*"],
       replyToMode: "first",
       configWrites: false,
@@ -29,6 +30,7 @@ describe("slack activation helpers", () => {
         botTokenMatches: true,
         appTokenMatches: true,
         dmPolicy: "open",
+        groupPolicy: "open",
         allowFromAll: true,
         replyToMode: "first",
         configWrites: false,
@@ -41,6 +43,23 @@ describe("slack activation helpers", () => {
   it("uses a broad log heuristic to decide when hot reload likely touched Slack", () => {
     expect(runtimeLogsSuggestSlackReady("Slack channel connected over websocket")).toBe(true);
     expect(runtimeLogsSuggestSlackReady("no relevant channel logs here")).toBe(false);
+  });
+
+  it("treats tenants without explicit channel policy as stale", () => {
+    const state = parseSlackConfigState(
+      JSON.stringify({
+        enabled: true,
+        botTokenPresent: true,
+        botTokenMatches: true,
+        appTokenMatches: true,
+        dmPolicy: "open",
+        allowFromAll: true,
+        replyToMode: "first",
+        configWrites: false,
+      })
+    );
+
+    expect(isSlackConfigCurrent(state)).toBe(false);
   });
 
   it("builds a concise welcome message", () => {
@@ -158,6 +177,7 @@ describe("activateSlack welcome DM behavior", () => {
           botTokenMatches: true,
           appTokenMatches: true,
           dmPolicy: "open",
+          groupPolicy: "open",
           allowFromAll: true,
           replyToMode: "first",
           configWrites: false,
