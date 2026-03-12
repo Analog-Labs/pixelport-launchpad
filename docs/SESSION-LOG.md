@@ -7,6 +7,33 @@
 
 ## Last Session
 
+- **Date:** 2026-03-12 (session 58)
+- **Who worked:** Codex
+- **What was done:**
+  - Ran the requested repo-hygiene cleanup from isolated branch `codex/repo-cleanup` so the founder's intentionally dirty local checkout stayed untouched.
+  - Fixed the Vercel production deploy skip hazard in `vercel.json`:
+    - replaced the old `HEAD^..HEAD` ignore check with a compare from `VERCEL_GIT_PREVIOUS_SHA` to `HEAD`
+    - added a safe fallback that forces a build when the previous SHA is missing or unavailable instead of risking another false skip
+    - preserved the existing path-based cost-control behavior for true docs-only or non-app changes
+  - Removed the stray local `.playwright-cli/` artifact from the founder's main workspace after confirming it is not repo-tracked product code.
+  - Cleaned up merged remote release branches from GitHub now that their work is already contained in `main`:
+    - deleted `origin/codex/bootstrap-persistence-truth`
+    - deleted `origin/codex/command-dispatch-timeout`
+    - deleted `origin/codex/foundation-spine`
+    - deleted `origin/codex/fresh-tenant-command-dispatch`
+    - deleted `origin/codex/memory-foundation`
+    - deleted `origin/codex/phase0-slices-1-2`
+    - deleted `origin/codex/slack-channel-debug`
+    - deleted `origin/codex/slack-chief-online`
+    - deleted `origin/codex/vault-refresh-command-v1`
+    - deleted `origin/codex/vault-refresh-recovery`
+  - Intentionally left old unmerged branch `origin/codex/phase0-slices-3-4` alone because deleting it was not necessary to fix the current production/release hygiene.
+  - Verified the cleanup branch diff remains limited to `vercel.json` plus the live tracking docs.
+- **What's next:**
+  - Merge `codex/repo-cleanup`, let Vercel pick up the safer ignore rule, and confirm the GitHub branches page now reflects only real open work.
+  - If desired later, retire `codex/phase0-slices-3-4` in a separate explicit cleanup step.
+- **Blockers:** None for the cleanup branch itself.
+
 - **Date:** 2026-03-12 (session 57)
 - **Who worked:** Codex
 - **What was done:**
