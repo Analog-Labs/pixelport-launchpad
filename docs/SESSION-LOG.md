@@ -15,11 +15,15 @@
     - preserved the branch cleanup and local `.playwright-cli/` removal
     - backed out the new `ignoreCommand` logic entirely rather than iterating on more shell logic in production config
     - simplified `vercel.json` by removing `ignoreCommand` so future pushes always build instead of risking another false skip or config-specific deploy failure
-  - Kept the cleanup branch scoped to the safe operational fix plus the live tracking docs.
+  - Pushed follow-up commit `3937b16` (`fix: remove vercel ignore command`) to `main`.
+  - Confirmed GitHub/Vercel returned `success` for commit `3937b16` after the follow-up deploy completed.
+  - Re-verified the public app remained reachable during the cleanup:
+    - `GET /` returned `200`
+    - `HEAD /api/inngest` returned the expected `405`
 - **What's next:**
-  - Push the simplified `vercel.json` fix to `main`.
-  - Confirm GitHub/Vercel returns a green deployment status after the cleanup follow-up.
-- **Blockers:** Commit `45f1430` is on `main`, but its Vercel deployment failed. Production is still serving the prior successful deployment until the simplified follow-up lands cleanly.
+  - No immediate cleanup action remains.
+  - Optional later hygiene: decide whether old unmerged historical branch `codex/phase0-slices-3-4` should also be retired.
+- **Blockers:** None. The cleanup follow-up is merged and the latest Vercel deployment is green.
 
 - **Date:** 2026-03-12 (session 58)
 - **Who worked:** Codex
