@@ -7,6 +7,21 @@
 
 ## Last Session
 
+- **Date:** 2026-03-12 (session 55)
+- **Who worked:** Codex
+- **What was done:**
+  - Applied the two CTO-required pre-commit fixes on `codex/memory-foundation` after the review verdict of `APPROVED — commit and merge after 2 pre-commit fixes`:
+    - added `.playwright-cli/` to `.gitignore` so the local Playwright CLI artifact will not be committed
+    - documented the bundled out-of-scope `api/inngest/index.ts` change that adds optional `INNGEST_SERVE_HOST` support to `serve(...)`
+  - Verified `.playwright-cli/` now appears as ignored in `git status --ignored`.
+  - Created the first real implementation commit for the memory branch:
+    - commit `a6b29af` — `feat: add native memory foundation`
+  - Pushed `codex/memory-foundation` to `origin` and confirmed the remote branch is now available for PR/review flow.
+- **What's next:**
+  - Merge `codex/memory-foundation` to `main`.
+  - Monitor deploy and run the planned production smoke for the shipped native-memory behavior in the same release session.
+- **Blockers:** No blocker remains on the branch itself. Release execution is still pending because the branch is committed and pushed but not yet merged/deployed.
+
 - **Date:** 2026-03-12 (session 54)
 - **Who worked:** Codex
 - **What was done:**
