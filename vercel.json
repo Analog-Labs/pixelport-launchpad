@@ -1,7 +1,10 @@
 {
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- src/ api/ public/ index.html package.json package-lock.json vite.config.ts tsconfig.json tsconfig.app.json vercel.json components.json tailwind.config.ts postcss.config.js",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "functions": {
