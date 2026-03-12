@@ -171,6 +171,57 @@ Post-cleanup verification:
 - no remaining tenant rows matched `linear-memory-canary%`
 - no surviving auth user remained for the canary account
 
+## Production Release Validation
+
+Release path:
+- merged branch stack into `main` at `eaf536a`
+- Vercel skipped that first `main` push because `vercel.json` `ignoreCommand` compares only `HEAD^..HEAD`, and the top commit in the pushed stack was the docs-only handoff commit
+- pushed no-op formatting commit `8709e50` on `vercel.json` only to force the real production rebuild without changing runtime behavior
+- GitHub/Vercel then reported deployment `success` for `8709e50` with target URL `https://vercel.com/sanchalrs-projects/pixelport-launchpad/9RtV8LqB4ajevk74hkZri1yJLV2S`
+- production alias `https://pixelport-launchpad.vercel.app` refreshed at `Thu, 12 Mar 2026 08:31:12 GMT`
+- `PUT https://pixelport-launchpad.vercel.app/api/inngest` returned `200 {"message":"Successfully registered","modified":true}`
+
+Production truth re-check on `vidacious-4`:
+- backend still showed:
+  - tenant `active`
+  - `memory_native_enabled=true`
+  - `memory_mem0_enabled=false`
+  - `agent_tasks=5`
+  - `competitors=4`
+  - `vault_sections=5`
+  - all `5` vault sections `ready`
+- SSH again reached `root@137.184.56.1`
+- `docker ps` still showed `openclaw-gateway` healthy on `pixelport-openclaw:2026.3.2-chromium`
+- `docker exec openclaw-gateway openclaw health` still reported:
+  - `Slack: ok`
+  - `Agents: main (default)`
+- droplet truth still showed:
+  - `agents.defaults.memorySearch.enabled = true`
+  - `provider = "openai"`
+  - `remote.apiKey = "${MEMORY_OPENAI_API_KEY}"`
+  - `MEMORY_OPENAI_API_KEY=<present>`
+  - `MEM0_API_KEY=<missing>`
+  - workspace files `MEMORY.md`, `memory/business-context.md`, `memory/operating-model.md`, and `memory/active-priorities.md`
+
+Production search proof:
+- `openclaw memory search "Pixie Vidacious video ads"` returned:
+  - `MEMORY.md`
+  - `memory/business-context.md`
+- `openclaw memory search "Canonical status snapshot recorded 5 tasks created"` returned:
+  - `memory/active-priorities.md`
+
+Production Mem0 graceful-degradation proof:
+- `GET https://pixelport-launchpad.vercel.app/api/agent/memory` with the real tenant `x-agent-key` returned:
+  - `200`
+  - `{"enabled":false,"provider":"mem0","status":"disabled","memories":[]}`
+- `GET https://pixelport-launchpad.vercel.app/api/agent/memory?q=test-memory` with the same `x-agent-key` returned:
+  - `200`
+  - `{"enabled":false,"provider":"mem0","status":"disabled","query":"test-memory","results":[]}`
+- `POST https://pixelport-launchpad.vercel.app/api/agent/memory` with the same `x-agent-key` returned:
+  - `409`
+  - `{"error":"Mem0 is disabled for this tenant","code":"mem0_disabled","enabled":false,"provider":"mem0"}`
+- result: the shipped route no longer returns a raw config `500` on this disabled tenant path
+
 ## Status
 
 - Repo implementation status: complete
@@ -178,4 +229,6 @@ Post-cleanup verification:
 - Live `vidacious-4` repair status: complete
 - Fresh-tenant native-memory inheritance status: complete, with the explicit canary truthfulness caveat above
 - Cleanup status: complete
-- Merge status: ready for CTO review, not yet approved for merge or deploy
+- Merge status: merged to `main`
+- Production deploy status: complete via `8709e50` after the initial docs-top-commit push at `eaf536a` was skipped by the Vercel ignore rule
+- Production smoke status: complete

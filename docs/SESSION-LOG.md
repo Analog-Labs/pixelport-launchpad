@@ -7,6 +7,41 @@
 
 ## Last Session
 
+- **Date:** 2026-03-12 (session 57)
+- **Who worked:** Codex
+- **What was done:**
+  - Merged the CTO-approved native-memory branch into `main` from an isolated release worktree so the local uncommitted `main` docs were not disturbed:
+    - fast-forwarded the release checkout to `eaf536a` from `codex/memory-foundation`
+    - pushed `main`
+  - Caught a real production-release hazard in the Vercel ignore rule:
+    - commit `eaf536a` was the docs handoff commit at the top of the fast-forwarded stack
+    - `vercel.json` uses `git diff --quiet HEAD^ HEAD ...`, so Vercel treated that top commit as docs-only and skipped the production build even though the previous commit in the same push contained code
+    - created no-op formatting commit `8709e50` (`chore: force production deploy for memory foundation`) on `vercel.json` only to force the real production rebuild without changing runtime behavior
+    - pushed `main` again and confirmed GitHub/Vercel reported deployment `success` for `8709e50` with target URL `https://vercel.com/sanchalrs-projects/pixelport-launchpad/9RtV8LqB4ajevk74hkZri1yJLV2S`
+  - Synced Inngest after deploy:
+    - `PUT https://pixelport-launchpad.vercel.app/api/inngest`
+    - response `200 {"message":"Successfully registered","modified":true}`
+  - Ran same-session production smoke for the shipped native-memory surface on active tenant `vidacious-4` (`6c6ae22c-d682-4af6-83ff-79913d267aea`):
+    - production alias `https://pixelport-launchpad.vercel.app` refreshed at `Thu, 12 Mar 2026 08:31:12 GMT`
+    - direct backend truth showed tenant `active`, `memory_native_enabled=true`, `memory_mem0_enabled=false`, `agent_tasks=5`, `competitors=4`, `vault_sections=5`, and all `5` vault sections `ready`
+    - SSH reached `root@137.184.56.1` / host `pixelport-vidacious-4`
+    - `docker ps` showed `openclaw-gateway` healthy on `pixelport-openclaw:2026.3.2-chromium`
+    - `openclaw health` reported Slack ok and `Agents: main (default)`
+    - droplet config still showed `agents.defaults.memorySearch.enabled=true`, `provider="openai"`, and `remote.apiKey="${MEMORY_OPENAI_API_KEY}"`
+    - droplet `.env` still had `MEMORY_OPENAI_API_KEY` present and `MEM0_API_KEY` missing
+    - workspace still had `MEMORY.md` plus `memory/{active-priorities,business-context,operating-model}.md`
+    - `openclaw memory search "Pixie Vidacious video ads"` returned `MEMORY.md` and `memory/business-context.md`
+    - `openclaw memory search "Canonical status snapshot recorded 5 tasks created"` returned `memory/active-priorities.md`
+  - Production-smoked the merged Mem0 graceful-degradation route directly on Vercel using the real tenant agent key:
+    - `GET /api/agent/memory` returned `200` with `{enabled:false, provider:"mem0", status:"disabled", memories:[]}`
+    - `GET /api/agent/memory?q=test-memory` returned `200` with `{enabled:false, provider:"mem0", status:"disabled", query:"test-memory", results:[]}`
+    - `POST /api/agent/memory` returned `409` with `{code:"mem0_disabled", enabled:false, provider:"mem0"}` instead of a raw config `500`
+  - Updated the native-memory QA/build docs so the repo now records the actual merge, deploy, forced rebuild nuance, and production smoke evidence.
+- **What's next:**
+  - No immediate release action remains for the native-memory foundation itself.
+  - Follow up separately on the Vercel ignore rule so stacked docs commits cannot accidentally suppress real production deploys again.
+- **Blockers:** None for the memory release. Operational follow-up only: the current `vercel.json` ignore rule can skip a real `main` deploy when the top pushed commit is docs-only.
+
 - **Date:** 2026-03-12 (session 55)
 - **Who worked:** Codex
 - **What was done:**

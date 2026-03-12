@@ -57,13 +57,13 @@ Use the companion prompt file:
 
 ## Production Smoke Checklist
 
-- [ ] Deploy completed successfully
-- [ ] `vidacious-4` native memory works on the live runtime after reindex
-- [ ] Mem0-disabled behavior no longer returns raw config `500`s
-- [ ] Fresh-tenant inheritance of native memory is proven on one real canary
-- [ ] Canary cleanup completed with FK-safe database deletes plus droplet cleanup
+- [x] Deploy completed successfully
+- [x] `vidacious-4` native memory works on the live runtime after reindex
+- [x] Mem0-disabled behavior no longer returns raw config `500`s
+- [x] Fresh-tenant inheritance of native memory is proven on one real canary
+- [x] Canary cleanup completed with FK-safe database deletes plus droplet cleanup
 
 ## Blockers / Required Credentials
 
 - Resolved credential: `MEMORY_OPENAI_API_KEY` was provided and validated during the live repair and fresh-canary proof.
-- Remaining gate: CTO review must complete before merge/deploy.
+- Release note: the first `main` push landed on docs commit `eaf536a`, so Vercel skipped the build because the repo `ignoreCommand` only compares `HEAD^..HEAD`. A no-op formatting commit on `vercel.json` (`8709e50`) was then used to force the real production deploy without changing runtime behavior.
