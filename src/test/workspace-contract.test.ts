@@ -13,11 +13,21 @@ describe("workspace contract", () => {
       onboardingData: {
         agent_name: "Luna",
         agent_tone: "bold",
+        company_url: "https://pixelport.test",
+        goals: ["Pipeline growth"],
+        scan_results: {
+          value_proposition: "AI chief of staff for startup marketing teams.",
+          industry: "SaaS",
+          brand_voice: "Direct and practical.",
+          target_audience: "Startup marketing teams",
+          key_products: ["Chief of staff workflows"],
+        },
       },
     });
 
     expect(scaffold.directories).toEqual(
       expect.arrayContaining([
+        "memory",
         "pixelport/content/deliverables",
         "pixelport/vault/snapshots",
         "pixelport/jobs",
@@ -31,7 +41,14 @@ describe("workspace contract", () => {
       expect(scaffold.files[promptFile]).toBeTruthy();
     }
 
+    expect(scaffold.files["MEMORY.md"]).toContain("This is Luna's fast recall layer");
+    expect(scaffold.files["MEMORY.md"]).toContain("- Website: https://pixelport.test");
+    expect(scaffold.files["memory/business-context.md"]).toContain("## Brand Voice Signals");
+    expect(scaffold.files["memory/business-context.md"]).toContain("## Products And Services Signals");
+    expect(scaffold.files["memory/operating-model.md"]).toContain("## Source Of Truth");
+    expect(scaffold.files["memory/active-priorities.md"]).toContain("## Current Operational Signals");
     expect(scaffold.files["pixelport/runtime/snapshots/status.json"]).toContain("foundation-spine");
+    expect(scaffold.files["pixelport/runtime/snapshots/status.json"]).toContain('"native_memory": "memory"');
   });
 
   it("removes permanent Spark and Scout assumptions while preserving current APIs", () => {
@@ -56,10 +73,13 @@ describe("workspace contract", () => {
     expect(combinedContent).toContain("/api/agent/workspace-events");
     expect(combinedContent).toContain("pixelport/scratch/subagents");
     expect(combinedContent).toContain("## Vault Refresh Commands");
+    expect(combinedContent).toContain("## Native Memory Workflow");
+    expect(combinedContent).toContain("Use native memory for fast recall.");
     expect(combinedContent).toContain("pixelport/vault/snapshots/<section_key>.md");
     expect(combinedContent).toContain('restore the prior content with `status: "ready"`');
     expect(combinedContent).not.toContain("/opt/openclaw/.env");
     expect(combinedContent).toContain("PIXELPORT_API_KEY must already be injected into the running container");
     expect(combinedContent).toContain("OPENAI_BASE_URL is required for direct model access");
+    expect(combinedContent).toContain("refresh the relevant native memory artifact in the same work cycle");
   });
 });

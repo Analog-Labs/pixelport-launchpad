@@ -2,6 +2,11 @@ import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
 import { persistBootstrapState } from '../../lib/bootstrap-state';
+import {
+  MEMORY_OPENAI_API_KEY_ENV,
+  buildOpenClawMemorySearchConfig,
+  resolveTenantMemorySettings,
+} from '../../lib/tenant-memory-settings';
 import { buildWorkspaceScaffold } from '../../lib/workspace-contract';
 import {
   buildBootstrapHooksConfig,
@@ -87,6 +92,21 @@ export const provisionTenant = inngest.createFunction(
       return data as TenantRow;
     });
     let onboardingData = (tenant.onboarding_data ?? {}) as Json;
+    const tenantMemorySettings = resolveTenantMemorySettings(tenant.settings);
+
+    await step.run('validate-memory-settings', async () => {
+      if (tenantMemorySettings.nativeEnabled && !process.env.MEMORY_OPENAI_API_KEY) {
+        throw new Error(
+          `${MEMORY_OPENAI_API_KEY_ENV} is required when memory_native_enabled is true. ` +
+          `Disable native memory for this tenant or configure the secret before provisioning.`
+        );
+      }
+
+      return {
+        nativeEnabled: tenantMemorySettings.nativeEnabled,
+        mem0Enabled: tenantMemorySettings.mem0Enabled,
+      };
+    });
 
     const litellmTeam = await step.run('create-litellm-team', async () => {
       const tenantSettings = (tenant.settings ?? {}) as Json;
@@ -150,6 +170,8 @@ export const provisionTenant = inngest.createFunction(
         openclawRuntimeImage: OPENCLAW_RUNTIME_IMAGE,
         litellmUrl: LITELLM_URL,
         litellmKey: litellmKey.key,
+        memoryOpenAiApiKey: process.env.MEMORY_OPENAI_API_KEY || '',
+        memoryNativeEnabled: tenantMemorySettings.nativeEnabled,
         geminiApiKey: process.env.GEMINI_API_KEY || '',
         agentmailApiKey: AGENTMAIL_API_KEY || '',
         agentApiKey,
@@ -553,6 +575,8 @@ function buildCloudInit(params: {
   openclawRuntimeImage: string;
   litellmUrl: string;
   litellmKey: string;
+  memoryOpenAiApiKey: string;
+  memoryNativeEnabled: boolean;
   geminiApiKey: string;
   agentmailApiKey: string;
   agentApiKey: string;
@@ -632,6 +656,7 @@ ${workspaceWriteCommands}
 cat > /opt/openclaw/.env << 'ENV_FILE'
 OPENAI_API_KEY=${params.litellmKey}
 OPENAI_BASE_URL=${params.litellmUrl}/v1
+MEMORY_OPENAI_API_KEY=${params.memoryOpenAiApiKey}
 GEMINI_API_KEY=${params.geminiApiKey}
 AGENTMAIL_API_KEY=${params.agentmailApiKey}
 PIXELPORT_API_KEY=${params.agentApiKey}
@@ -713,11 +738,12 @@ USER node
 `;
 }
 
-function buildOpenClawConfig(params: {
+export function buildOpenClawConfig(params: {
   tenantSlug: string;
   gatewayToken: string;
   litellmUrl: string;
   agentName: string;
+  memoryNativeEnabled: boolean;
   geminiApiKey: string;
   disableAcpDispatch: boolean;
 }): Record<string, unknown> {
@@ -771,6 +797,7 @@ function buildOpenClawConfig(params: {
           primary: 'litellm/gpt-5.4',
           fallbacks: ['litellm/gemini-2.5-flash', 'litellm/gpt-4o-mini'],
         },
+        memorySearch: buildOpenClawMemorySearchConfig(params.memoryNativeEnabled),
         subagents: {
           maxSpawnDepth: 2,
           maxChildrenPerAgent: 5,

@@ -101,6 +101,7 @@ export function buildOnboardingBootstrapMessage(params: {
     '6. If you generate content ideas, save them as draft_content tasks that require approval.',
     '7. If any information is missing, record what you learned and what you still need from the human instead of waiting silently.',
     '8. Valid task_type values are exactly: draft_content, research, competitor_analysis, strategy, report. If you need a running status, use "running" instead of "in_progress".',
+    '9. After you materially update canonical vault truth, refresh the relevant native memory artifact in `MEMORY.md` or `memory/` during the same work cycle.',
     '',
     'Keep your final reply short. The important part is writing the work back into the PixelPort APIs.',
   ];

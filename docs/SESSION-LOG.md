@@ -7,6 +7,101 @@
 
 ## Last Session
 
+- **Date:** 2026-03-12 (session 54)
+- **Who worked:** Codex
+- **What was done:**
+  - Recovered the stuck execution thread `019ce06d-bcfe-7df2-8939-8aefaa07441e` from local Codex session storage and resumed from the actual live branch/runtime state instead of the stale blocked docs.
+  - Re-ran the live native-memory proof on repaired tenant `vidacious-4` (`6c6ae22c-d682-4af6-83ff-79913d267aea`, droplet `557399795` / `137.184.56.1`):
+    - SSH reached `root@137.184.56.1`
+    - `docker ps` showed `openclaw-gateway` on `pixelport-openclaw:2026.3.2-chromium` healthy
+    - `docker exec openclaw-gateway openclaw --version` returned `2026.3.2`
+    - `openclaw health` reported Slack ok and the `main` agent available
+    - `agents.defaults.memorySearch` was present with `provider: "openai"` and `remote.apiKey: "${MEMORY_OPENAI_API_KEY}"`
+    - `.env` had `MEMORY_OPENAI_API_KEY` present and `MEM0_API_KEY` absent
+    - the workspace contained `MEMORY.md` plus `memory/{active-priorities,business-context,operating-model}.md`
+    - `openclaw memory search "Pixie Vidacious video ads"` returned hits from `MEMORY.md` and `memory/business-context.md`
+    - `openclaw memory search "Canonical status snapshot recorded 5 tasks created"` returned `memory/active-priorities.md`
+  - Re-ran the fresh-tenant inheritance proof on canary `linear-memory-canary-r2` (`267c3eac-5824-4f8b-a3e6-777b4d26f933`, droplet `557679536` / `167.172.155.156`) before cleanup:
+    - tenant status was `active`
+    - settings showed `memory_native_enabled=true` and `memory_mem0_enabled=false`
+    - gateway health succeeded, `memorySearch` config was present, `MEMORY_OPENAI_API_KEY` was present, `MEM0_API_KEY` was absent, and the native-memory scaffold files existed
+    - `openclaw memory search "Chief Orbit Website linear.app"` returned `MEMORY.md`
+    - `openclaw memory search "Current strategic priorities"` returned `memory/active-priorities.md`
+    - truthful backend counts at capture time were `vault_sections=5`, `agent_tasks=0`, `competitors=0`, `workspace_events=0`, `sessions_log=0`
+    - recorded the non-blocking caveat that this canary proved native-memory inheritance and indexing, but not dashboard/task write completeness in the local runtime
+  - Cleaned up the disposable canary completely:
+    - deleted droplet `557679536`
+    - deleted tenant-linked rows in the FK-safe order from the CTO brief (only `vault_sections=5` and `agents=1` existed; all earlier tables were already `0`)
+    - deleted tenant row `267c3eac-5824-4f8b-a3e6-777b4d26f933`
+    - deleted auth user `6045dabe-9c11-44e6-832c-73c818e25469` / `codex.memory.canary.1773297172884@example.com`
+    - confirmed DigitalOcean `GET` on droplet `557679536` returned `404`
+    - confirmed no remaining tenant rows matched `linear-memory-canary%` and auth lookup returned `User not found`
+  - Documented the small out-of-scope operational diff in `api/inngest/index.ts`:
+    - adds optional `INNGEST_SERVE_HOST` pass-through to `serve(...)`
+    - unrelated to native memory behavior
+    - harmless enough to keep bundled in this branch as an operational improvement, but should be committed with explicit awareness that it is not part of the memory foundation scope
+  - Updated the memory QA and CTO handoff docs so the branch artifacts now reflect the repaired live state, the proven searchable layout, the canary caveat, and the completed cleanup.
+- **What's next:**
+  - Submit `codex/memory-foundation` for CTO review using `docs/build-briefs/2026-03-12-memory-foundation-cto-prompt.md`.
+  - After CTO approval, merge/deploy the branch and run the planned production smoke for the shipped memory behavior.
+- **Blockers:** No implementation blocker remains. Merge is waiting on CTO review. Non-blocking caveat: the disposable canary proved native-memory inheritance and searchable indexing, but its local runtime did not complete task/competitor/workspace-event writes before cleanup.
+
+- **Date:** 2026-03-12 (session 53)
+- **Who worked:** Codex
+- **What was done:**
+  - Started the approved high-risk execution branch `codex/memory-foundation` from `main` without resetting the existing local doc edits.
+  - Reused the recovered planning brief and re-verified the live `vidacious-4` baseline on droplet `137.184.56.1`:
+    - host reachable as `root`
+    - container `openclaw-gateway` healthy on image `pixelport-openclaw:2026.3.2-chromium`
+    - `openclaw --version` returned `2026.3.2`
+    - current workspace had no `MEMORY.md` and no `memory/` directory
+    - droplet `.env` still used the LiteLLM `OPENAI_API_KEY` and did not yet contain `MEMORY_OPENAI_API_KEY` or `MEM0_API_KEY`
+    - live bundle inspection confirmed the intended `agents.defaults.memorySearch` path accepts `provider: "openai"` and `remote.apiKey`
+  - Implemented the repo-side native-memory foundation:
+    - added shared tenant-memory settings resolution/defaulting via `api/lib/tenant-memory-settings.ts`
+    - wired default flat settings into tenant creation and debug test-tenant creation
+    - updated provisioning to fail fast when native memory is enabled without `MEMORY_OPENAI_API_KEY`, inject the new env var, and emit the validated `memorySearch` config fragment
+    - extended workspace scaffolding and guidance with `MEMORY.md`, `memory/business-context.md`, `memory/operating-model.md`, and `memory/active-priorities.md`
+    - added the minimal onboarding bootstrap requirement to refresh native memory after canonical truth changes
+    - changed `/api/agent/memory` so Mem0-disabled or unavailable states degrade cleanly instead of returning raw config `500`s
+  - Added focused coverage for:
+    - tenant-memory settings resolution/defaulting
+    - provisioning config emission
+    - native-memory scaffold generation and guidance
+    - onboarding bootstrap message scope
+    - Mem0 graceful degradation
+  - Ran local validation successfully:
+    - `npx vitest run src/test/tenant-memory-settings.test.ts src/test/provision-tenant-memory.test.ts src/test/onboarding-bootstrap.test.ts src/test/workspace-contract.test.ts src/test/agent-memory-route.test.ts`
+    - `npx tsc --noEmit`
+  - Prepared the branch artifacts:
+    - `docs/build-briefs/2026-03-12-memory-foundation.md`
+    - `docs/qa/2026-03-12-memory-foundation.md`
+    - `docs/build-briefs/2026-03-12-memory-foundation-cto-prompt.md`
+- **What's next:**
+  - Obtain the real `MEMORY_OPENAI_API_KEY`.
+  - Repair live tenant `vidacious-4` in-session, reindex native memory, and prove what is actually searchable before finalizing the shipped memory layout.
+  - Run one fresh-tenant canary with FK-safe cleanup, then update the QA docs and hand off for CTO review.
+- **Blockers:** Live repair, searchable-memory proof, and the required fresh-tenant canary are blocked until the founder provides `MEMORY_OPENAI_API_KEY`.
+
+- **Date:** 2026-03-12 (session 52)
+- **Who worked:** Codex
+- **What was done:**
+  - Recovered the stalled Q&A/planning thread `019cc9f4-89be-75b0-9b4a-913be98f6225` directly from local Codex session storage at `/Users/sanchal/.codex/sessions/2026/03/07/rollout-2026-03-07T14-19-32-019cc9f4-89be-75b0-9b4a-913be98f6225.jsonl`.
+  - Confirmed that the thread did not stop before the CTO-feedback step; it already incorporated the founder-pasted CTO review, ran live tenant/runtime verification during planning, and produced a revised execution-ready memory brief plus next-session prompt.
+  - Reconstructed the latest planning-state outcome from that thread:
+    - topic = native memory repair + optional Mem0 activation
+    - target current tenant = `vidacious-4` (`6c6ae22c-d682-4af6-83ff-79913d267aea`)
+    - verified live droplet IP = `137.184.56.1`
+    - verified live OpenClaw version = `2026.3.2`
+    - verified `profile: "full"` already exposes `memory_search` / `memory_get`
+    - verified native memory is currently failing because the tenant has no `MEMORY.md`, no `memory/` corpus, and native memory defaults to direct OpenAI embeddings while the current tenant `OPENAI_API_KEY` is a LiteLLM virtual key, producing `401`
+    - locked planning direction = standard OpenClaw paths (`MEMORY.md` + `memory/**/*.md`), flat tenant settings keys, direct `MEMORY_OPENAI_API_KEY` for native embeddings, Mem0 optional/off-by-default, current-tenant repair plus future-tenant inheritance
+  - Checked repo/git state and found no evidence that the recovered `codex/memory-foundation` brief was later executed or merged; the recovered artifact remains planning-only.
+- **What's next:**
+  - Use the recovered memory brief as the resume point if the founder still wants to tackle native memory next.
+  - If execution is approved, start a separate high-risk build session from `main`, create branch `codex/memory-foundation`, and use the recovered next-session prompt rather than re-planning from scratch.
+- **Blockers:** No blocker for the recovery itself. The future implementation session will still need `MEMORY_OPENAI_API_KEY`, and `MEM0_API_KEY` only if optional live Mem0 validation is desired.
+
 - **Date:** 2026-03-11 (session 51)
 - **Who worked:** Codex
 - **What was done:**

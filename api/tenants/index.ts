@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
+import { applyTenantMemorySettingsDefaults } from '../lib/tenant-memory-settings';
 
 // Inline client creation — importing from a local file that re-exports inngest
 // crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
@@ -163,10 +164,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           plan: 'trial',
           status: 'provisioning',
           onboarding_data: onboardingData,
-          settings: {
+          settings: applyTenantMemorySettingsDefaults({
             trial_budget_usd: 20,
             timezone: resolveTimezone(),
-          },
+          }),
         })
         .select('*')
         .single();

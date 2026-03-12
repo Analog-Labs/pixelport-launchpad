@@ -82,6 +82,17 @@ function getScanResults(onboardingData: JsonRecord): ScanResults | null {
   return scanResults as unknown as ScanResults;
 }
 
+function normalizeGoals(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => normalizeText(entry))
+    .filter((entry): entry is string => !!entry)
+    .slice(0, 6);
+}
+
 function listKeyProducts(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -185,6 +196,221 @@ function buildVaultSnapshots(scanResults: ScanResults | null): Record<string, st
   };
 }
 
+function buildGoalsList(goals: string[]): string {
+  if (goals.length === 0) {
+    return '- No onboarding goals were captured in canonical truth yet.';
+  }
+
+  return goals.map((goal) => `- ${goal}`).join('\n');
+}
+
+function buildBulletList(items: string[], fallback: string): string {
+  if (items.length === 0) {
+    return `- ${fallback}`;
+  }
+
+  return items.map((item) => `- ${item}`).join('\n');
+}
+
+function buildBusinessContextMemory(params: {
+  tenantName: string;
+  onboardingData: JsonRecord;
+  scanResults: ScanResults | null;
+}): string {
+  const goals = normalizeGoals(params.onboardingData.goals);
+  const companyUrl = normalizeText(params.onboardingData.company_url);
+  const scanResults = params.scanResults;
+  const products = listKeyProducts(scanResults?.key_products);
+  const brandVoiceSignals = [
+    normalizeText(scanResults?.brand_voice),
+    scanResults?.value_proposition
+      ? `Repeat the proof point: ${scanResults.value_proposition}`
+      : null,
+  ].filter((entry): entry is string => !!entry);
+  const audienceSignals = [
+    normalizeText(scanResults?.target_audience),
+    goals.length > 0
+      ? `Onboarding goals currently prioritize: ${goals.join(', ')}`
+      : null,
+  ].filter((entry): entry is string => !!entry);
+  const productSignals = [
+    ...products,
+    scanResults?.value_proposition
+      ? `Core promise: ${scanResults.value_proposition}`
+      : null,
+  ].filter((entry): entry is string => !!entry);
+
+  const lines = [
+    '# Business Context',
+    '',
+    `## Company`,
+    `- Tenant: ${params.tenantName}`,
+    companyUrl ? `- Website: ${companyUrl}` : '- Website: not captured in onboarding data.',
+    scanResults?.company_description
+      ? `- Description: ${scanResults.company_description}`
+      : '- Description: not yet promoted into canonical truth.',
+    scanResults?.value_proposition
+      ? `- Value proposition: ${scanResults.value_proposition}`
+      : '- Value proposition: not yet promoted into canonical truth.',
+    scanResults?.industry
+      ? `- Industry: ${scanResults.industry}`
+      : '- Industry: not yet promoted into canonical truth.',
+    '',
+    '## Onboarding Goals',
+    buildGoalsList(goals),
+    '',
+    '## Brand Voice Signals',
+    buildBulletList(
+      brandVoiceSignals,
+      'Use `pixelport/vault/snapshots/brand_voice.md` as the canonical source until stronger guidance is promoted.'
+    ),
+    '',
+    '## Audience And ICP Signals',
+    buildBulletList(
+      audienceSignals,
+      'Use `pixelport/vault/snapshots/icp.md` as the canonical source until ICP details are promoted.'
+    ),
+    '',
+    '## Products And Services Signals',
+    buildBulletList(
+      productSignals,
+      'Use `pixelport/vault/snapshots/products.md` as the canonical source until product details are promoted.'
+    ),
+    '',
+    '## Competitor Watchlist',
+    '- Use `pixelport/vault/snapshots/competitors.md` as the canonical source until verified competitors are promoted.',
+    '',
+    '## Canonical Snapshots',
+    '- Company profile: `pixelport/vault/snapshots/company_profile.md`',
+    '- Brand voice: `pixelport/vault/snapshots/brand_voice.md`',
+    '- ICP: `pixelport/vault/snapshots/icp.md`',
+    '- Products/services: `pixelport/vault/snapshots/products.md`',
+    '- Competitors: `pixelport/vault/snapshots/competitors.md`',
+  ];
+
+  return lines.join('\n');
+}
+
+function buildOperatingModelMemory(params: {
+  tenantName: string;
+  onboardingData: JsonRecord;
+}): string {
+  const agentName = getAgentName(params.onboardingData);
+
+  return [
+    '# Operating Model',
+    '',
+    '## Chief Identity',
+    `- Chief name: ${agentName}`,
+    `- Role: AI Chief of Staff for ${params.tenantName}`,
+    `- Tone contract: ${getToneDescription(params.onboardingData)}`,
+    '',
+    '## Source Of Truth',
+    '- Workspace files on the tenant droplet are the runtime source of truth.',
+    '- The dashboard is a projection of canonical backend and workspace truth.',
+    '- Native memory is a concise fast-recall layer derived from canonical truth.',
+    '- Mem0, if enabled later, is only for soft learned memory and must not replace canonical truth.',
+    '',
+    '## Verification Rules',
+    '- Use native memory for fast recall.',
+    '- Verify against canonical workspace truth when correctness matters.',
+    '- Canonical root files: `SOUL.md`, `TOOLS.md`, `AGENTS.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`.',
+    '- Canonical business snapshots: `pixelport/vault/snapshots/*.md`.',
+    '',
+    '## Refresh Rules',
+    '- When canonical truth changes materially, refresh the relevant native memory artifact in the same work cycle.',
+    '- Do not create a second competing truth store for company context.',
+  ].join('\n');
+}
+
+function buildActivePrioritiesMemory(onboardingData: JsonRecord): string {
+  const goals = normalizeGoals(onboardingData.goals);
+
+  return [
+    '# Active Priorities',
+    '',
+    '## Onboarding Goals',
+    buildGoalsList(goals),
+    '',
+    '## Current Operational Signals',
+    '- No additional runtime signals have been promoted into canonical truth yet.',
+    '- Until new durable work is written back, use onboarding goals plus the latest vault snapshots as the active planning baseline.',
+    '',
+    '## Current Strategic Priorities',
+    '- No current strategic priorities have been promoted into canonical truth yet.',
+    '- When strategic priorities are promoted into canonical truth, summarize them here for fast recall.',
+    '',
+    '## Refresh Trigger',
+    '- When strategic priorities are explicitly updated in canonical truth, refresh this file in the same work cycle.',
+  ].join('\n');
+}
+
+function buildRootMemoryFile(params: {
+  tenantName: string;
+  onboardingData: JsonRecord;
+  scanResults: ScanResults | null;
+}): string {
+  const agentName = getAgentName(params.onboardingData);
+  const goals = normalizeGoals(params.onboardingData.goals);
+  const companyUrl = normalizeText(params.onboardingData.company_url);
+
+  return [
+    '# Native Memory',
+    '',
+    `This is ${agentName}'s fast recall layer for ${params.tenantName}.`,
+    '',
+    '## How To Use This Layer',
+    '- Use native memory for fast recall.',
+    '- Verify against canonical workspace truth when correctness matters.',
+    '- Mem0 is optional and only for soft learned memory.',
+    '- When canonical truth changes materially, refresh this file and the related files in `memory/` in the same work cycle.',
+    '',
+    '## Quick Facts',
+    `- Chief: ${agentName}`,
+    companyUrl ? `- Website: ${companyUrl}` : '- Website: not yet captured in canonical truth.',
+    params.scanResults?.value_proposition
+      ? `- Value proposition: ${params.scanResults.value_proposition}`
+      : '- Value proposition: not yet promoted into canonical truth.',
+    goals.length > 0
+      ? `- Onboarding goals: ${goals.join(' | ')}`
+      : '- Onboarding goals: none captured yet.',
+    params.scanResults?.industry
+      ? `- Industry: ${params.scanResults.industry}`
+      : '- Industry: not yet promoted into canonical truth.',
+    '',
+    '## Canonical References',
+    '- `memory/business-context.md`',
+    '- `memory/operating-model.md`',
+    '- `memory/active-priorities.md`',
+    '- `pixelport/vault/snapshots/*.md`',
+  ].join('\n');
+}
+
+function buildMemoryArtifacts(params: {
+  tenantName: string;
+  onboardingData: JsonRecord;
+}): Record<string, string> {
+  const scanResults = getScanResults(params.onboardingData);
+
+  return {
+    'MEMORY.md': buildRootMemoryFile({
+      tenantName: params.tenantName,
+      onboardingData: params.onboardingData,
+      scanResults,
+    }),
+    'memory/business-context.md': buildBusinessContextMemory({
+      tenantName: params.tenantName,
+      onboardingData: params.onboardingData,
+      scanResults,
+    }),
+    'memory/operating-model.md': buildOperatingModelMemory({
+      tenantName: params.tenantName,
+      onboardingData: params.onboardingData,
+    }),
+    'memory/active-priorities.md': buildActivePrioritiesMemory(params.onboardingData),
+  };
+}
+
 function buildSoulFile(params: {
   tenantName: string;
   onboardingData: JsonRecord;
@@ -215,6 +441,12 @@ ${buildBrandContext(scanResults)}
 - Disposable worker output belongs under \`pixelport/scratch/subagents/\`.
 - Promote only verified runtime artifacts into stable \`pixelport/\` locations.
 - Emit \`workspace-events\` when commands progress or a runtime artifact is promoted.
+
+## Native Memory
+- Use native memory for fast recall through \`MEMORY.md\` and \`memory/\`.
+- Verify against canonical workspace truth when correctness matters.
+- Mem0 is optional and only for soft learned memory if it is enabled later.
+- When canonical truth changes materially, refresh the relevant native memory artifact in the same work cycle.
 
 ## Delivery Rules
 - Keep current task, vault, competitor, and image-generation APIs working as the live dashboard path.
@@ -296,6 +528,18 @@ curl -s -X POST \\
   "$API_BASE_URL/api/agent/workspace-events"
 \`\`\`
 
+## Native Memory Workflow
+\`\`\`bash
+# Search native memory for fast recall
+openclaw memory search --query "latest priorities"
+
+# Reindex native memory after materially updating canonical truth
+openclaw memory index --force
+\`\`\`
+
+- Use native memory for fast recall, then verify against canonical workspace truth in root files and \`pixelport/vault/snapshots/\` when correctness matters.
+- If \`MEMORY.md\` or \`memory/*.md\` changes materially, refresh the native memory index in the same work cycle.
+
 ## Vault Refresh Commands
 - Valid vault refresh section keys: ${vaultRefreshKeys}
 - A \`vault_refresh\` command always targets exactly one \`vault_section\`.
@@ -338,7 +582,8 @@ If heartbeat or a scheduled check-in runs, use this order:
 1. Review incomplete command work and emit a status event if reality changed.
 2. Check whether any durable runtime artifact should be promoted into \`pixelport/\`.
 3. Sync vault snapshot files when new verified knowledge exists.
-4. Avoid duplicate work. Prefer continuing or closing an existing command over starting a parallel duplicate.
+4. Refresh native memory artifacts after canonical truth changes materially.
+5. Avoid duplicate work. Prefer continuing or closing an existing command over starting a parallel duplicate.
 `;
 }
 
@@ -358,7 +603,8 @@ You are ${agentName} inside the PixelPort workspace for ${params.tenantName} (${
 2. Confirm the \`pixelport/\` directories exist before creating new runtime artifacts.
 3. Treat \`pixelport/runtime/snapshots/status.json\` as the local contract summary.
 4. Keep synced vault context in \`pixelport/vault/snapshots/\`.
-5. Emit \`workspace-events\` for command progress and promoted runtime artifacts.
+5. Keep \`MEMORY.md\` and \`memory/\` as the native fast-recall layer derived from canonical truth.
+6. Emit \`workspace-events\` for command progress and promoted runtime artifacts.
 
 ## Important
 - This foundation slice keeps the current task, vault, and competitor APIs as the live dashboard path.
@@ -385,6 +631,7 @@ function buildStatusSnapshot(params: {
         vault_snapshots: 'pixelport/vault/snapshots',
         runtime_snapshots: 'pixelport/runtime/snapshots',
         ops_events: 'pixelport/ops/events',
+        native_memory: 'memory',
         scratch_subagents: 'pixelport/scratch/subagents',
       },
     },
@@ -418,6 +665,7 @@ export function buildWorkspaceScaffold(params: {
 
   return {
     directories: [
+      'memory',
       'pixelport/content/deliverables',
       'pixelport/vault/snapshots',
       'pixelport/jobs',
@@ -426,6 +674,10 @@ export function buildWorkspaceScaffold(params: {
       'pixelport/scratch/subagents',
     ],
     files: {
+      ...buildMemoryArtifacts({
+        tenantName: params.tenantName,
+        onboardingData,
+      }),
       'SOUL.md': buildSoulFile({
         tenantName: params.tenantName,
         onboardingData,

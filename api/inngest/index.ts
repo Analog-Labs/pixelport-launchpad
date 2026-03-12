@@ -11,7 +11,10 @@ const inngest = new Inngest({
   eventKey: process.env.INNGEST_EVENT_KEY,
 });
 
+const serveHost = process.env.INNGEST_SERVE_HOST;
+
 export default serve({
   client: inngest,
   functions: [provisionTenant, activateSlack, activateIntegration],
+  ...(serveHost ? { serveHost } : {}),
 });

@@ -37,3 +37,6 @@ supabase/.temp/
 # Claude Code local config
 .claude/
 .mcp.json
+
+# Local Playwright CLI artifacts
+.playwright-cli/
