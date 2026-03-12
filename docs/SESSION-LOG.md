@@ -7,6 +7,24 @@
 
 ## Last Session
 
+- **Date:** 2026-03-12 (session 60)
+- **Who worked:** Codex
+- **What was done:**
+  - Double-checked old branch `codex/phase0-slices-3-4` before deleting it.
+  - Confirmed it is stale and should not be merged:
+    - branch state was `behind 190 / ahead 4` relative to `origin/main`
+    - the only unique commits were the original March 3 Phase 0 slice commits:
+      - `0a1f93a` `phase0 slice3: add supabase-auth api bridge routes`
+      - `07c1789` `phase0 slice4: add provisioning workflow and cto feedback log`
+      - `8747590` `docs: align active-plan notes with slice 3-4 completion`
+      - `9d1e53c` `CTO QA: fix 9 frontend issues + expand CTO scope`
+    - the branch diff against current `main` would remove or rewind large portions of the now-shipped product surface, including later Phase 1/2/3 APIs, Slack work, command ledger work, native-memory work, and current docs
+  - Deleted the stale remote branch `origin/codex/phase0-slices-3-4`.
+  - Deleted the matching local branch `codex/phase0-slices-3-4`.
+- **What's next:**
+  - No further branch-retirement work is required right now; the remote repo now reflects only `main`.
+- **Blockers:** None.
+
 - **Date:** 2026-03-12 (session 59)
 - **Who worked:** Codex
 - **What was done:**
