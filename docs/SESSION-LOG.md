@@ -7,6 +7,20 @@
 
 ## Last Session
 
+- **Date:** 2026-03-12 (session 59)
+- **Who worked:** Codex
+- **What was done:**
+  - Followed through on the repo-hygiene cleanup after commit `45f1430` (`chore: clean up release branches and deploy guard`) pushed successfully to `main` but Vercel marked its deployment as failed.
+  - Treated the failed deploy as an operational blocker instead of leaving `main` with a red release:
+    - preserved the branch cleanup and local `.playwright-cli/` removal
+    - backed out the new `ignoreCommand` logic entirely rather than iterating on more shell logic in production config
+    - simplified `vercel.json` by removing `ignoreCommand` so future pushes always build instead of risking another false skip or config-specific deploy failure
+  - Kept the cleanup branch scoped to the safe operational fix plus the live tracking docs.
+- **What's next:**
+  - Push the simplified `vercel.json` fix to `main`.
+  - Confirm GitHub/Vercel returns a green deployment status after the cleanup follow-up.
+- **Blockers:** Commit `45f1430` is on `main`, but its Vercel deployment failed. Production is still serving the prior successful deployment until the simplified follow-up lands cleanly.
+
 - **Date:** 2026-03-12 (session 58)
 - **Who worked:** Codex
 - **What was done:**
