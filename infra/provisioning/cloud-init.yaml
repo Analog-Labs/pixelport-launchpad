@@ -5,8 +5,8 @@
 #
 # Variables (replaced at runtime by Inngest provisioning function):
 #   {{TENANT_SLUG}}             — tenant identifier
-#   {{OPENCLAW_BASE_IMAGE}}     — pinned OpenClaw base image (e.g., ghcr.io/openclaw/openclaw:2026.3.2)
-#   {{OPENCLAW_RUNTIME_IMAGE}}  — local browser-capable runtime tag built on the droplet
+#   {{OPENCLAW_BASE_IMAGE}}     — pinned OpenClaw base image (e.g., ghcr.io/openclaw/openclaw:2026.3.11)
+#   {{OPENCLAW_RUNTIME_IMAGE}}  — runtime image (defaults to OPENCLAW_BASE_IMAGE unless an override is set)
 #   {{GATEWAY_TOKEN}}           — random UUID for gateway auth
 #   {{LITELLM_KEY}}             — LiteLLM virtual key for this tenant
 #   {{LITELLM_URL}}             — LiteLLM proxy base URL
@@ -30,30 +30,13 @@ runcmd:
       systemctl start docker
     fi
 
-    # 2. Build a browser-capable runtime image from the pinned OpenClaw base
+    # 2. Pull the OpenClaw runtime image
     mkdir -p /opt/openclaw
     mkdir -p /opt/openclaw/workspace-main
     mkdir -p /opt/openclaw/canvas
     mkdir -p /opt/openclaw/cron
     mkdir -p /opt/openclaw/agents
-    mkdir -p /opt/openclaw/image
-
-    cat > /opt/openclaw/image/Dockerfile << 'OPENCLAW_DOCKERFILE'
-    FROM {{OPENCLAW_BASE_IMAGE}}
-
-    USER root
-
-    RUN apt-get update \
-      && apt-get install -y --no-install-recommends chromium \
-      && mkdir -p /home/node/.openclaw/browser \
-      && chown -R node:node /home/node/.openclaw \
-      && rm -rf /var/lib/apt/lists/*
-
-    USER node
-    OPENCLAW_DOCKERFILE
-
-    docker pull {{OPENCLAW_BASE_IMAGE}}
-    docker build -t {{OPENCLAW_RUNTIME_IMAGE}} /opt/openclaw/image
+    docker pull {{OPENCLAW_RUNTIME_IMAGE}}
 
     # 3. Write openclaw.json candidates (generated from buildOpenClawConfig)
     # 4. Write the workspace contract:

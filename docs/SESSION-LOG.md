@@ -7,6 +7,58 @@
 
 ## Last Session
 
+- **Date:** 2026-03-13 (session 62)
+- **Who worked:** Codex
+- **What was done:**
+  - Executed the approved two-step OpenClaw runtime canary against the new simplified provisioning path (no custom Chromium image build):
+    - Step 1 canary (`OPENCLAW_IMAGE=ghcr.io/openclaw/openclaw:2026.3.2`, no `OPENCLAW_RUNTIME_IMAGE` override) reached `active` with `bootstrap.status=accepted`, dashboard truth endpoints returned `200`, and runtime image on-droplet was the direct base image (`ghcr.io/openclaw/openclaw:2026.3.2`) instead of a `*-chromium` derivative.
+    - Step 2 canary (`OPENCLAW_IMAGE=ghcr.io/openclaw/openclaw:2026.3.11`, same simplified path) also reached `active` with `bootstrap.status=accepted`, dashboard truth endpoints returned `200`, and runtime image/version on-droplet were `ghcr.io/openclaw/openclaw:2026.3.11` / `OpenClaw 2026.3.11`.
+  - Verified CTO-requested ACP checks on both canary droplets:
+    - current emitted config (`acp.dispatch.enabled=false`) validated cleanly via `openclaw config validate --json`
+    - ACP-enabled compatibility variant also validated cleanly via an isolated profile config (`openclaw --profile acpcheck config validate --json`) with no policy flip in rollout config
+  - Confirmed canary runtime config parity goals:
+    - browser tool is blocked by policy (`agents.list[0].tools.deny: ["browser"]`)
+    - session delegation toggles remain intact (`tools.sessions.visibility: "all"`, `tools.agentToAgent.enabled: true`)
+    - `agents.defaults.memorySearch` remains enabled with `${MEMORY_OPENAI_API_KEY}` in both versions
+  - Captured canary caveat truthfully for both steps:
+    - each fresh tenant produced `vault_sections=5`, `agent_tasks=0`, `competitors=0`, `workspace_events=0`, `sessions_log=0` at capture time (same caveat pattern as recent local-runtime canaries; no new regression introduced by 2026.3.11)
+    - `openclaw memory status/search` output remained unchanged between 2026.3.2 and 2026.3.11 (`unable to open database file`)
+  - Cleaned DB/auth canary artifacts in FK-safe order for Step 1 and Step 2 tenants; tenant rows are removed.
+  - Found a cleanup permission blocker: DigitalOcean droplet `DELETE` returns `403 Forbidden` (`You are not authorized to perform this operation`) for both canary droplets, so disposable droplets remain until token scope or account-level cleanup is handled.
+  - Captured detailed canary evidence in `docs/qa/2026-03-13-openclaw-runtime-simplification-canary.md`.
+- **What's next:**
+  - Keep the repo default at `ghcr.io/openclaw/openclaw:2026.3.11` and proceed with normal forward rollout posture (no mass reprovision of existing tenants).
+  - Keep Growth Swarm excluded.
+  - Resolve DigitalOcean token scope (or manually delete the disposable canary droplets) to restore automated canary cleanup/cost control.
+- **Blockers:** Droplet cleanup permissions: current `DO_API_TOKEN` cannot delete droplets (`403`), so disposable canary droplets cannot be removed automatically.
+
+- **Date:** 2026-03-13 (session 61)
+- **Who worked:** Codex
+- **What was done:**
+  - Implemented the OpenClaw runtime simplification + upgrade defaults in repo code:
+    - removed custom Chromium layer build logic from provisioning script generation (`buildCloudInit`) so fresh droplets now pull the runtime image directly instead of generating `/opt/openclaw/image/Dockerfile` and running `docker build`
+    - added runtime image resolution helper so `OPENCLAW_RUNTIME_IMAGE` remains an optional override and defaults to `OPENCLAW_IMAGE` when unset
+    - bumped default `OPENCLAW_IMAGE` from `ghcr.io/openclaw/openclaw:2026.3.2` to `ghcr.io/openclaw/openclaw:2026.3.11`
+  - Disabled browser tool explicitly in emitted OpenClaw agent config (`tools.deny: ["browser"]`) while keeping existing model/session/memory/slack behavior.
+  - Synced infra templates with the new runtime path:
+    - updated `infra/provisioning/openclaw-template.json` to include browser deny and refreshed ACP note wording
+    - updated `infra/provisioning/cloud-init.yaml` to document direct runtime-image pull (no Chromium build stage)
+  - Deleted dead file `infra/openclaw-browser/Dockerfile` outright per founder direction.
+  - Added/updated targeted tests for:
+    - no Chromium build commands in generated cloud-init
+    - runtime image precedence (`OPENCLAW_RUNTIME_IMAGE` override vs base image default)
+    - explicit browser deny in generated agent config
+  - Ran local validation:
+    - `npx vitest run src/test/provision-tenant-memory.test.ts src/test/tenant-memory-settings.test.ts src/test/slack-activation.test.ts src/test/tenants-bootstrap-route.test.ts` (all passing)
+    - `npx tsc --noEmit` (passing)
+- **What's next:**
+  - Run the planned two-step canary sequence before broad rollout:
+    - Step 1: `2026.3.2` canary with no custom image build path
+    - Step 2: `2026.3.11` canary with the same simplified runtime path
+  - During canary, include CTO-required ACP checks (validate current `acp.dispatch.enabled=false` config and separately validate ACP-enabled variant), plus Slack/session-spawn/memory/dashboard-truth verification.
+  - Keep Growth Swarm excluded; existing active tenants are unchanged unless explicitly reprovisioned/recovered.
+- **Blockers:** No code blocker. Release promotion is pending canary execution evidence.
+
 - **Date:** 2026-03-12 (session 60)
 - **Who worked:** Codex
 - **What was done:**

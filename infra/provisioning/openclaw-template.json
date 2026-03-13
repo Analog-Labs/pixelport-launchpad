@@ -12,7 +12,7 @@
     }
   },
   "acp": {
-    "_comment": "Disable ACP dispatch for fresh tenant canaries on OpenClaw 2026.3.2. Provisioning falls back to a config without this block if validate rejects it.",
+    "_comment": "Disable ACP dispatch for fresh-tenant canaries unless a release-specific validation pass explicitly approves enabling it.",
     "dispatch": {
       "enabled": false
     }
@@ -54,7 +54,10 @@
           ]
         },
         "tools": {
-          "profile": "full"
+          "profile": "full",
+          "deny": [
+            "browser"
+          ]
         }
       }
     ]

@@ -58,11 +58,22 @@ if (!LITELLM_URL || !LITELLM_MASTER_KEY || !DO_API_TOKEN) {
   throw new Error('Missing one or more required env vars: LITELLM_URL, LITELLM_MASTER_KEY, DO_API_TOKEN');
 }
 
-const OPENCLAW_BASE_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.3.2';
-const OPENCLAW_RUNTIME_IMAGE = process.env.OPENCLAW_RUNTIME_IMAGE || 'pixelport-openclaw:2026.3.2-chromium';
+const OPENCLAW_BASE_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.3.11';
+const OPENCLAW_RUNTIME_IMAGE = resolveOpenClawRuntimeImage(
+  OPENCLAW_BASE_IMAGE,
+  process.env.OPENCLAW_RUNTIME_IMAGE,
+);
 const DEFAULT_DROPLET_IMAGE = 'ubuntu-24-04-x64';
 const DEFAULT_DROPLET_SIZE = 's-1vcpu-2gb';
 const DEFAULT_REGION = 'nyc1';
+
+export function resolveOpenClawRuntimeImage(
+  baseImage: string,
+  runtimeImageOverride?: string,
+): string {
+  const override = runtimeImageOverride?.trim();
+  return override && override.length > 0 ? override : baseImage;
+}
 
 export const provisionTenant = inngest.createFunction(
   {
@@ -567,7 +578,7 @@ ${heredocTag}`;
   return [...directoryCommands, ...fileCommands].join('\n\n');
 }
 
-function buildCloudInit(params: {
+export function buildCloudInit(params: {
   tenantSlug: string;
   tenantName: string;
   gatewayToken: string;
@@ -623,20 +634,13 @@ if ! command -v docker &> /dev/null; then
   systemctl start docker
 fi
 
-# 2. Build a browser-capable OpenClaw runtime image from the pinned base image
+# 2. Pull the OpenClaw runtime image
 mkdir -p /opt/openclaw
 mkdir -p /opt/openclaw/workspace-main
 mkdir -p /opt/openclaw/canvas
 mkdir -p /opt/openclaw/cron
 mkdir -p /opt/openclaw/agents
-mkdir -p /opt/openclaw/image
-
-cat > /opt/openclaw/image/Dockerfile << 'OPENCLAW_DOCKERFILE'
-${buildOpenClawBrowserDockerfile(params.openclawBaseImage)}
-OPENCLAW_DOCKERFILE
-
-docker pull ${params.openclawBaseImage}
-docker build -t ${params.openclawRuntimeImage} /opt/openclaw/image
+docker pull ${params.openclawRuntimeImage}
 
 # 3. Write agent configuration candidates
 cat > /opt/openclaw/openclaw.with-acp.json << 'OPENCLAW_CONFIG'
@@ -723,21 +727,6 @@ echo "PixelPort provisioning complete for ${params.tenantSlug}"
 `;
 }
 
-function buildOpenClawBrowserDockerfile(baseImage: string): string {
-  return `FROM ${baseImage}
-
-USER root
-
-RUN apt-get update \\
-  && apt-get install -y --no-install-recommends chromium \\
-  && mkdir -p /home/node/.openclaw/browser \\
-  && chown -R node:node /home/node/.openclaw \\
-  && rm -rf /var/lib/apt/lists/*
-
-USER node
-`;
-}
-
 export function buildOpenClawConfig(params: {
   tenantSlug: string;
   gatewayToken: string;
@@ -814,6 +803,7 @@ export function buildOpenClawConfig(params: {
           },
           tools: {
             profile: 'full',
+            deny: ['browser'],
           },
         },
       ],
