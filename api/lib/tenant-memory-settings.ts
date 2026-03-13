@@ -11,6 +11,14 @@ export type TenantMemorySettings = {
   rawSettings: JsonRecord;
 };
 
+export type TenantMemoryProvisioningPlan = {
+  requestedNativeEnabled: boolean;
+  effectiveNativeEnabled: boolean;
+  mem0Enabled: boolean;
+  nativeDowngradedMissingApiKey: boolean;
+  memoryOpenAiApiKey: string;
+};
+
 function asRecord(value: unknown): JsonRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return {};
@@ -85,5 +93,22 @@ export function buildOpenClawMemorySearchConfig(nativeEnabled: boolean): JsonRec
     remote: {
       apiKey: OPENCLAW_MEMORY_OPENAI_API_KEY_REF,
     },
+  };
+}
+
+export function resolveTenantMemoryProvisioningPlan(params: {
+  settings: unknown;
+  memoryOpenAiApiKey: string | null | undefined;
+}): TenantMemoryProvisioningPlan {
+  const resolved = resolveTenantMemorySettings(params.settings);
+  const memoryOpenAiApiKey = params.memoryOpenAiApiKey?.trim() ?? '';
+  const nativeDowngradedMissingApiKey = resolved.nativeEnabled && memoryOpenAiApiKey.length === 0;
+
+  return {
+    requestedNativeEnabled: resolved.nativeEnabled,
+    effectiveNativeEnabled: resolved.nativeEnabled && !nativeDowngradedMissingApiKey,
+    mem0Enabled: resolved.mem0Enabled,
+    nativeDowngradedMissingApiKey,
+    memoryOpenAiApiKey,
   };
 }

@@ -3,6 +3,7 @@ import {
   OPENCLAW_MEMORY_OPENAI_API_KEY_REF,
   applyTenantMemorySettingsDefaults,
   buildOpenClawMemorySearchConfig,
+  resolveTenantMemoryProvisioningPlan,
   resolveTenantMemorySettings,
 } from "../../api/lib/tenant-memory-settings";
 
@@ -58,6 +59,60 @@ describe("tenant memory settings", () => {
 
     expect(buildOpenClawMemorySearchConfig(false)).toEqual({
       enabled: false,
+    });
+  });
+
+  it("keeps native memory enabled during provisioning when the key exists", () => {
+    expect(
+      resolveTenantMemoryProvisioningPlan({
+        settings: {
+          memory_native_enabled: true,
+          memory_mem0_enabled: false,
+        },
+        memoryOpenAiApiKey: "  sk-memory  ",
+      }),
+    ).toEqual({
+      requestedNativeEnabled: true,
+      effectiveNativeEnabled: true,
+      mem0Enabled: false,
+      nativeDowngradedMissingApiKey: false,
+      memoryOpenAiApiKey: "sk-memory",
+    });
+  });
+
+  it("downgrades native memory during provisioning when key is missing", () => {
+    expect(
+      resolveTenantMemoryProvisioningPlan({
+        settings: {
+          memory_native_enabled: true,
+          memory_mem0_enabled: false,
+        },
+        memoryOpenAiApiKey: "",
+      }),
+    ).toEqual({
+      requestedNativeEnabled: true,
+      effectiveNativeEnabled: false,
+      mem0Enabled: false,
+      nativeDowngradedMissingApiKey: true,
+      memoryOpenAiApiKey: "",
+    });
+  });
+
+  it("does not mark downgrade when tenant already disabled native memory", () => {
+    expect(
+      resolveTenantMemoryProvisioningPlan({
+        settings: {
+          memory_native_enabled: false,
+          memory_mem0_enabled: true,
+        },
+        memoryOpenAiApiKey: "",
+      }),
+    ).toEqual({
+      requestedNativeEnabled: false,
+      effectiveNativeEnabled: false,
+      mem0Enabled: true,
+      nativeDowngradedMissingApiKey: false,
+      memoryOpenAiApiKey: "",
     });
   });
 });

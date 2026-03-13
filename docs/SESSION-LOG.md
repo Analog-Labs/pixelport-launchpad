@@ -7,6 +7,33 @@
 
 ## Last Session
 
+- **Date:** 2026-03-13 (session 65)
+- **Who worked:** Codex
+- **What was done:**
+  - Traced the fresh onboarding/provisioning failure shown in Inngest (`Provision New Tenant`) to a hard runtime guard in `api/inngest/functions/provision-tenant.ts`:
+    - `validate-memory-settings` threw when tenant `memory_native_enabled=true` and `MEMORY_OPENAI_API_KEY` was missing.
+    - This blocked droplet creation entirely and left tenants stuck in `provisioning`.
+  - Confirmed current Vercel production env now includes `MEMORY_OPENAI_API_KEY` (encrypted, present), so the immediate incident is unblocked.
+  - Implemented a permanent resilience fix so onboarding no longer hard-fails on that env gap:
+    - added `resolveTenantMemoryProvisioningPlan()` in `api/lib/tenant-memory-settings.ts`
+    - replaced hard throw with graceful runtime downgrade in provisioning:
+      - if key missing, continue provisioning with native memory effectively disabled for that run
+      - emit warning log and persist a durable warning payload under `tenants.onboarding_data.provisioning_memory`
+    - kept tenant requested settings intact (no forced rewrite of `memory_native_enabled`)
+    - passed effective memory flags to emitted cloud-init/OpenClaw config so runtime config matches the downgrade decision.
+  - Expanded unit coverage:
+    - `src/test/tenant-memory-settings.test.ts` now includes provisioning-plan tests for:
+      - native enabled + key present
+      - native enabled + key missing (downgrade path)
+      - native already disabled (no false downgrade)
+  - Validation run:
+    - `npx vitest run src/test/tenant-memory-settings.test.ts src/test/provision-tenant-memory.test.ts` (passing)
+    - `npx tsc --noEmit` (passing)
+- **What's next:**
+  - Ship this branch and run one fresh-tenant canary to verify provisioning reaches `active` even if memory key is absent in runtime envs.
+  - Keep `MEMORY_OPENAI_API_KEY` configured in Vercel production to preserve native memory functionality (the new fallback protects onboarding continuity, not memory quality).
+- **Blockers:** No onboarding-blocking code issue remains on this branch; deployment + canary validation still required.
+
 - **Date:** 2026-03-13 (session 64)
 - **Who worked:** Codex
 - **What was done:**

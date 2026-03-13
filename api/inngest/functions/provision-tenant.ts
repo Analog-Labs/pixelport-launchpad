@@ -5,7 +5,7 @@ import { persistBootstrapState } from '../../lib/bootstrap-state';
 import {
   MEMORY_OPENAI_API_KEY_ENV,
   buildOpenClawMemorySearchConfig,
-  resolveTenantMemorySettings,
+  resolveTenantMemoryProvisioningPlan,
 } from '../../lib/tenant-memory-settings';
 import { buildWorkspaceScaffold } from '../../lib/workspace-contract';
 import {
@@ -103,21 +103,52 @@ export const provisionTenant = inngest.createFunction(
       return data as TenantRow;
     });
     let onboardingData = (tenant.onboarding_data ?? {}) as Json;
-    const tenantMemorySettings = resolveTenantMemorySettings(tenant.settings);
+    const memoryProvisioningPlan = await step.run('resolve-memory-settings', async () => {
+      const plan = resolveTenantMemoryProvisioningPlan({
+        settings: tenant.settings,
+        memoryOpenAiApiKey: process.env.MEMORY_OPENAI_API_KEY,
+      });
 
-    await step.run('validate-memory-settings', async () => {
-      if (tenantMemorySettings.nativeEnabled && !process.env.MEMORY_OPENAI_API_KEY) {
-        throw new Error(
-          `${MEMORY_OPENAI_API_KEY_ENV} is required when memory_native_enabled is true. ` +
-          `Disable native memory for this tenant or configure the secret before provisioning.`
+      if (plan.nativeDowngradedMissingApiKey) {
+        console.warn(
+          `[provision-tenant] ${MEMORY_OPENAI_API_KEY_ENV} is missing; ` +
+          `continuing with native memory disabled for tenant ${tenantId}.`
         );
       }
 
-      return {
-        nativeEnabled: tenantMemorySettings.nativeEnabled,
-        mem0Enabled: tenantMemorySettings.mem0Enabled,
-      };
+      return plan;
     });
+
+    if (memoryProvisioningPlan.nativeDowngradedMissingApiKey) {
+      onboardingData = await step.run('record-memory-downgrade', async (): Promise<Json> => {
+        const memoryRuntimeWarning = {
+          code: 'native_memory_disabled_missing_key',
+          reason: `${MEMORY_OPENAI_API_KEY_ENV} was missing during provisioning`,
+          checked_at: new Date().toISOString(),
+          requested_native_enabled: memoryProvisioningPlan.requestedNativeEnabled,
+          effective_native_enabled: memoryProvisioningPlan.effectiveNativeEnabled,
+          mem0_enabled: memoryProvisioningPlan.mem0Enabled,
+        };
+
+        const nextOnboardingData = {
+          ...onboardingData,
+          provisioning_memory: memoryRuntimeWarning,
+        };
+
+        const { data, error } = await supabase
+          .from('tenants')
+          .update({ onboarding_data: nextOnboardingData })
+          .eq('id', tenantId)
+          .select('onboarding_data')
+          .single();
+
+        if (error) {
+          throw new Error(`Failed to persist memory downgrade warning: ${error.message}`);
+        }
+
+        return (data?.onboarding_data as Json | null) ?? nextOnboardingData;
+      });
+    }
 
     const litellmTeam = await step.run('create-litellm-team', async () => {
       const tenantSettings = (tenant.settings ?? {}) as Json;
@@ -181,8 +212,8 @@ export const provisionTenant = inngest.createFunction(
         openclawRuntimeImage: OPENCLAW_RUNTIME_IMAGE,
         litellmUrl: LITELLM_URL,
         litellmKey: litellmKey.key,
-        memoryOpenAiApiKey: process.env.MEMORY_OPENAI_API_KEY || '',
-        memoryNativeEnabled: tenantMemorySettings.nativeEnabled,
+        memoryOpenAiApiKey: memoryProvisioningPlan.memoryOpenAiApiKey,
+        memoryNativeEnabled: memoryProvisioningPlan.effectiveNativeEnabled,
         geminiApiKey: process.env.GEMINI_API_KEY || '',
         agentmailApiKey: AGENTMAIL_API_KEY || '',
         agentApiKey,
@@ -539,6 +570,8 @@ export const provisionTenant = inngest.createFunction(
       agentmailInbox,
       bootstrapAccepted: bootstrapResult.ok,
       bootstrapStatus: bootstrapResult.status,
+      memoryNativeEnabled: memoryProvisioningPlan.effectiveNativeEnabled,
+      memoryNativeDowngraded: memoryProvisioningPlan.nativeDowngradedMissingApiKey,
       trialMode: !!trialMode,
       requestedSize: droplet.requestedSize,
       requestedRegion: droplet.requestedRegion,
