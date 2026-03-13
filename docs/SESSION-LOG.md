@@ -7,6 +7,41 @@
 
 ## Last Session
 
+- **Date:** 2026-03-13 (session 64)
+- **Who worked:** Codex
+- **What was done:**
+  - Audited the founder-reported Pixel reply on the live `vidacious-4` runtime (`6c6ae22c-d682-4af6-83ff-79913d267aea`, droplet `557399795` / `137.184.56.1`) and confirmed the message was materially accurate at capture time:
+    - OpenClaw version `2026.3.11`
+    - memory commands failing with `unable to open database file`
+    - security audit surfacing host-header fallback + open Slack group policy + file-permission findings
+  - Applied one-time runtime repair in place on `vidacious-4`:
+    - normalized `/home/node/.openclaw` ownership/perms to `node:node` with `700`
+    - normalized `/home/node/.openclaw/{identity,devices}` ownership/perms to `node:node` with `700`
+    - tightened `/opt/openclaw/{openclaw.json,.env}` perms to `600`
+  - Revalidated live runtime after repair:
+    - `openclaw health` and `curl http://127.0.0.1:18789/health` both healthy
+    - `openclaw channels status --json` showed Slack `running:true`
+    - `openclaw memory status --json` now succeeds (no DB-open error)
+    - forced `openclaw memory index --force`, then `openclaw memory search --json "Canonical status snapshot recorded"` returned expected `memory/active-priorities.md` hit
+    - no fresh `EACCES` / `unable to open database file` log lines in post-fix window
+  - Verified permission hardening impact in security audit:
+    - summary improved from `4 critical · 6 warn · 2 info` to `3 critical · 5 warn · 2 info`
+    - cleared permission findings (`Config file is world-readable`, `State dir is readable by others`)
+    - remaining criticals match current intentional policy posture (`dangerouslyAllowHostHeaderOriginFallback`, Slack `groupPolicy:"open"` exposure class)
+  - Implemented persistent provisioning hardening in repo:
+    - updated `api/inngest/functions/provision-tenant.ts` so generated cloud-init now:
+      - enforces `chmod 600 /opt/openclaw/openclaw.json /opt/openclaw/.env` before gateway start
+      - runs post-start `normalize_runtime_state_perms()` with retry to create/chown/chmod `/home/node/.openclaw`, `identity`, and `devices`
+    - synced docs template parity in `infra/provisioning/cloud-init.yaml` with the same hardening steps
+    - expanded `src/test/provision-tenant-memory.test.ts` assertions to lock the new permission-normalization script output
+  - Ran validation in repo:
+    - `npx vitest run src/test/provision-tenant-memory.test.ts src/test/tenant-memory-settings.test.ts` (passing)
+    - `npx tsc --noEmit` (passing)
+- **What's next:**
+  - Optional: run one fresh-tenant canary (or controlled container replacement on a disposable tenant) to prove the new post-start permission normalization survives end-to-end provisioning automatically.
+  - Founder decision later (if desired) on whether to harden `dangerouslyAllowHostHeaderOriginFallback` and Slack open-group policy; these were intentionally left unchanged in this pass.
+- **Blockers:** No blocker for memory/runtime stabilization on `vidacious-4`. Known intentional security posture warnings remain by policy choice.
+
 - **Date:** 2026-03-13 (session 63)
 - **Who worked:** Codex
 - **What was done:**

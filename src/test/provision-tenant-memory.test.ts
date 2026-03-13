@@ -161,5 +161,16 @@ describe("provision tenant memory config", () => {
     expect(script).not.toContain("docker build -t");
     expect(script).not.toContain("/opt/openclaw/image");
     expect(script).not.toContain("--no-install-recommends chromium");
+    expect(script).toContain("chmod 600 /opt/openclaw/openclaw.json /opt/openclaw/.env");
+    expect(script).toContain("normalize_runtime_state_perms()");
+    expect(script).toContain(
+      "mkdir -p /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices",
+    );
+    expect(script).toContain(
+      "chown 1000:1000 /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices",
+    );
+    expect(script).toContain(
+      "chmod 700 /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices",
+    );
   });
 });

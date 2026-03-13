@@ -669,6 +669,7 @@ ENV_FILE
 
 # 6. Set ownership (OpenClaw container runs as node:1000)
 chown -R 1000:1000 /opt/openclaw
+chmod 600 /opt/openclaw/openclaw.json /opt/openclaw/.env
 
 # 7. Validate OpenClaw config before starting the gateway
 validate_openclaw_config() {
@@ -722,6 +723,26 @@ docker run -d \\
   -v /opt/openclaw/agents:/home/node/.openclaw/agents \\
   ${params.openclawRuntimeImage} \\
   openclaw.mjs gateway --port 18789 --bind lan --allow-unconfigured
+
+# 9. Normalize runtime state permissions required by memory/device features
+normalize_runtime_state_perms() {
+  local attempts=0
+  until docker exec -u 0 openclaw-gateway sh -lc '
+    set -e
+    mkdir -p /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices
+    chown 1000:1000 /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices
+    chmod 700 /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices
+  '; do
+    attempts=$((attempts + 1))
+    if [ "$attempts" -ge 5 ]; then
+      echo "Failed to normalize OpenClaw runtime state permissions" >&2
+      exit 1
+    fi
+    sleep 2
+  done
+}
+
+normalize_runtime_state_perms
 
 echo "PixelPort provisioning complete for ${params.tenantSlug}"
 `;
