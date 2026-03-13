@@ -7,6 +7,41 @@
 
 ## Last Session
 
+- **Date:** 2026-03-13 (session 68)
+- **Who worked:** Codex
+- **What was done:**
+  - Ran founder-requested live upgrade validation on active tenant `vidacious-4` (`6c6ae22c-d682-4af6-83ff-79913d267aea`, droplet `557399795` / `137.184.56.1`) to verify real `2026.3.11` behavior against the listed feature claims.
+  - Reconfirmed runtime baseline:
+    - container image/version: `ghcr.io/openclaw/openclaw:2026.3.11` / `OpenClaw 2026.3.11`
+    - gateway health: `{"ok":true,"status":"live"}`
+    - channel runtime: `openclaw channels status --json` reported Slack `running:true`
+    - config schema: `openclaw config validate --json` returned `valid:true` with current `acp.dispatch.enabled=false`.
+  - Verified dynamic subagent behavior directly (not inferred):
+    - executed `openclaw agent` smoke prompt requiring `sessions_spawn`
+    - session transcript `e8c33ce2-6ccb-4e02-99a5-5ca5ddfba60c.jsonl` captured real `toolCall` + `toolResult` for `sessions_spawn`
+    - child session keys were created and completed successfully (e.g., `agent:main:subagent:e54ddf19-926b-49ce-a624-b0b3f4803fce`)
+    - deleted child-session artifact showed `cwd=/home/node/.openclaw/workspace-main`, confirming workspace inheritance behavior on this runtime.
+  - Verified browser/runtime reality on `vidacious-4`:
+    - browser tool is present and callable, but `browser status` shows no detected executable
+    - `openclaw browser start --json` fails with `No supported browser found (Chrome/Brave/Edge/Chromium...)`
+    - agent-level browser tool probe returned `BROWSER_STATUS:running=false`.
+  - Verified memory behavior:
+    - `openclaw memory status --json` succeeded (builtin + vector available)
+    - forced reindex succeeded (`openclaw memory index --force`)
+    - search hit returned from `memory/active-priorities.md` for `Canonical status snapshot recorded`.
+  - Reconfirmed current security posture on upgraded runtime:
+    - `openclaw security audit --json` remained `3 critical / 5 warn / 2 info`
+    - host-header origin fallback is still enabled (`gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback=true`)
+    - Slack open-group exposure warnings remain by current policy.
+  - Captured the dashboard offline root-cause state continuity:
+    - last `EACCES ... /home/node/.openclaw/devices` errors in log were at lines `487-488` (`2026-03-13T03:42:55Z`)
+    - later `webchat connected ... openclaw-control-ui v2026.3.11` appeared at line `493` (`2026-03-13T03:43:11Z`), matching the post-permission-fix recovery.
+- **What's next:**
+  - Optional hardening decision: disable `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` and move to explicit `allowedOrigins`.
+  - Optional consistency pass for existing upgraded tenants: explicitly deny `browser` in live config too (to match new-tenant policy and avoid unusable browser attempts).
+  - Keep browser re-enable as a separate approved canary if/when browser-assisted workflows are reprioritized.
+- **Blockers:** No blocker for core upgraded runtime operation on `vidacious-4`. Browser-assisted workflows remain intentionally unavailable without a browser binary/install strategy.
+
 - **Date:** 2026-03-13 (session 67)
 - **Who worked:** Codex
 - **What was done:**
