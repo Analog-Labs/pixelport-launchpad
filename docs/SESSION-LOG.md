@@ -7,6 +7,40 @@
 
 ## Last Session
 
+- **Date:** 2026-03-13 (session 63)
+- **Who worked:** Codex
+- **What was done:**
+  - Committed the OpenClaw runtime simplification + upgrade bundle as `29213c4` (`feat: simplify openclaw runtime path and pin 2026.3.11`) and pushed `main`.
+  - Verified Vercel deployment succeeded for `29213c4`:
+    - commit status: `success`
+    - Vercel target: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/9S4zUErWB7CBJbAwyuzRSFHwu1mc`
+    - public app reachability: `GET /` returned `200`
+  - Synced Inngest after deploy:
+    - `PUT https://pixelport-launchpad.vercel.app/api/inngest`
+    - response `{"message":"Successfully registered","modified":true}`
+  - Upgraded the live Slack-integrated tenant (`vidacious-4`, tenant `6c6ae22c-d682-4af6-83ff-79913d267aea`, droplet `557399795` / `137.184.56.1`) in place:
+    - baseline container image/version: `pixelport-openclaw:2026.3.2-chromium` / `2026.3.2`
+    - backed up runtime files:
+      - `/opt/openclaw/backups/openclaw.json.20260313-031433`
+      - `/opt/openclaw/backups/.env.20260313-031433`
+    - pulled `ghcr.io/openclaw/openclaw:2026.3.11`
+    - validated existing config against new image before swap (`openclaw.mjs config validate --json` => `valid:true`)
+    - replaced container with same host networking, env-file, and mounts; only image changed to `ghcr.io/openclaw/openclaw:2026.3.11`
+  - Post-upgrade validation on live tenant:
+    - `docker ps`: `openclaw-gateway` on `ghcr.io/openclaw/openclaw:2026.3.11` and `healthy`
+    - `curl http://127.0.0.1:18789/health` => `{"ok":true,"status":"live"}`
+    - logs show gateway listening + Slack socket reconnect:
+      - `gateway listening on ws://0.0.0.0:18789`
+      - `slack socket mode connected`
+    - `openclaw channels status --json` shows Slack account `default` with `running:true`
+  - Fixed one post-upgrade ops edge case:
+    - `openclaw health` via CLI initially failed (`EACCES mkdir /home/node/.openclaw/identity`)
+    - created/chowned `/home/node/.openclaw/identity` inside the running container; CLI health probe then succeeded and showed Slack probe `ok:true` for workspace `TS7V7KT35`.
+- **What's next:**
+  - Founder-led QA on live `vidacious-4` Slack flow (DM + one channel mention) to confirm no behavioral regressions after runtime upgrade.
+  - Optional hardening follow-up: add an explicit identity-path mount in provisioning for future runtime ops parity on `2026.3.11`.
+- **Blockers:** No release blocker for this rollout. Existing cleanup blocker remains separate: current `DO_API_TOKEN` still cannot delete disposable canary droplets (`403`).
+
 - **Date:** 2026-03-13 (session 62)
 - **Who worked:** Codex
 - **What was done:**
