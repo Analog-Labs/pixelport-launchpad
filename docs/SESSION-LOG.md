@@ -7,6 +7,29 @@
 
 ## Last Session
 
+- **Date:** 2026-03-13 (session 67)
+- **Who worked:** Codex
+- **What was done:**
+  - Founder updated Vercel `MEMORY_OPENAI_API_KEY` and redeployed.
+  - Revalidated memory/runtime directly on founder-requested canary droplet `162.243.160.239` (`pixelport-dry-run-mmoeognr`):
+    - gateway/container healthy
+    - no `EACCES`/DB-open permission errors
+    - key fingerprint remained old (`...XAAY`) and memory search still failed with OpenAI `401 invalid_api_key` (expected stale env snapshot from pre-rotation provisioning).
+  - Continued validation on the newer canary droplet `68.183.124.49` (`pixelport-dry-run-mmoezocv`) provisioned after key rotation:
+    - tenant reached `active` (`6640c856-7481-4537-9e20-8413193cb5b4`, droplet `557927762`)
+    - gateway/container healthy on `ghcr.io/openclaw/openclaw:2026.3.11`
+    - key fingerprint changed (`...bXAA`) and memory search no longer returned auth errors
+    - forced `openclaw memory index --force` and confirmed real hit for:
+      - `openclaw memory search --json "Complete post-onboarding bootstrap"`
+      - result included `memory/active-priorities.md`
+  - Ran dry-run cleanup:
+    - test tenant DB rows were deleted successfully
+    - droplet deletes still returned `droplet_deleted:false` (known DO token scope limitation).
+- **What's next:**
+  - Optional: if desired, manually destroy leftover dry-run droplets in DO dashboard until token delete scope is fixed.
+  - Continue normal build work; onboarding and native-memory key-quality blockers are cleared for new tenants.
+- **Blockers:** No onboarding-flow blocker and no current memory-key validity blocker. Remaining infra cleanup blocker: DO token still cannot delete canary droplets via API.
+
 - **Date:** 2026-03-13 (session 66)
 - **Who worked:** Codex
 - **What was done:**
