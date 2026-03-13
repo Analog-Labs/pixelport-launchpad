@@ -7,6 +7,45 @@
 
 ## Last Session
 
+- **Date:** 2026-03-13 (session 66)
+- **Who worked:** Codex
+- **What was done:**
+  - Received founder-confirmed CTO approval (`Approved to merge and deploy.`) and executed release on branch `codex/vidacious-runtime-permissions-stabilization`.
+  - Merged/pushed to `main` (fast-forward):
+    - base before merge: `9a8543f`
+    - released head: `71077aa`
+    - included runtime permission hardening + onboarding memory-key fallback + review artifacts.
+  - Verified deploy signal:
+    - GitHub commit status `success`
+    - Vercel deployment: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/8FYPrT1tB4G9FpJMMU4rDqtjUkjp`
+  - Re-synced Inngest on production alias:
+    - `PUT https://pixelport-launchpad.vercel.app/api/inngest`
+    - response `{"message":"Successfully registered","modified":true}`
+  - Ran fresh provisioning smoke canary through production debug endpoint:
+    - created tenant `pixelport-dry-run-mmoeognr` (`8fd36cd0-427c-4985-83d5-197739db0a62`)
+    - tenant progressed from `provisioning` to `active`
+    - droplet refs persisted: `557926844` / `162.243.160.239`
+    - backend truth on fresh tenant:
+      - `memory_native_enabled=true`
+      - `memory_mem0_enabled=false`
+      - `onboarding_data.provisioning_memory=null` (no missing-key downgrade triggered)
+      - `agents=1`, `vault_sections=5`, `agent_tasks=0`, `competitors=0`, `workspace_events=0` at capture time
+  - Ran droplet runtime checks on canary:
+    - `curl http://127.0.0.1:18789/health` returned live
+    - `openclaw-gateway` container `healthy` on `ghcr.io/openclaw/openclaw:2026.3.11`
+    - `openclaw health --json` reported `ok:true`
+    - no `EACCES` / `unable to open database file` hits in recent logs
+  - Found one env-quality blocker during memory smoke:
+    - `openclaw memory search` returned OpenAI `401 invalid_api_key` on the fresh canary
+    - direct OpenAI probe with current secret also returned `401`, indicating the currently configured OpenAI key value is invalid (not just missing).
+- **What's next:**
+  - Founder updates Vercel `MEMORY_OPENAI_API_KEY` to a valid OpenAI project key (keep secret-only in env).
+  - After key update, run one focused memory smoke on the fresh canary droplet:
+    - `openclaw memory status --json`
+    - `openclaw memory search --json "<known phrase>"`
+  - Optional cleanup afterward: remove disposable dry-run tenants/droplets.
+- **Blockers:** Native-memory quality remains blocked by invalid OpenAI key value in env, even though onboarding/provisioning flow no longer breaks.
+
 - **Date:** 2026-03-13 (session 65)
 - **Who worked:** Codex
 - **What was done:**
