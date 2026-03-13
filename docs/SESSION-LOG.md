@@ -26,6 +26,10 @@
       - native enabled + key present
       - native enabled + key missing (downgrade path)
       - native already disabled (no false downgrade)
+  - Prepared formal release-review artifacts for this high-risk change:
+    - build brief: `docs/build-briefs/2026-03-13-runtime-stabilization-onboarding-fallback.md`
+    - CTO handoff prompt: `docs/build-briefs/2026-03-13-runtime-stabilization-onboarding-fallback-cto-prompt.md`
+    - QA evidence: `docs/qa/2026-03-13-runtime-stabilization-onboarding-fallback.md`
   - Validation run:
     - `npx vitest run src/test/tenant-memory-settings.test.ts src/test/provision-tenant-memory.test.ts` (passing)
     - `npx tsc --noEmit` (passing)
