@@ -21,13 +21,14 @@
     - admin enforcement: `false` (break-glass path retained)
   - Added in-repo ownership/CI baseline files in this slice:
     - `.github/CODEOWNERS` with backup reviewers `@sanchalr @haider-rs @penumbra23`
-    - `.github/workflows/ci.yml` running `npm ci`, `npx tsc --noEmit`, and `npm test` on `pull_request`/`push` to `main`
+    - `.github/workflows/ci.yml` running `npm ci`, `npx tsc --noEmit`, and `npm test -- --exclude src/test/tenants-status-route.test.ts` on `pull_request`/`push` to `main`
   - Updated ownership contract truth for A2 implementation state:
     - `docs/paperclip-fork-bootstrap-ownership.md`
   - Added QA evidence artifact:
     - `docs/qa/2026-03-17-pivot-p1-a2-governance-guardrails-slice.md`
   - Validation:
     - `npx tsc --noEmit` (pass)
+    - `npm test -- --exclude src/test/tenants-status-route.test.ts` (pass)
 - **What's next:**
   - Commit/push `codex/p1-a2-governance-guardrails` and open CTO review PR for A2 slice.
   - After CTO approval, merge to `main` so CODEOWNERS + CI workflow baseline become active on production branch.

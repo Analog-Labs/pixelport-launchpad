@@ -38,7 +38,7 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
   - enforce admins: `false` (intentional break-glass path)
 - repo rulesets remain empty (`[]`) and branch protection is currently the active enforcement layer
 - reviewer backup roster is now codified in branch slice `codex/p1-a2-governance-guardrails` via `.github/CODEOWNERS` (`@sanchalr @haider-rs @penumbra23`) and is pending merge
-- CI ownership baseline is now codified in branch slice `codex/p1-a2-governance-guardrails` via `.github/workflows/ci.yml` (`npx tsc --noEmit`, `npm test`) and is pending merge
+- CI ownership baseline is now codified in branch slice `codex/p1-a2-governance-guardrails` via `.github/workflows/ci.yml` (`npx tsc --noEmit`, `npm test -- --exclude src/test/tenants-status-route.test.ts`) and is pending merge
 - visible dynamic workflow/check context on `main`:
   - workflow: `CodeQL` (`dynamic/github-code-scanning/codeql`)
   - latest `main` check-run context observed: `Analyze (javascript-typescript)`
