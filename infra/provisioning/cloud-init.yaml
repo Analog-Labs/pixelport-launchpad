@@ -5,6 +5,12 @@
 #
 # Variables (replaced at runtime by Inngest provisioning function):
 #   {{TENANT_SLUG}}             — tenant identifier
+#   (Droplet image/size/region baseline is selected before cloud-init using
+#    PROVISIONING_DROPLET_IMAGE, PROVISIONING_DROPLET_SIZE, and
+#    PROVISIONING_DROPLET_REGION. Legacy fallbacks:
+#    PIXELPORT_DROPLET_IMAGE / DO_GOLDEN_IMAGE_ID, PIXELPORT_DROPLET_SIZE,
+#    PIXELPORT_DROPLET_REGION. If none are set, provisioning uses the
+#    compatibility image `ubuntu-24-04-x64`.)
 #   {{OPENCLAW_BASE_IMAGE}}     — pinned OpenClaw base image (e.g., ghcr.io/openclaw/openclaw:2026.3.11)
 #   {{OPENCLAW_RUNTIME_IMAGE}}  — runtime image (defaults to OPENCLAW_BASE_IMAGE unless an override is set)
 #   {{GATEWAY_TOKEN}}           — random UUID for gateway auth

@@ -30,6 +30,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     'AGENTMAIL_API_KEY',
     'GEMINI_API_KEY',
     'OPENCLAW_IMAGE',
+    'OPENCLAW_RUNTIME_IMAGE',
+    'PROVISIONING_DROPLET_IMAGE',
+    'PROVISIONING_DROPLET_SIZE',
+    'PROVISIONING_DROPLET_REGION',
+    'PIXELPORT_DROPLET_IMAGE',
+    'DO_GOLDEN_IMAGE_ID',
+    'PIXELPORT_DROPLET_SIZE',
+    'PIXELPORT_DROPLET_REGION',
   ];
 
   const results = vars.map((name) => {

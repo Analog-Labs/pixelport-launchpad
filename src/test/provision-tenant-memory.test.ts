@@ -134,6 +134,66 @@ describe("provision tenant memory config", () => {
     ).toBe("pixelport-openclaw:custom-runtime");
   });
 
+  it("resolves droplet baseline defaults to compatibility image with 4vcpu/8gb sizing", async () => {
+    const { resolveDropletBaseline } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const baseline = resolveDropletBaseline({});
+
+    expect(baseline.image).toBe("ubuntu-24-04-x64");
+    expect(baseline.size).toBe("s-4vcpu-8gb");
+    expect(baseline.region).toBe("nyc1");
+    expect(baseline.imageSource).toBe("legacy_fallback");
+  });
+
+  it("resolves droplet baseline from canonical provisioning env vars", async () => {
+    const { resolveDropletBaseline } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const baseline = resolveDropletBaseline({
+      PROVISIONING_DROPLET_IMAGE: "pixelport-paperclip-golden-v2",
+      PROVISIONING_DROPLET_SIZE: "s-8vcpu-16gb",
+      PROVISIONING_DROPLET_REGION: "nyc3",
+    } as NodeJS.ProcessEnv);
+
+    expect(baseline.image).toBe("pixelport-paperclip-golden-v2");
+    expect(baseline.size).toBe("s-8vcpu-16gb");
+    expect(baseline.region).toBe("nyc3");
+    expect(baseline.imageSource).toBe("configured");
+  });
+
+  it("falls back to legacy image vars when canonical vars are unset", async () => {
+    const { resolveDropletBaseline } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const baseline = resolveDropletBaseline({
+      PIXELPORT_DROPLET_IMAGE: "pixelport-paperclip-golden-legacy",
+      PIXELPORT_DROPLET_SIZE: "s-4vcpu-8gb",
+      PIXELPORT_DROPLET_REGION: "sfo3",
+    } as NodeJS.ProcessEnv);
+
+    expect(baseline.image).toBe("pixelport-paperclip-golden-legacy");
+    expect(baseline.size).toBe("s-4vcpu-8gb");
+    expect(baseline.region).toBe("sfo3");
+    expect(baseline.imageSource).toBe("configured");
+  });
+
+  it("supports DO_GOLDEN_IMAGE_ID when PIXELPORT_DROPLET_IMAGE is absent", async () => {
+    const { resolveDropletBaseline } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const baseline = resolveDropletBaseline({
+      DO_GOLDEN_IMAGE_ID: "217894561",
+    } as NodeJS.ProcessEnv);
+
+    expect(baseline.image).toBe("217894561");
+    expect(baseline.imageSource).toBe("configured");
+  });
+
   it("generates cloud-init without chromium build steps", async () => {
     const { buildCloudInit } = await import(
       "../../api/inngest/functions/provision-tenant"

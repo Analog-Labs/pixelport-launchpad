@@ -40,6 +40,13 @@ type InngestEventData = {
   regionOverride?: string;
 };
 
+type DropletBaseline = {
+  image: string;
+  size: string;
+  region: string;
+  imageSource: 'configured' | 'legacy_fallback';
+};
+
 const supabaseUrl = process.env.SUPABASE_PROJECT_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -63,9 +70,46 @@ const OPENCLAW_RUNTIME_IMAGE = resolveOpenClawRuntimeImage(
   OPENCLAW_BASE_IMAGE,
   process.env.OPENCLAW_RUNTIME_IMAGE,
 );
-const DEFAULT_DROPLET_IMAGE = 'ubuntu-24-04-x64';
-const DEFAULT_DROPLET_SIZE = 's-1vcpu-2gb';
-const DEFAULT_REGION = 'nyc1';
+const LEGACY_FALLBACK_DROPLET_IMAGE = 'ubuntu-24-04-x64';
+const RECOMMENDED_GOLDEN_IMAGE_SELECTOR = 'pixelport-paperclip-golden-2026-03-16';
+const DEFAULT_PROVISIONING_DROPLET_SIZE = 's-4vcpu-8gb';
+const DEFAULT_PROVISIONING_DROPLET_REGION = 'nyc1';
+
+function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
+  for (const value of values) {
+    const normalized = value?.trim();
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return undefined;
+}
+
+export function resolveDropletBaseline(env: NodeJS.ProcessEnv = process.env): DropletBaseline {
+  const configuredImage = firstNonEmpty(
+    env.PROVISIONING_DROPLET_IMAGE,
+    env.PIXELPORT_DROPLET_IMAGE,
+    env.DO_GOLDEN_IMAGE_ID,
+  );
+  const configuredSize = firstNonEmpty(
+    env.PROVISIONING_DROPLET_SIZE,
+    env.PIXELPORT_DROPLET_SIZE,
+  );
+  const configuredRegion = firstNonEmpty(
+    env.PROVISIONING_DROPLET_REGION,
+    env.PIXELPORT_DROPLET_REGION,
+  );
+
+  return {
+    image: configuredImage || LEGACY_FALLBACK_DROPLET_IMAGE,
+    size: configuredSize || DEFAULT_PROVISIONING_DROPLET_SIZE,
+    region: configuredRegion || DEFAULT_PROVISIONING_DROPLET_REGION,
+    imageSource: configuredImage ? 'configured' : 'legacy_fallback',
+  };
+}
+
+const DROPLET_BASELINE = resolveDropletBaseline();
 
 export function resolveOpenClawRuntimeImage(
   baseImage: string,
@@ -198,8 +242,11 @@ export const provisionTenant = inngest.createFunction(
 
     const droplet = await step.run('create-droplet', async () => {
       const gatewayToken = `gw-${randomUUID()}`;
-      const requestedSize = trialMode && testDropletSize ? testDropletSize : DEFAULT_DROPLET_SIZE;
-      const requestedRegion = regionOverride || DEFAULT_REGION;
+      const requestedSize = trialMode
+        ? firstNonEmpty(testDropletSize, DROPLET_BASELINE.size) || DROPLET_BASELINE.size
+        : DROPLET_BASELINE.size;
+      const requestedRegion = firstNonEmpty(regionOverride, DROPLET_BASELINE.region) || DROPLET_BASELINE.region;
+      const requestedImage = DROPLET_BASELINE.image;
 
       // Generate agent API key for Chief → Vercel API auth
       const agentApiKey = `ppk-${randomUUID()}`;
@@ -238,7 +285,7 @@ export const provisionTenant = inngest.createFunction(
         name: `pixelport-${tenant.slug}`,
         region: requestedRegion,
         size: requestedSize,
-        image: DEFAULT_DROPLET_IMAGE,
+        image: requestedImage,
         user_data: cloudInit,
         tags: ['pixelport', `tenant-${tenant.slug}`, 'pixelport-trial'],
       };
@@ -260,11 +307,19 @@ export const provisionTenant = inngest.createFunction(
         const errorBody = await response.text();
         throw new Error(
           `Droplet creation failed (HTTP ${response.status}): ${errorBody} ` +
-          `[size=${requestedSize}, region=${requestedRegion}, image=${DEFAULT_DROPLET_IMAGE}]`
+          `[size=${requestedSize}, region=${requestedRegion}, image=${requestedImage}]`
         );
       }
 
       const result = (await response.json()) as { droplet: { id: number } };
+
+      if (DROPLET_BASELINE.imageSource === 'legacy_fallback') {
+        console.warn(
+          `[provision-tenant] No provisioning golden image override configured; ` +
+          `falling back to compatibility image ${DROPLET_BASELINE.image}. ` +
+          `Set PROVISIONING_DROPLET_IMAGE (recommended baseline: ${RECOMMENDED_GOLDEN_IMAGE_SELECTOR}).`
+        );
+      }
 
       return {
         dropletId: String(result.droplet.id),

@@ -1,0 +1,49 @@
+schema_version: 1
+manifest_name: pixelport-paperclip-golden-image
+last_updated: "2026-03-16"
+
+baseline:
+  droplet:
+    default_size: s-4vcpu-8gb
+    default_region: nyc1
+    default_image: pixelport-paperclip-golden-2026-03-16
+    compatibility_fallback_image: ubuntu-24-04-x64
+    image_selector:
+      primary_env: PROVISIONING_DROPLET_IMAGE
+      legacy_fallback_envs:
+        - PIXELPORT_DROPLET_IMAGE
+        - DO_GOLDEN_IMAGE_ID
+    size_selector:
+      primary_env: PROVISIONING_DROPLET_SIZE
+      legacy_fallback_env: PIXELPORT_DROPLET_SIZE
+    region_selector:
+      primary_env: PROVISIONING_DROPLET_REGION
+      legacy_fallback_env: PIXELPORT_DROPLET_REGION
+
+components:
+  paperclip:
+    source: pixelport-owned-paperclip-fork
+    version_pin: REQUIRED_AT_IMAGE_BUILD
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:2026.3.11
+    policy: pinned-tag-only
+  postgres:
+    major_version: "16"
+    policy: pinned-major-with-explicit-minor-on-image-build
+
+rollout_policy:
+  strategy: canary-first-manual-rollout
+  steps:
+    - build-new-golden-image-with-pinned-versions
+    - validate-single-canary-tenant-end-to-end
+    - expand-to-small-batch
+    - promote-to-default-after-smoke-passes
+  rollback:
+    - restore-previous-image-id-in-env
+    - reprovision-only-new-tenants-on-rollback-image
+
+notes:
+  - This manifest defines the required baseline contract for Track C1.
+  - Runtime provisioning keeps a temporary compatibility fallback image if no selector env is set.
+  - Production should set PROVISIONING_DROPLET_IMAGE to enforce the golden-image baseline.
+  - Exact Paperclip and Postgres minor pins are set at image build time and must be recorded before production promotion.

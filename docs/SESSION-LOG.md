@@ -7,6 +7,41 @@
 
 ## Last Session
 
+- **Date:** 2026-03-16 (session 71)
+- **Who worked:** Codex + sub-agents (Peirce, Bohr)
+- **What was done:**
+  - Continued implementation on branch `codex/pivot-p0-implementation` and completed remaining P0 Track C items (`C1`, `C3`, `C4`).
+  - Implemented provisioning baseline contract in `api/inngest/functions/provision-tenant.ts`:
+    - added env-driven droplet baseline resolver for image/size/region
+    - canonical envs: `PROVISIONING_DROPLET_IMAGE`, `PROVISIONING_DROPLET_SIZE`, `PROVISIONING_DROPLET_REGION`
+    - legacy fallback envs: `PIXELPORT_DROPLET_IMAGE`, `DO_GOLDEN_IMAGE_ID`, `PIXELPORT_DROPLET_SIZE`, `PIXELPORT_DROPLET_REGION`
+    - default sizing aligned to pivot baseline: `s-4vcpu-8gb` / `nyc1`.
+  - Addressed QA-flagged provisioning safety regression in-slice:
+    - initial default image selector risked failed droplet creates when unset
+    - adjusted to compatibility fallback image `ubuntu-24-04-x64` with warning log, preserving onboarding continuity while golden image env rollout completes.
+  - Added baseline/infra documentation artifacts:
+    - `infra/provisioning/golden-image-manifest.yaml`
+    - updated `infra/provisioning/cloud-init.yaml` comments for new selector behavior.
+  - Implemented thin bridge contract hardening for launchpad-to-runtime handoff:
+    - added `api/lib/thin-bridge-contract.ts`
+    - `/api/tenants/status` now emits `contract_version` and `task_step_unlocked`
+    - onboarding polling consumes `task_step_unlocked` when present, with status fallback preserved.
+  - Added C4 migration planning artifact:
+    - `docs/migration/launchpad-runtime-prune-checklist.md` with keep/deprecate/archive route classification and deletion order constraints.
+  - Produced second-slice review artifacts:
+    - `docs/build-briefs/2026-03-16-pivot-p0-runtime-bridge-baseline-slice.md`
+    - `docs/build-briefs/2026-03-16-pivot-p0-runtime-bridge-baseline-slice-cto-prompt.md`
+    - `docs/qa/2026-03-16-pivot-p0-runtime-bridge-baseline-slice.md`.
+  - Validation run on branch:
+    - `npx tsc --noEmit` (pass)
+    - `npx vitest run src/test/provision-tenant-memory.test.ts src/test/provisioning-allowlist.test.ts src/test/runtime-bridge-contract.test.ts` (pass, 18/18).
+- **What's next:**
+  - Run CTO review against full branch scope (session 70 + session 71 slices).
+  - Address CTO findings (if any), then merge to `main`.
+  - Run same-session post-merge production smoke with a fresh-tenant canary.
+  - Set `PROVISIONING_DROPLET_IMAGE` to a valid golden image selector before enforcing strict golden-image-only provisioning.
+- **Blockers:** CTO approval still required before merge/deploy per build workflow.
+
 - **Date:** 2026-03-16 (session 70)
 - **Who worked:** Codex + sub-agent implementation contributors (Franklin, Leibniz)
 - **What was done:**

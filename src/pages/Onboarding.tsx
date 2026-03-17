@@ -8,6 +8,7 @@ import StepProvisioning from "@/components/onboarding/StepProvisioning";
 import StepTaskSetup, { type AgentSuggestionInput } from "@/components/onboarding/StepTaskSetup";
 import StepConnectTools from "@/components/onboarding/StepConnectTools";
 import { getPostAuthRedirectPath } from "@/lib/dashboard-redirect";
+import { isTaskStepUnlocked, type TenantStatusResponse } from "@/lib/runtime-bridge-contract";
 
 interface OnboardingFormData {
   company_name: string;
@@ -16,12 +17,6 @@ interface OnboardingFormData {
   agent_name: string;
   starter_task: string;
   agent_suggestions: AgentSuggestionInput[];
-}
-
-interface TenantStatusResponse {
-  status?: string;
-  bootstrap_status?: string;
-  error?: string;
 }
 
 const DEFAULT_AGENT_NAME = "Luna";
@@ -40,8 +35,7 @@ function readString(value: unknown): string {
 }
 
 function isProvisionReady(status: string | null | undefined): boolean {
-  const normalized = (status ?? "").toLowerCase();
-  return normalized === "ready" || normalized === "active";
+  return isTaskStepUnlocked(status);
 }
 
 function isLaunchCompleted(onboardingData: Record<string, unknown> | null | undefined): boolean {
@@ -256,11 +250,12 @@ const Onboarding = () => {
       }
 
       const nextStatus = typeof payload.status === "string" ? payload.status : tenant.status;
+      const nextTaskStepUnlocked = payload.task_step_unlocked ?? isProvisionReady(nextStatus);
       setProvisionStatus(nextStatus);
       setBootstrapStatus(typeof payload.bootstrap_status === "string" ? payload.bootstrap_status : null);
       setLastCheckedAt(new Date().toISOString());
 
-      if (isProvisionReady(nextStatus)) {
+      if (nextTaskStepUnlocked) {
         await refreshTenant();
       }
     } catch (error) {

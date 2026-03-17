@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P0 — Paperclip-Primary Pivot Foundation
 
-**Status:** Active (first implementation slice completed on 2026-03-16; CTO review + production smoke pending).
+**Status:** Active (first two implementation slices completed on 2026-03-16; CTO review + production smoke pending).
 **Goal:** Shift active product execution to a PixelPort-owned Paperclip fork while keeping launchpad focused on marketing, billing, and thin bridge duties.
 **Binding spec:** `docs/pixelport-pivot-plan-2026-03-16.md`
 
@@ -43,10 +43,10 @@
 - [x] B4: Define Launch-step agent suggestion behavior and edit controls.
 
 #### Track C — Runtime and Provisioning Prep
-- [ ] C1: Finalize golden-image manifest (Paperclip + OpenClaw + Postgres + pinned versions).
+- [x] C1: Finalize golden-image manifest (Paperclip + OpenClaw + Postgres + pinned versions).
 - [x] C2: Define allowlist-gated provisioning trigger path for no-Stripe testing mode.
-- [ ] C3: Define launchpad-to-runtime thin bridge interfaces for handoff.
-- [ ] C4: Define migration prune list for launchpad runtime routes/services.
+- [x] C3: Define launchpad-to-runtime thin bridge interfaces for handoff.
+- [x] C4: Define migration prune list for launchpad runtime routes/services.
 
 ### Blockers
 
@@ -63,6 +63,11 @@
   - Build brief: `docs/build-briefs/2026-03-16-pivot-p0-onboarding-provisioning-slice.md`
   - CTO prompt: `docs/build-briefs/2026-03-16-pivot-p0-onboarding-provisioning-slice-cto-prompt.md`
   - QA evidence: `docs/qa/2026-03-16-pivot-p0-onboarding-provisioning-slice.md`
+- Second implementation slice artifacts:
+  - Build brief: `docs/build-briefs/2026-03-16-pivot-p0-runtime-bridge-baseline-slice.md`
+  - CTO prompt: `docs/build-briefs/2026-03-16-pivot-p0-runtime-bridge-baseline-slice-cto-prompt.md`
+  - QA evidence: `docs/qa/2026-03-16-pivot-p0-runtime-bridge-baseline-slice.md`
+  - Migration checklist: `docs/migration/launchpad-runtime-prune-checklist.md`
 
 ---
 
