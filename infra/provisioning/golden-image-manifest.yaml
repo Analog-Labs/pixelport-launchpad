@@ -44,6 +44,7 @@ rollout_policy:
 
 notes:
   - This manifest defines the required baseline contract for Track C1.
-  - Runtime provisioning keeps a temporary compatibility fallback image if no selector env is set.
-  - Production should set PROVISIONING_DROPLET_IMAGE to enforce the golden-image baseline.
+  - Runtime provisioning requires an explicit selector env (no implicit fallback path).
+  - Compatibility selector (`ubuntu-24-04-x64`) may be used temporarily via PROVISIONING_DROPLET_IMAGE.
+  - Optional env PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true blocks compatibility selector use.
   - Exact Paperclip and Postgres minor pins are set at image build time and must be recorded before production promotion.

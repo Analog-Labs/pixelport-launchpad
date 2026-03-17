@@ -44,7 +44,7 @@ type DropletBaseline = {
   image: string;
   size: string;
   region: string;
-  imageSource: 'configured' | 'missing';
+  imageSource: 'managed' | 'compatibility' | 'missing';
 };
 
 const supabaseUrl = process.env.SUPABASE_PROJECT_URL;
@@ -71,6 +71,7 @@ const OPENCLAW_RUNTIME_IMAGE = resolveOpenClawRuntimeImage(
   process.env.OPENCLAW_RUNTIME_IMAGE,
 );
 const RECOMMENDED_GOLDEN_IMAGE_SELECTOR = 'pixelport-paperclip-golden-2026-03-16';
+const COMPATIBILITY_DROPLET_IMAGE_SELECTOR = 'ubuntu-24-04-x64';
 const DEFAULT_PROVISIONING_DROPLET_SIZE = 's-4vcpu-8gb';
 const DEFAULT_PROVISIONING_DROPLET_REGION = 'nyc1';
 
@@ -83,6 +84,15 @@ function firstNonEmpty(...values: Array<string | undefined>): string | undefined
   }
 
   return undefined;
+}
+
+function isCompatibilityDropletImageSelector(imageSelector: string): boolean {
+  return imageSelector.trim().toLowerCase() === COMPATIBILITY_DROPLET_IMAGE_SELECTOR;
+}
+
+function isManagedGoldenImageRequired(env: NodeJS.ProcessEnv = process.env): boolean {
+  const raw = env.PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE?.trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes';
 }
 
 export function resolveDropletBaseline(env: NodeJS.ProcessEnv = process.env): DropletBaseline {
@@ -100,22 +110,38 @@ export function resolveDropletBaseline(env: NodeJS.ProcessEnv = process.env): Dr
     env.PIXELPORT_DROPLET_REGION,
   );
 
+  const imageSource = !configuredImage
+    ? 'missing'
+    : isCompatibilityDropletImageSelector(configuredImage)
+      ? 'compatibility'
+      : 'managed';
+
   return {
     image: configuredImage || '',
     size: configuredSize || DEFAULT_PROVISIONING_DROPLET_SIZE,
     region: configuredRegion || DEFAULT_PROVISIONING_DROPLET_REGION,
-    imageSource: configuredImage ? 'configured' : 'missing',
+    imageSource,
   };
 }
 
 const DROPLET_BASELINE = resolveDropletBaseline();
 
-export function assertGoldenImageConfigured(baseline: DropletBaseline): void {
-  if (baseline.imageSource !== 'configured' || !baseline.image) {
+export function assertGoldenImageConfigured(
+  baseline: DropletBaseline,
+  env: NodeJS.ProcessEnv = process.env,
+): void {
+  if (baseline.imageSource === 'missing' || !baseline.image) {
     throw new Error(
       `Missing provisioning golden image selector. Set PROVISIONING_DROPLET_IMAGE ` +
       `(recommended baseline: ${RECOMMENDED_GOLDEN_IMAGE_SELECTOR}). ` +
       `Accepted inputs: PROVISIONING_DROPLET_IMAGE, PIXELPORT_DROPLET_IMAGE, DO_GOLDEN_IMAGE_ID.`
+    );
+  }
+
+  if (baseline.imageSource === 'compatibility' && isManagedGoldenImageRequired(env)) {
+    throw new Error(
+      `Managed golden image selector required. Current value "${baseline.image}" is a compatibility selector. ` +
+      `Set PROVISIONING_DROPLET_IMAGE to a maintained golden image artifact and retry.`
     );
   }
 }
@@ -257,6 +283,12 @@ export const provisionTenant = inngest.createFunction(
       const requestedRegion = firstNonEmpty(regionOverride, DROPLET_BASELINE.region) || DROPLET_BASELINE.region;
       assertGoldenImageConfigured(DROPLET_BASELINE);
       const requestedImage = DROPLET_BASELINE.image;
+      if (DROPLET_BASELINE.imageSource === 'compatibility') {
+        console.warn(
+          `[provision-tenant] Using compatibility image selector "${requestedImage}". ` +
+          'Promote PROVISIONING_DROPLET_IMAGE to a managed golden image artifact when ready.',
+        );
+      }
 
       // Generate agent API key for Chief → Vercel API auth
       const agentApiKey = `ppk-${randomUUID()}`;

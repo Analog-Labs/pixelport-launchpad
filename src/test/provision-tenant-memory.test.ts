@@ -162,7 +162,7 @@ describe("provision tenant memory config", () => {
     expect(baseline.image).toBe("pixelport-paperclip-golden-v2");
     expect(baseline.size).toBe("s-4vcpu-8gb");
     expect(baseline.region).toBe("nyc1");
-    expect(baseline.imageSource).toBe("configured");
+    expect(baseline.imageSource).toBe("managed");
     expect(() => assertGoldenImageConfigured(baseline)).not.toThrow();
   });
 
@@ -180,7 +180,7 @@ describe("provision tenant memory config", () => {
     expect(baseline.image).toBe("pixelport-paperclip-golden-v2");
     expect(baseline.size).toBe("s-8vcpu-16gb");
     expect(baseline.region).toBe("nyc3");
-    expect(baseline.imageSource).toBe("configured");
+    expect(baseline.imageSource).toBe("managed");
   });
 
   it("falls back to legacy image vars when canonical vars are unset", async () => {
@@ -197,7 +197,7 @@ describe("provision tenant memory config", () => {
     expect(baseline.image).toBe("pixelport-paperclip-golden-legacy");
     expect(baseline.size).toBe("s-4vcpu-8gb");
     expect(baseline.region).toBe("sfo3");
-    expect(baseline.imageSource).toBe("configured");
+    expect(baseline.imageSource).toBe("managed");
   });
 
   it("supports DO_GOLDEN_IMAGE_ID when PIXELPORT_DROPLET_IMAGE is absent", async () => {
@@ -210,7 +210,25 @@ describe("provision tenant memory config", () => {
     } as NodeJS.ProcessEnv);
 
     expect(baseline.image).toBe("217894561");
-    expect(baseline.imageSource).toBe("configured");
+    expect(baseline.imageSource).toBe("managed");
+  });
+
+  it("classifies ubuntu selector as compatibility and supports optional managed-only enforcement", async () => {
+    const { resolveDropletBaseline, assertGoldenImageConfigured } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const baseline = resolveDropletBaseline({
+      PROVISIONING_DROPLET_IMAGE: "ubuntu-24-04-x64",
+    } as NodeJS.ProcessEnv);
+
+    expect(baseline.imageSource).toBe("compatibility");
+    expect(() => assertGoldenImageConfigured(baseline)).not.toThrow();
+    expect(() =>
+      assertGoldenImageConfigured(baseline, {
+        PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE: "true",
+      } as NodeJS.ProcessEnv),
+    ).toThrowError(/Managed golden image selector required/);
   });
 
   it("generates cloud-init without chromium build steps", async () => {
