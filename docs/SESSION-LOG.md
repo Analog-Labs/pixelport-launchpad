@@ -7,6 +7,36 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 85)
+- **Who worked:** Codex + QA sub-agent (Newton)
+- **What was done:**
+  - Executed founder-approved authenticated production onboarding-launch handoff smoke on `https://pixelport-launchpad.vercel.app`:
+    - created temporary Supabase auth user (service-role flow) and temporary active tenant with valid `droplet_ip`
+    - generated valid bearer token via `signInWithPassword`
+    - `POST /api/tenants/onboarding` -> `200`
+    - `POST /api/runtime/handoff` with `{ "source": "onboarding-launch" }` -> `200`
+    - response contract truth:
+      - `contract_version = "p1-v1"`
+      - `source = "onboarding-launch"`
+      - `paperclip_runtime_url = "http://203.0.113.10:18789"`
+      - `handoff_token` present
+      - `tenant.status = "active"`
+    - cleanup completed:
+      - tenant deleted: `true`
+      - user deleted: `true`
+  - Ran independent QA sub-agent verification (read-only):
+    - confirmed production guard behavior remains intact:
+      - `GET /api/runtime/handoff` -> `405`
+      - `POST /api/runtime/handoff` without auth -> `401`
+    - confirmed no leftover tenant row for smoke tenant id `627b36d7-abe7-4bc1-a3a0-e57453961962` (`[]` result)
+    - QA verdict: `PASS`
+  - Added QA evidence artifact:
+    - `docs/qa/2026-03-17-p1-step5-authenticated-onboarding-launch-smoke.md`
+- **What's next:**
+  - Continue Track A closure work (A2-A5) with founder approvals.
+  - Keep managed-only canary hygiene in place with founder-led droplet cleanup policy.
+- **Blockers:** None for Step 5 release verification scope (merge + targeted smoke + authenticated onboarding-launch smoke are now closed).
+
 - **Date:** 2026-03-17 (session 84)
 - **Who worked:** Codex
 - **What was done:**
