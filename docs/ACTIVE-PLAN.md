@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (first P1 handoff slice merged to `main` at `4e1dfb91602d9686df6aa0b4b990881448882813`, deployed, and production-smoked on 2026-03-17; Track A ownership-audit evidence captured on 2026-03-17; top-level A2-A5 remain open).  
+**Status:** Active (first P1 handoff slice is merged/deployed; authenticated production smoke now confirms auth path reaches config validation but `200` success is blocked by missing `PAPERCLIP_RUNTIME_URL` + `PAPERCLIP_HANDOFF_SECRET`; Track A top-level A2-A5 remain open).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -54,7 +54,8 @@ Track A audit evidence recorded (without closure fabrication):
 |---------|---------------|-----------------|
 | PixelPort `main` lacks enforced branch protection/review/check gates and explicit backup reviewer assignment | A2 closure and cutover-safe governance | Technical Lead + Founder |
 | Deploy ownership signals exist but explicit founder approval of named primary/backup owners is pending | A3 closure and runtime cutover prep | Founder + Technical Lead |
-| Handoff/runtime secret source-of-truth and rotation authority are not founder-closed; `PAPERCLIP_*` vars are not visible in current Vercel env listing evidence | A4 closure and safe runtime handoff | Founder + Technical Lead |
+| Authenticated production handoff smoke returns `503` with missing `PAPERCLIP_RUNTIME_URL` and `PAPERCLIP_HANDOFF_SECRET` | `POST /api/runtime/handoff` `200` success-path validation and runtime handoff progression | Founder + Technical Lead |
+| Handoff/runtime secret source-of-truth and rotation authority are not founder-closed | A4 closure and safe runtime handoff | Founder + Technical Lead |
 | Rollback authority and incident escalation chain are documented but not explicitly founder-confirmed for closure | A5 closure and incident readiness | Founder + Technical Lead |
 | Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
 
@@ -72,6 +73,9 @@ Track A audit evidence recorded (without closure fabrication):
   - ownership-audit brief: `docs/build-briefs/2026-03-17-pivot-p1-ownership-audit-slice.md`
   - ownership-audit CTO prompt: `docs/build-briefs/2026-03-17-pivot-p1-ownership-audit-slice-cto-prompt.md`
   - ownership-audit QA evidence: `docs/qa/2026-03-17-pivot-p1-ownership-audit.md`
+  - authenticated smoke brief: `docs/build-briefs/2026-03-17-pivot-p1-handoff-auth-smoke-slice.md`
+  - authenticated smoke CTO prompt: `docs/build-briefs/2026-03-17-pivot-p1-handoff-auth-smoke-slice-cto-prompt.md`
+  - authenticated smoke QA evidence: `docs/qa/2026-03-17-pivot-p1-handoff-authenticated-smoke.md`
 
 ---
 

@@ -91,6 +91,19 @@ Track A ownership-audit evidence is now documented (without fabricated closure):
 Track A closure state remains unchanged:
 - A2, A3, A4, A5 are still open pending explicit enforcement/configuration and founder-level confirmations.
 
+## Pivot Execution Update (2026-03-17 Authenticated Handoff Smoke)
+
+Authenticated production smoke was executed for `POST /api/runtime/handoff` using a temporary Supabase-backed test user + temporary active tenant.
+
+- valid Bearer token was generated via `signInWithPassword`
+- response was `503` with:
+  - `{"error":"Paperclip runtime handoff is not configured.","missing":["PAPERCLIP_RUNTIME_URL","PAPERCLIP_HANDOFF_SECRET"]}`
+- cleanup evidence:
+  - tenant deleted: `true`
+  - user deleted: `true`
+
+Conclusion: auth path is validated up to config gating; success-path `200` remains blocked until required handoff env vars are set.
+
 ---
 
 ## 1. Strategic Context
@@ -717,12 +730,13 @@ First P1 handoff slice is shipped on `main` (`4e1dfb91602d9686df6aa0b4b990881448
    - review gate baseline
    - explicit backup reviewer model
 2. Close A3 with explicit founder approval of deploy ownership for launchpad/runtime staging+production and rollback authority.
-3. Close A4 with explicit founder approval for secrets source-of-truth and rotation owners, including final placement of `PAPERCLIP_*` handoff vars.
-4. Close A5 with explicit founder approval of incident escalation chain and notification SLAs.
-5. Run an authenticated production smoke for `POST /api/runtime/handoff` success path (`200`) with a valid test token/session.
-6. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract after A2-A5 closure criteria are satisfied or explicitly waived.
-7. Keep launchpad scoped to marketing, billing, and thin provisioning bridge responsibilities while cutover work proceeds.
-8. Set `PROVISIONING_DROPLET_IMAGE` in production before strict golden-image-only enforcement.
+3. Set `PAPERCLIP_RUNTIME_URL` and `PAPERCLIP_HANDOFF_SECRET` in production env, then redeploy.
+4. Re-run authenticated production smoke for `POST /api/runtime/handoff` and confirm success-path `200`.
+5. Close A4 with explicit founder approval for secrets source-of-truth and rotation owners, including final placement/ownership of `PAPERCLIP_*` handoff vars.
+6. Close A5 with explicit founder approval of incident escalation chain and notification SLAs.
+7. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract after A2-A5 closure criteria are satisfied or explicitly waived.
+8. Keep launchpad scoped to marketing, billing, and thin provisioning bridge responsibilities while cutover work proceeds.
+9. Set `PROVISIONING_DROPLET_IMAGE` in production before strict golden-image-only enforcement.
 
 ### Scope Boundaries (Current)
 

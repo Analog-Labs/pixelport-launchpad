@@ -7,6 +7,25 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 76)
+- **Who worked:** Codex
+- **What was done:**
+  - Executed authenticated production smoke for `POST /api/runtime/handoff` on branch `codex/pivot-p1-handoff-auth-smoke`.
+  - Created a temporary test user and temporary active tenant via Supabase service-role flow for this one-time validation.
+  - Generated a valid Bearer token using `signInWithPassword` and called production `/api/runtime/handoff`.
+  - Observed response:
+    - status: `503`
+    - body: `{"error":"Paperclip runtime handoff is not configured.","missing":["PAPERCLIP_RUNTIME_URL","PAPERCLIP_HANDOFF_SECRET"]}`
+  - Confirmed cleanup completed:
+    - tenant deleted: `true`
+    - user deleted: `true`
+  - Recorded QA evidence + planning docs for this authenticated smoke step.
+- **What's next:**
+  - Set required production handoff env vars: `PAPERCLIP_RUNTIME_URL` and `PAPERCLIP_HANDOFF_SECRET`.
+  - Re-run authenticated production smoke and confirm `200` handoff success payload.
+  - Keep Track A ownership closure work (A2-A5) in progress.
+- **Blockers:** `200` handoff path is blocked until `PAPERCLIP_RUNTIME_URL` and `PAPERCLIP_HANDOFF_SECRET` are set in production env.
+
 - **Date:** 2026-03-17 (session 75)
 - **Who worked:** Codex + sub-agents (Dirac, Locke, Banach)
 - **What was done:**
