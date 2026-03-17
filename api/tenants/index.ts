@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
 import { applyTenantMemorySettingsDefaults } from '../lib/tenant-memory-settings';
+import { isEmailAllowedForProvisioning, parseProvisioningAllowlist } from '../lib/provisioning-allowlist';
 
 // Inline client creation — importing from a local file that re-exports inngest
 // crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
@@ -86,6 +87,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
+    const provisioningAllowlist = parseProvisioningAllowlist(process.env.TENANT_PROVISIONING_ALLOWLIST);
+
     const { data: existingTenant } = await supabase
       .from('tenants')
       .select('*')
@@ -97,9 +100,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(200).json({ tenant: safeTenant, created: false });
     }
 
+    if (!isEmailAllowedForProvisioning(user.email, provisioningAllowlist)) {
+      return res.status(403).json({
+        error: 'Tenant provisioning is currently invite-only for this environment.',
+      });
+    }
+
     const {
       company_name,
       company_url,
+      mission,
       goals,
       agent_name,
       agent_tone,
@@ -108,6 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     } = (req.body || {}) as {
       company_name?: string;
       company_url?: string;
+      mission?: string | null;
       goals?: string[];
       agent_name?: string;
       agent_tone?: string;
@@ -127,6 +138,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(400).json({ error: 'Invalid avatar selection' });
     }
 
+    if (mission !== undefined && mission !== null && typeof mission !== 'string') {
+      return res.status(400).json({ error: 'mission must be a string' });
+    }
+
     if (goals !== undefined && (!Array.isArray(goals) || goals.some((goal) => typeof goal !== 'string'))) {
       return res.status(400).json({ error: 'goals must be an array of strings' });
     }
@@ -141,6 +156,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const onboardingData = {
       company_name: normalizedCompanyName,
       company_url: typeof company_url === 'string' && company_url.trim() ? company_url.trim() : null,
+      mission: typeof mission === 'string' && mission.trim() ? mission.trim() : null,
       goals: goals || [],
       agent_name: typeof agent_name === 'string' && agent_name.trim() ? agent_name.trim() : 'Luna',
       agent_tone: agent_tone || 'professional',
