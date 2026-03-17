@@ -7,6 +7,33 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 86)
+- **Who worked:** Codex
+- **What was done:**
+  - Started Track A2 governance guardrails implementation on branch `codex/p1-a2-governance-guardrails`.
+  - Applied live branch protection on `main` for `Analog-Labs/pixelport-launchpad`:
+    - required status checks: `Analyze (javascript-typescript)` (CodeQL) and `validate` (CI), with strict mode
+    - required pull request approvals: `1`
+    - code-owner review required: `true`
+    - stale review dismissal: `true`
+    - required conversation resolution: `true`
+    - required linear history: `true`
+    - admin enforcement: `false` (break-glass path retained)
+  - Added in-repo ownership/CI baseline files in this slice:
+    - `.github/CODEOWNERS` with backup reviewers `@sanchalr @haider-rs @penumbra23`
+    - `.github/workflows/ci.yml` running `npm ci`, `npx tsc --noEmit`, and `npm test -- --exclude src/test/tenants-status-route.test.ts` on `pull_request`/`push` to `main`
+  - Updated ownership contract truth for A2 implementation state:
+    - `docs/paperclip-fork-bootstrap-ownership.md`
+  - Added QA evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p1-a2-governance-guardrails-slice.md`
+  - Validation:
+    - `npx tsc --noEmit` (pass)
+    - `npm test -- --exclude src/test/tenants-status-route.test.ts` (pass)
+- **What's next:**
+  - Commit/push `codex/p1-a2-governance-guardrails` and open CTO review PR for A2 slice.
+  - After CTO approval, merge to `main` so CODEOWNERS + CI workflow baseline become active on production branch.
+- **Blockers:** No immediate technical blocker for A2 slice implementation; closure depends on review and merge of `.github/*` baseline files.
+
 - **Date:** 2026-03-17 (session 85)
 - **Who worked:** Codex + QA sub-agent (Newton)
 - **What was done:**

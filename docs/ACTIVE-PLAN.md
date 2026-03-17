@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (`688c4e3`, `9faee29`, and follow-up merge `f8a5b1a` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; post-merge targeted production smoke and authenticated onboarding-launch handoff smoke for Step 5 follow-up have both passed with cleanup; Track A top-level A2-A5 remain open).  
+**Status:** Active (`688c4e3`, `9faee29`, and follow-up merge `f8a5b1a` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; post-merge targeted production smoke and authenticated onboarding-launch handoff smoke for Step 5 follow-up have both passed with cleanup; Track A2 implementation slice is now in review on `codex/p1-a2-governance-guardrails`; Track A3-A5 remain open).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -32,6 +32,8 @@
 Track A audit evidence recorded (without closure fabrication):
 - [x] A2-evidence: PixelPort `main` defaults and protection/ruleset/CODEOWNERS state documented.
 - [x] A2-evidence: Paperclip default/protected branch and active ruleset/workflow signals documented.
+- [x] A2-evidence: live `main` branch protection baseline is now applied (required review/check gates enabled).
+- [x] A2-evidence: `.github/CODEOWNERS` + `.github/workflows/ci.yml` baseline prepared on `codex/p1-a2-governance-guardrails` for review/merge.
 - [x] A3-evidence: Vercel/Railway/DO ownership signals documented with source commands.
 - [x] A4-evidence: secrets inventory key names captured by surface; `PAPERCLIP_*` visibility gap noted.
 - [x] A5-evidence: founder decision gates listed explicitly for closure.
@@ -53,7 +55,7 @@ Track A audit evidence recorded (without closure fabrication):
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
-| PixelPort `main` lacks enforced branch protection/review/check gates and explicit backup reviewer assignment | A2 closure and cutover-safe governance | Technical Lead + Founder |
+| `.github/CODEOWNERS` + `.github/workflows/ci.yml` ownership baseline is implemented on `codex/p1-a2-governance-guardrails` but not yet merged to `main` | Final A2 closure for in-repo reviewer/CI ownership baseline | Technical Lead + CTO Reviewer |
 | Deploy ownership signals exist but explicit founder approval of named primary/backup owners is pending | A3 closure and runtime cutover prep | Founder + Technical Lead |
 | Handoff/runtime secret source-of-truth and rotation authority are not founder-closed | A4 closure and safe runtime handoff | Founder + Technical Lead |
 | Current DO token cannot delete droplets (`HTTP 403`), so debug cleanup removes tenant rows but leaves dry-run droplets running | Repeat canary cost/quota hygiene and unattended cleanup reliability | Founder + Technical Lead |
@@ -89,6 +91,7 @@ Track A audit evidence recorded (without closure fabrication):
   - post-session QA follow-up log: `docs/SESSION-LOG.md` (sessions 82-85)
   - step 5 follow-up merge smoke evidence: `docs/qa/2026-03-17-p1-step5-merge-release-smoke.md`
   - step 5 authenticated onboarding-launch handoff smoke evidence: `docs/qa/2026-03-17-p1-step5-authenticated-onboarding-launch-smoke.md`
+  - A2 governance guardrails slice evidence: `docs/qa/2026-03-17-pivot-p1-a2-governance-guardrails-slice.md`
 
 ---
 

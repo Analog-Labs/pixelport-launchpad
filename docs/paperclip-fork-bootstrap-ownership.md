@@ -27,11 +27,22 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 
 **PixelPort repo (`Analog-Labs/pixelport-launchpad`):**
 - default branch is `main`
-- `main` is currently **unprotected**
-- `branches/main/protection` returns `404 Branch not protected`
-- repo rulesets and branch rules for `main` are empty (`[]`)
-- CODEOWNERS lookup returns `404` for `CODEOWNERS`, `.github/CODEOWNERS`, and `docs/CODEOWNERS`
-- one visible dynamic workflow/check context:
+- `main` branch protection is now enabled (`protected: true`)
+- enforced branch-protection baseline on `main`:
+  - required status checks:
+    - `Analyze (javascript-typescript)` (CodeQL)
+    - `validate` (CI workflow)
+    - strict mode: `true`
+  - required pull-request approvals: `1`
+  - code-owner reviews required: `true`
+  - stale-review dismissal: `true`
+  - required conversation resolution: `true`
+  - required linear history: `true`
+  - enforce admins: `false` (intentional break-glass path)
+- repo rulesets remain empty (`[]`) and branch protection is currently the active enforcement layer
+- reviewer backup roster is now codified in branch slice `codex/p1-a2-governance-guardrails` via `.github/CODEOWNERS` (`@sanchalr @haider-rs @penumbra23`) and is pending merge
+- CI ownership baseline is now codified in branch slice `codex/p1-a2-governance-guardrails` via `.github/workflows/ci.yml` (`npx tsc --noEmit`, `npm test -- --exclude src/test/tenants-status-route.test.ts`) and is pending merge
+- visible dynamic workflow/check context on `main`:
   - workflow: `CodeQL` (`dynamic/github-code-scanning/codeql`)
   - latest `main` check-run context observed: `Analyze (javascript-typescript)`
 
@@ -123,7 +134,7 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 | Item | Status | Why still open |
 |------|--------|----------------|
 | A1 Publish ownership contract | ✅ Closed | Contract exists with matrix + runbook ownership intent |
-| A2 Repo/branch protection + CI owners/backups | ⏳ Open | PixelPort `main` unprotected, no CODEOWNERS, required checks/review gates not enforced |
+| A2 Repo/branch protection + CI owners/backups | 🚧 In Progress | `main` protection baseline is now live; CODEOWNERS + CI workflow ownership files are implemented on `codex/p1-a2-governance-guardrails` and pending merge + CTO review |
 | A3 Deploy ownership confirmation | ⏳ Open | Ownership signals exist, but explicit founder confirmation of named owners/backups is pending |
 | A4 Secrets + rotation + rollback authority | ⏳ Open | Inventory signal captured, but source-of-truth/rotation ownership and handoff var placement are not founder-closed |
 | A5 Incident escalation + founder boundaries | ⏳ Open | Boundaries documented, but explicit founder confirmation for closure is pending |
@@ -133,7 +144,7 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 1. Approve exact `main` protection policy on `Analog-Labs/pixelport-launchpad`:
    - required checks
    - required PR review baseline
-   - named reviewer backup path (since no CODEOWNERS)
+   - named reviewer backup path in `.github/CODEOWNERS`
 2. Approve deploy ownership model across launchpad/runtime surfaces:
    - primary owner
    - backup owner
