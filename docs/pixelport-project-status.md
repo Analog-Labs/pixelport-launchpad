@@ -158,6 +158,39 @@ Validated outcomes:
   - evidence: `docs/qa/2026-03-17-pivot-p1-golden-image-policy-gate.md`
 - Post-merge production smoke canary for `9faee29` reached `active` (poll 16) with gateway health `200`; tenant row cleanup confirmed.
 
+## Pivot Execution Update (2026-03-17 Managed Golden Promotion + Managed-Only Gate Rollout)
+
+Step 1 and Step 2 execution are complete; Step 3 is partially complete with an infrastructure blocker:
+
+- Step 1 (selector promotion) completed:
+  - DO snapshot promoted: `220984246` (`pixelport-paperclip-golden-2026-03-17-a627712`)
+  - production selector updated to: `PROVISIONING_DROPLET_IMAGE=220984246`
+  - production redeploy completed on alias `https://pixelport-launchpad.vercel.app`
+- Step 2 (managed-image canary) completed:
+  - tenant `025792b0-80f1-48c1-812a-75af3f7020d3` reached `active`
+  - droplet `558892798` / `159.65.239.67`
+  - gateway health `200`
+  - DO truth confirms droplet image `220984246`
+  - tenant cleanup confirmed (`TENANT_AFTER=[]`)
+- Step 3 (managed-only gate) configuration completed:
+  - `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true` is set in production
+  - production redeploy completed (`pixelport-launchpad-htok25s2n-sanchalrs-projects.vercel.app`)
+
+Step 3 canary blocker evidence:
+- strict managed-only fresh tenant (`86fc38f5-ac20-4c14-be88-3bcb1d2792aa`) remained `provisioning` with no `droplet_id`
+- Inngest run fails on `create-droplet` with `HTTP 422`
+- direct DO probe confirms exact root cause:
+  - `{"id":"unprocessable_entity","message":"creating this/these droplet(s) will exceed your droplet limit"}`
+- autonomous cleanup cannot clear capacity with current token:
+  - delete attempts for stale dry-run droplets return `HTTP 403 {"id":"Forbidden","message":"You are not authorized to perform this operation"}`
+
+Operational implication:
+- managed-only policy logic is deployed and enabled in production config, but end-to-end closure is not yet validated because DigitalOcean account capacity + delete authorization are blocked outside current automation scope.
+- closure action required: authorized owner deletes stale dry-run droplets (or raises limit), then rerun strict managed-only fresh canary.
+
+Evidence artifact:
+- `docs/qa/2026-03-17-pivot-p1-managed-golden-promotion-and-managed-only-canary.md`
+
 ---
 
 ## 1. Strategic Context
@@ -784,7 +817,10 @@ Latest P1 runtime-target/golden-enforcement slice is shipped on `main` (`688c4e3
    - review gate baseline
    - explicit backup reviewer model
 2. Close A3 with explicit founder approval of deploy ownership for launchpad/runtime staging+production and rollback authority.
-3. Promote `PROVISIONING_DROPLET_IMAGE` from compatibility selector (`ubuntu-24-04-x64`) to a maintained PixelPort golden image artifact, then enable `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`.
+3. Unblock managed-only rollout closure by resolving DigitalOcean infra constraints:
+   - free droplet capacity (delete stale `pixelport-dry-run*` droplets or raise account limit)
+   - provide delete-capable DO scope for cleanup automation or owner-run cleanup path
+   - rerun strict managed-only fresh-tenant canary and record closure evidence
 4. Close A4 with explicit founder approval for secrets source-of-truth and rotation owners, including final ownership model for `PAPERCLIP_*` handoff vars.
 5. Close A5 with explicit founder approval of incident escalation chain and notification SLAs.
 6. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract after A2-A5 closure criteria are satisfied or explicitly waived.

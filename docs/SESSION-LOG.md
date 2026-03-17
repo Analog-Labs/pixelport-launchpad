@@ -7,6 +7,38 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 80)
+- **Who worked:** Codex
+- **What was done:**
+  - Completed Step 1 managed golden-image promotion in production:
+    - created DO snapshot image `220984246` (`pixelport-paperclip-golden-2026-03-17-a627712`) from validated canary droplet lineage
+    - updated production env selector to `PROVISIONING_DROPLET_IMAGE=220984246`
+    - redeployed production alias: `https://pixelport-launchpad.vercel.app`
+  - Completed Step 2 managed-image fresh-tenant canary and image-truth validation:
+    - tenant `025792b0-80f1-48c1-812a-75af3f7020d3` (`pixelport-dry-run-mmudpzis`)
+    - reached `active` with gateway `200`
+    - droplet `558892798` / `159.65.239.67`
+    - DO droplet image truth: `image.id=220984246`
+    - cleanup confirmed tenant row deleted (`TENANT_AFTER=[]`)
+  - Executed Step 3 managed-only gate enablement:
+    - set `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true` in Vercel production
+    - redeployed production alias (`pixelport-launchpad-htok25s2n-sanchalrs-projects.vercel.app`)
+  - Ran strict managed-only fresh-tenant canary and captured blocker truth:
+    - test tenant `86fc38f5-ac20-4c14-be88-3bcb1d2792aa` stayed `provisioning` with no `droplet_id`
+    - Inngest run detail (founder screenshot + direct checks) shows failure at `create-droplet`
+    - direct DO probe with same image/size/region confirms root cause:
+      - `HTTP 422 {"id":"unprocessable_entity","message":"creating this/these droplet(s) will exceed your droplet limit"}`
+  - Validated cleanup scope limitation that prevents autonomous unblocking:
+    - stale dry-run droplets remain active (`558840407`, `558876964`, `558878686`, `558892354`, `558892798`)
+    - DO delete attempts returned `HTTP 403 {"id":"Forbidden","message":"You are not authorized to perform this operation"}`
+  - Added QA evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p1-managed-golden-promotion-and-managed-only-canary.md`
+- **What's next:**
+  - Founder/authorized DO owner must free droplet capacity (delete stale dry-run droplets or raise droplet limit).
+  - Grant delete-capable DO scope for cleanup path or provide owner-run cleanup step.
+  - Re-run strict managed-only fresh-tenant canary after capacity unblock and record pass/fail closure.
+- **Blockers:** Production fresh-tenant validation under managed-only gate is blocked by DO account droplet limit (`422`) plus lack of delete authorization (`403`) for the current automation token.
+
 - **Date:** 2026-03-17 (session 79)
 - **Who worked:** Codex + sub-agent QA reviewer (Locke)
 - **What was done:**

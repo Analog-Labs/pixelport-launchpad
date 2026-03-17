@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (`688c4e3` and `9faee29` are merged/deployed; authenticated runtime-handoff smoke and fresh-tenant selector canaries pass; production selector env is set to `ubuntu-24-04-x64`; Track A top-level A2-A5 remain open).  
+**Status:** Active (`688c4e3` and `9faee29` are merged/deployed; managed snapshot selector promotion is live with `PROVISIONING_DROPLET_IMAGE=220984246`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is currently blocked by DigitalOcean account quota/deletion scope; Track A top-level A2-A5 remain open).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -56,7 +56,7 @@ Track A audit evidence recorded (without closure fabrication):
 | PixelPort `main` lacks enforced branch protection/review/check gates and explicit backup reviewer assignment | A2 closure and cutover-safe governance | Technical Lead + Founder |
 | Deploy ownership signals exist but explicit founder approval of named primary/backup owners is pending | A3 closure and runtime cutover prep | Founder + Technical Lead |
 | Handoff/runtime secret source-of-truth and rotation authority are not founder-closed | A4 closure and safe runtime handoff | Founder + Technical Lead |
-| Production selector is still compatibility slug (`ubuntu-24-04-x64`) rather than a maintained PixelPort golden artifact (managed-only gate exists but is not enabled) | Long-term reproducibility and bootstrap drift control | Founder + Technical Lead |
+| Strict managed-only fresh-tenant validation is blocked by DigitalOcean account droplet quota (`HTTP 422`) and current DO token delete authorization gap (`HTTP 403` on dry-run droplet deletes) | Managed-only canary closure and reproducible bootstrap rollout signoff | Founder + Technical Lead |
 | Rollback authority and incident escalation chain are documented but not explicitly founder-confirmed for closure | A5 closure and incident readiness | Founder + Technical Lead |
 | Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
 
@@ -84,6 +84,7 @@ Track A audit evidence recorded (without closure fabrication):
   - golden image policy gate brief: `docs/build-briefs/2026-03-17-pivot-p1-golden-image-policy-gate-slice.md`
   - golden image policy gate CTO prompt: `docs/build-briefs/2026-03-17-pivot-p1-golden-image-policy-gate-slice-cto-prompt.md`
   - golden image policy gate QA evidence: `docs/qa/2026-03-17-pivot-p1-golden-image-policy-gate.md`
+  - managed golden promotion + managed-only canary evidence: `docs/qa/2026-03-17-pivot-p1-managed-golden-promotion-and-managed-only-canary.md`
 
 ---
 
