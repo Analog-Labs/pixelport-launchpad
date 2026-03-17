@@ -2,13 +2,26 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Rocket } from "lucide-react";
 
 interface Props {
+  companyName: string;
   agentName: string;
+  starterTask: string;
+  suggestionCount: number;
+  launching: boolean;
   error?: string;
   onBack: () => void;
   onLaunch: () => void;
 }
 
-const StepConnectTools = ({ agentName, error, onBack, onLaunch }: Props) => {
+const StepConnectTools = ({
+  companyName,
+  agentName,
+  starterTask,
+  suggestionCount,
+  launching,
+  error,
+  onBack,
+  onLaunch,
+}: Props) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-2">
@@ -16,49 +29,47 @@ const StepConnectTools = ({ agentName, error, onBack, onLaunch }: Props) => {
           <Rocket className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-foreground">Launch your Chief of Staff</h2>
-          <p className="text-sm text-muted-foreground">We'll provision the workspace first, then unlock integrations</p>
+          <h2 className="text-xl font-bold text-foreground">Launch your workspace</h2>
+          <p className="text-sm text-muted-foreground">Finalize your setup and continue to dashboard</p>
         </div>
       </div>
 
       <div className="rounded-xl border border-[hsla(38,60%,58%,0.15)] bg-[hsl(240_14%_8%)] p-6">
-        <h3 className="text-lg font-semibold text-foreground">What happens when you launch</h3>
+        <h3 className="text-lg font-semibold text-foreground">Setup summary</h3>
         <p className="text-sm text-muted-foreground mt-3">
-          We create the infrastructure for {agentName || "your Chief of Staff"}, deploy the workspace, and start the first research pass.
+          {companyName || "Your company"} is ready. {agentName || "Luna"} will start from this task:
+        </p>
+        <p className="text-sm text-foreground mt-3 rounded-lg border border-border bg-[hsl(240_14%_6%)] p-3">
+          {starterTask || "Create the first 14-day marketing execution plan."}
         </p>
         <p className="text-xs text-muted-foreground mt-4">
-          Slack, email, and other integrations become available after provisioning finishes. They are not part of this launch step.
+          Editable agent suggestions configured: {suggestionCount}
         </p>
       </div>
 
-      <p className="text-xs text-muted-foreground text-center">
-        Tool connections appear later in Dashboard &gt; Connections once the tenant is active.
-      </p>
-
-      {/* What happens next */}
       <div className="rounded-xl border-2 border-dashed border-primary/30 p-5 space-y-3">
-        <p className="text-sm font-semibold text-foreground">After you complete setup:</p>
+        <p className="text-sm font-semibold text-foreground">After launch:</p>
         <ul className="space-y-2 text-sm text-muted-foreground">
-          <li>✅ Your Chief of Staff starts scanning your website</li>
-          <li>✅ First competitor analysis begins automatically</li>
-          <li>✅ Your first content draft arrives within ~30 minutes</li>
-          <li>✅ A proposed KPI plan lands in your inbox</li>
+          <li>1. We persist your starter task and agent setup to onboarding data.</li>
+          <li>2. You land in the dashboard and can continue edits there.</li>
+          <li>3. Integrations remain available under Dashboard &gt; Connections.</li>
         </ul>
       </div>
 
-      {/* Buttons */}
       <div className="flex gap-3">
         <Button variant="ghost" onClick={onBack} className="text-muted-foreground">
           <ArrowLeft className="mr-1 h-4 w-4" /> Back
         </Button>
-        <Button className="flex-1 shimmer-btn text-primary-foreground font-semibold text-base py-5" onClick={onLaunch}>
-          🚀 Launch My Agent
+        <Button
+          className="flex-1 shimmer-btn text-primary-foreground font-semibold text-base py-5"
+          onClick={onLaunch}
+          disabled={launching}
+        >
+          {launching ? "Finalizing..." : "Launch and Open Dashboard"}
         </Button>
       </div>
 
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 };

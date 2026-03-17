@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 
-const steps = ["Company Info", "Your Agent", "Launch"];
+const steps = ["Company", "Provision", "Task", "Launch"];
 
 interface StepIndicatorProps {
   currentStep: number; // 1-based
@@ -42,7 +42,7 @@ const StepIndicator = ({ currentStep }: StepIndicatorProps) => (
           {/* Connector line */}
           {i < steps.length - 1 && (
             <div
-              className={`w-16 sm:w-24 h-0.5 mx-2 mb-6 transition-colors duration-300 ${
+              className={`w-8 sm:w-14 h-0.5 mx-2 mb-6 transition-colors duration-300 ${
                 stepNum < currentStep ? "bg-primary" : "bg-[hsl(240_10%_20%)]"
               }`}
             />

@@ -1,42 +1,30 @@
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Building2, ArrowRight } from "lucide-react";
 
-const GOALS = [
-  { emoji: "📱", label: "Social media growth" },
-  { emoji: "✍️", label: "Blog & content creation" },
-  { emoji: "🔍", label: "Competitor monitoring" },
-  { emoji: "📧", label: "Email marketing" },
-  { emoji: "🔎", label: "SEO content" },
-  { emoji: "🎯", label: "Lead generation" },
-  { emoji: "📊", label: "Brand awareness" },
-  { emoji: "➕", label: "Other" },
-];
-
 interface Props {
-  data: { company_name: string; company_url: string; goals: string[]; other_goal: string };
+  data: {
+    company_name: string;
+    company_url: string;
+    mission_goals: string;
+    agent_name: string;
+  };
   onChange: (patch: Partial<Props["data"]>) => void;
-  onNext: () => void;
+  onNext: () => void | Promise<void>;
+  submitting: boolean;
+  error?: string;
 }
 
-const StepCompanyInfo = ({ data, onChange, onNext }: Props) => {
-  const toggleGoal = (label: string) => {
-    const next = data.goals.includes(label)
-      ? data.goals.filter((g) => g !== label)
-      : [...data.goals, label];
-    onChange({ goals: next });
-  };
-
-  const valid = data.company_name.trim().length >= 2 && data.goals.length >= 1;
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && valid) onNext();
-  };
+const StepCompanyInfo = ({ data, onChange, onNext, submitting, error }: Props) => {
+  const valid =
+    data.company_name.trim().length >= 2 &&
+    data.mission_goals.trim().length >= 6 &&
+    data.agent_name.trim().length >= 1;
 
   return (
-    <div className="space-y-6" onKeyDown={handleKeyDown}>
+    <div className="space-y-6">
       <div className="flex items-center gap-3 mb-2">
         <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
           <Building2 className="h-5 w-5 text-primary" />
@@ -71,55 +59,45 @@ const StepCompanyInfo = ({ data, onChange, onNext }: Props) => {
           className="bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary"
           maxLength={255}
         />
-        <p className="text-xs text-muted-foreground">We'll scan your site to auto-fill brand details</p>
-        {data.company_url.trim().length > 5 && (
-          <span className="inline-block text-xs bg-primary/20 text-primary px-2.5 py-1 rounded-full">
-            ✨ Your agent will analyze this during setup
-          </span>
-        )}
       </div>
 
-      {/* Goals */}
-      <div className="space-y-3">
-        <Label>What should your Chief of Staff focus on?</Label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {GOALS.map((g) => {
-            const selected = data.goals.includes(g.label);
-            return (
-              <button
-                key={g.label}
-                type="button"
-                onClick={() => toggleGoal(g.label)}
-                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm font-medium transition-all duration-200 text-left ${
-                  selected
-                    ? "bg-primary/20 border-primary text-foreground"
-                    : "bg-[hsl(240_14%_8%)] border-[hsl(240_10%_20%)] text-muted-foreground hover:border-muted-foreground/40"
-                }`}
-              >
-                <span>{g.emoji}</span>
-                {g.label}
-              </button>
-            );
-          })}
-        </div>
-        {data.goals.includes("Other") && (
-          <Input
-            placeholder="Describe your goal..."
-            value={data.other_goal}
-            onChange={(e) => onChange({ other_goal: e.target.value })}
-            className="bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary mt-2"
-            maxLength={200}
-          />
-        )}
+      {/* Mission and goals */}
+      <div className="space-y-2">
+        <Label htmlFor="mission_goals">Mission and goals</Label>
+        <Textarea
+          id="mission_goals"
+          placeholder="What does success look like in the next 30-90 days?"
+          value={data.mission_goals}
+          onChange={(e) => onChange({ mission_goals: e.target.value })}
+          className="bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary min-h-[120px]"
+          maxLength={500}
+        />
+        <p className="text-xs text-muted-foreground">You can include mission, priorities, or specific growth goals.</p>
+      </div>
+
+      {/* Agent name */}
+      <div className="space-y-2">
+        <Label htmlFor="agent_name">Chief of Staff name</Label>
+        <Input
+          id="agent_name"
+          placeholder="Luna"
+          value={data.agent_name}
+          onChange={(e) => onChange({ agent_name: e.target.value })}
+          className="bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary"
+          maxLength={60}
+        />
       </div>
 
       <Button
         className="w-full shimmer-btn text-primary-foreground font-semibold"
-        disabled={!valid}
+        disabled={!valid || submitting}
         onClick={onNext}
       >
-        Next <ArrowRight className="ml-1 h-4 w-4" />
+        {submitting ? "Starting provisioning..." : "Continue to Provision"}
+        {!submitting && <ArrowRight className="ml-1 h-4 w-4" />}
       </Button>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 };
