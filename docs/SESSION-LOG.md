@@ -7,6 +7,46 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 79)
+- **Who worked:** Codex + sub-agent QA reviewer (Locke)
+- **What was done:**
+  - Completed founder-approved Step 1 fresh-tenant selector canary on production:
+    - tenant `078bd6f9-ff77-4431-8bac-ba83f2d94e59` (`pixelport-dry-run-mmua9dqn`)
+    - reached `active` (poll 9)
+    - droplet `558876964` / `64.227.3.37`
+    - gateway health `200`
+    - backend artifact truth included `vault_non_pending=5`
+    - cleanup: tenant deleted `true`, droplet delete remained `false` (known DO scope limit)
+  - Implemented and shipped Step 2 golden-image policy-gate slice:
+    - branch: `codex/p1-golden-image-policy-gate`
+    - merged/pushed to `main`: `9faee29`
+    - deployment: `https://pixelport-launchpad-q4qnlchai-sanchalrs-projects.vercel.app` (`Ready`)
+  - Step 2 implementation outcomes:
+    - provisioning image selector now classifies as `managed | compatibility | missing`
+    - strict missing-selector enforcement remains intact
+    - optional managed-only gate added:
+      - `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
+      - blocks compatibility selector usage
+    - compatibility selector path remains non-breaking by default with warning logs
+    - manifest notes synced to strict-selector reality and optional managed-only gate
+  - Local validation for Step 2:
+    - `npx tsc --noEmit` (pass)
+    - `npx vitest run src/test/provision-tenant-memory.test.ts` (pass, 12/12)
+  - QA reviewer result for Step 2 code diff:
+    - verdict: `APPROVED`
+    - no blocking findings
+  - Ran post-merge production smoke canary for `9faee29`:
+    - tenant `d53e52ae-f593-4f79-9e24-0e9a72998b38` (`pixelport-dry-run-mmuap4ug`)
+    - reached `active` (poll 16)
+    - droplet `558878686` / `157.245.83.187`
+    - gateway health `200`
+    - tenant row cleanup confirmed (`BEFORE=[]`, `AFTER=[]`)
+- **What's next:**
+  - Continue Track A closure work (A2-A5) with founder-confirmed ownership decisions.
+  - Promote production selector from compatibility slug to maintained PixelPort golden artifact.
+  - After selector promotion, enable `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`.
+- **Blockers:** No missing-selector blocker remains. Primary open risk is compatibility-selector operation until maintained golden artifact promotion is completed.
+
 - **Date:** 2026-03-17 (session 78)
 - **Who worked:** Codex
 - **What was done:**

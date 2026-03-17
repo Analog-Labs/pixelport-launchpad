@@ -136,6 +136,28 @@ Operational follow-up truth:
 - `PROVISIONING_DROPLET_IMAGE` is now configured in production as `ubuntu-24-04-x64` (set 2026-03-17).
 - strict enforcement is no longer blocked by missing env; follow-up is promotion from compatibility selector to a maintained PixelPort golden artifact.
 
+## Pivot Execution Update (2026-03-17 Golden Selector Canary + Policy Gate)
+
+Post-merge update after `9faee29` on `main`:
+
+- commit: `9faee29`
+- deploy status: `success`
+- deploy URL: `https://pixelport-launchpad-q4qnlchai-sanchalrs-projects.vercel.app`
+
+Validated outcomes:
+- Fresh-tenant canary passed under strict-selector path with production `PROVISIONING_DROPLET_IMAGE=ubuntu-24-04-x64`:
+  - tenant `078bd6f9-ff77-4431-8bac-ba83f2d94e59` reached `active`
+  - gateway health `200`
+  - backend artifacts present (`vault_non_pending=5`)
+  - evidence: `docs/qa/2026-03-17-pivot-p1-golden-selector-fresh-tenant-canary.md`
+- Provisioning policy-gate slice shipped:
+  - selector classification now reports `managed | compatibility | missing`
+  - missing-selector strict behavior unchanged
+  - optional managed-only enforcement gate added:
+    - `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
+  - evidence: `docs/qa/2026-03-17-pivot-p1-golden-image-policy-gate.md`
+- Post-merge production smoke canary for `9faee29` reached `active` (poll 16) with gateway health `200`; tenant row cleanup confirmed.
+
 ---
 
 ## 1. Strategic Context
@@ -762,7 +784,7 @@ Latest P1 runtime-target/golden-enforcement slice is shipped on `main` (`688c4e3
    - review gate baseline
    - explicit backup reviewer model
 2. Close A3 with explicit founder approval of deploy ownership for launchpad/runtime staging+production and rollback authority.
-3. Promote `PROVISIONING_DROPLET_IMAGE` from compatibility selector (`ubuntu-24-04-x64`) to a maintained PixelPort golden image artifact and capture fresh-tenant canary evidence.
+3. Promote `PROVISIONING_DROPLET_IMAGE` from compatibility selector (`ubuntu-24-04-x64`) to a maintained PixelPort golden image artifact, then enable `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`.
 4. Close A4 with explicit founder approval for secrets source-of-truth and rotation owners, including final ownership model for `PAPERCLIP_*` handoff vars.
 5. Close A5 with explicit founder approval of incident escalation chain and notification SLAs.
 6. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract after A2-A5 closure criteria are satisfied or explicitly waived.
