@@ -134,26 +134,22 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 | Item | Status | Why still open |
 |------|--------|----------------|
 | A1 Publish ownership contract | ✅ Closed | Contract exists with matrix + runbook ownership intent |
-| A2 Repo/branch protection + CI owners/backups | 🚧 In Progress | `main` protection baseline is now live; CODEOWNERS + CI workflow ownership files are implemented on `codex/p1-a2-governance-guardrails` and pending merge + CTO review |
+| A2 Repo/branch protection + CI owners/backups | ✅ Closed | `main` branch protection is enforced and requires both `Analyze (javascript-typescript)` + `validate`; CODEOWNERS + CI ownership baseline is merged on `main` via PR #2 (`9eb17df`) |
 | A3 Deploy ownership confirmation | ⏳ Open | Ownership signals exist, but explicit founder confirmation of named owners/backups is pending |
 | A4 Secrets + rotation + rollback authority | ⏳ Open | Inventory signal captured, but source-of-truth/rotation ownership and handoff var placement are not founder-closed |
 | A5 Incident escalation + founder boundaries | ⏳ Open | Boundaries documented, but explicit founder confirmation for closure is pending |
 
 ## Founder Decisions Needed (To Close A2-A5)
 
-1. Approve exact `main` protection policy on `Analog-Labs/pixelport-launchpad`:
-   - required checks
-   - required PR review baseline
-   - named reviewer backup path in `.github/CODEOWNERS`
-2. Approve deploy ownership model across launchpad/runtime surfaces:
+1. Approve deploy ownership model across launchpad/runtime surfaces:
    - primary owner
    - backup owner
    - who can promote/rollback production
-3. Approve secrets source-of-truth and rotation model:
+2. Approve secrets source-of-truth and rotation model:
    - where handoff vars (`PAPERCLIP_*`) are stored
    - rotation owner and cadence
    - escalation policy for missing/misaligned secrets
-4. Approve rollback and incident-command authority boundary:
+3. Approve rollback and incident-command authority boundary:
    - who can execute immediate rollback
    - founder notification SLA by severity
    - CTO escalation/review trigger points

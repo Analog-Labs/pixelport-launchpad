@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (`688c4e3`, `9faee29`, and follow-up merge `f8a5b1a` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; post-merge targeted production smoke and authenticated onboarding-launch handoff smoke for Step 5 follow-up have both passed with cleanup; Track A2 implementation slice is now in review on `codex/p1-a2-governance-guardrails`; Track A3-A5 remain open).  
+**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, and A2 merge `9eb17df` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A2 guardrails are merged and production-smoked; Track A3-A5 remain open).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -24,7 +24,7 @@
 
 #### Track A — Ownership Lock
 - [x] A1: Publish Paperclip fork bootstrap ownership contract.
-- [ ] A2: Confirm repo/branch protection + CI owners and reviewer backups.
+- [x] A2: Confirm repo/branch protection + CI owners and reviewer backups.
 - [ ] A3: Confirm deploy ownership for staging/production runtime targets.
 - [ ] A4: Confirm secret inventory + rotation ownership and rollback authority.
 - [ ] A5: Confirm incident escalation path and founder decision boundaries.
@@ -55,7 +55,6 @@ Track A audit evidence recorded (without closure fabrication):
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
-| `.github/CODEOWNERS` + `.github/workflows/ci.yml` ownership baseline is implemented on `codex/p1-a2-governance-guardrails` but not yet merged to `main` | Final A2 closure for in-repo reviewer/CI ownership baseline | Technical Lead + CTO Reviewer |
 | Deploy ownership signals exist but explicit founder approval of named primary/backup owners is pending | A3 closure and runtime cutover prep | Founder + Technical Lead |
 | Handoff/runtime secret source-of-truth and rotation authority are not founder-closed | A4 closure and safe runtime handoff | Founder + Technical Lead |
 | Current DO token cannot delete droplets (`HTTP 403`), so debug cleanup removes tenant rows but leaves dry-run droplets running | Repeat canary cost/quota hygiene and unattended cleanup reliability | Founder + Technical Lead |
@@ -88,10 +87,11 @@ Track A audit evidence recorded (without closure fabrication):
   - golden image policy gate QA evidence: `docs/qa/2026-03-17-pivot-p1-golden-image-policy-gate.md`
   - managed golden promotion + managed-only canary evidence: `docs/qa/2026-03-17-pivot-p1-managed-golden-promotion-and-managed-only-canary.md`
   - managed golden rebuild closure evidence: `docs/qa/2026-03-17-pivot-p1-managed-golden-rebuild-closure.md`
-  - post-session QA follow-up log: `docs/SESSION-LOG.md` (sessions 82-85)
+  - post-session QA follow-up log: `docs/SESSION-LOG.md` (sessions 82-87)
   - step 5 follow-up merge smoke evidence: `docs/qa/2026-03-17-p1-step5-merge-release-smoke.md`
   - step 5 authenticated onboarding-launch handoff smoke evidence: `docs/qa/2026-03-17-p1-step5-authenticated-onboarding-launch-smoke.md`
   - A2 governance guardrails slice evidence: `docs/qa/2026-03-17-pivot-p1-a2-governance-guardrails-slice.md`
+  - A2 governance merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a2-governance-merge-smoke.md`
 
 ---
 

@@ -7,6 +7,32 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 87)
+- **Who worked:** Codex
+- **What was done:**
+  - Merged approved PR `#2` to `main`:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/2`
+    - merge commit: `9eb17df`
+  - Confirmed deploy completion for merge commit:
+    - Vercel status: `success`
+    - deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/EGgViFwByLvrTxZrZvK8uvvtD2Wu`
+  - Closed CTO blocker on required checks by updating live `main` protection policy:
+    - required status checks now include both:
+      - `Analyze (javascript-typescript)` (CodeQL)
+      - `validate` (CI workflow)
+    - strict checks remain enabled
+  - Ran targeted post-merge production smoke on `https://pixelport-launchpad.vercel.app`:
+    - `GET /api/runtime/handoff` -> `405 {"error":"Method not allowed"}`
+    - `POST /api/runtime/handoff` without auth -> `401 {"error":"Missing or invalid Authorization header"}`
+    - `POST /api/runtime/handoff` invalid bearer -> `401 {"error":"Invalid or expired token"}`
+    - `GET /api/debug/env-check` -> `404` (`NOT_FOUND`)
+  - Added merge-smoke evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p1-a2-governance-merge-smoke.md`
+- **What's next:**
+  - Continue Track A closure work with founder approvals for A3-A5.
+  - Optionally run a dedicated follow-up slice to repair `src/test/tenants-status-route.test.ts` so CI can remove the current narrow exclusion.
+- **Blockers:** No blocker remains for A2; A3-A5 founder-confirmation blockers remain open.
+
 - **Date:** 2026-03-17 (session 86)
 - **Who worked:** Codex
 - **What was done:**
