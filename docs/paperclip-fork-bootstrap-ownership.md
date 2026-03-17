@@ -1,81 +1,160 @@
 # Paperclip Fork Bootstrap Ownership Contract (Phase P1)
 
-**Date:** 2026-03-16  
+**Date:** 2026-03-17  
 **Scope:** Post-P0 ownership lock for the Paperclip-primary runtime bootstrap  
 **Binding context:** `docs/pixelport-pivot-plan-2026-03-16.md`
 
 ## Purpose
 
-Define who owns each critical bootstrap function for the PixelPort-owned Paperclip fork so Phase P1 execution can proceed without decision ambiguity.
+Define ownership for bootstrap-critical surfaces and record audit evidence for Track A without fabricating enforcement or signoff.
 
-## Ownership Matrix
+## Ownership Matrix (Execution Contract)
 
-| Surface | Primary owner | Reviewer / backup | Founder approval required |
-|---------|---------------|-------------------|---------------------------|
-| Paperclip fork repo administration (default branch, protected branches, required checks) | Technical Lead (Codex) | CTO reviewer | Yes, for any policy or workflow change that alters release gates |
-| CI workflow integrity for runtime repo (build/test/check jobs) | Technical Lead (Codex) | CTO reviewer | No, unless CI policy changes affect release risk posture |
-| Runtime deploy environments (staging/prod targets, domain wiring, release promotion) | Technical Lead (Codex) | Founder informed; CTO reviewer on medium/high changes | Yes, for production target changes or cutover timing |
-| Launchpad -> Paperclip thin handoff contract | Technical Lead (Codex) | CTO reviewer | Yes, if contract changes alter user-visible flow or auth model |
-| Secret inventory and source-of-truth mapping (launchpad, Paperclip runtime, droplet bootstrap) | Technical Lead (Codex) | Founder visibility + CTO review | Yes, for key vendor/account changes |
-| Secret rotation execution and cadence | Technical Lead (Codex) | Founder visibility | No for routine rotations; yes for emergency incident policy changes |
-| Rollback command authority (runtime rollback / bridge rollback) | Technical Lead (Codex) | Founder notified immediately; CTO reviewer for postmortem | No for emergency rollback execution |
-| Incident commander for runtime bootstrap failures | Technical Lead (Codex) | Founder escalation path + CTO reviewer | No for incident response; yes for strategy/policy changes post-incident |
+| Surface | Primary owner | Reviewer / backup | Founder approval required to close |
+|---------|---------------|-------------------|------------------------------------|
+| Repo admin and branch policy (`Analog-Labs/pixelport-launchpad`, Paperclip fork governance) | Technical Lead (Codex) | CTO reviewer + named human backup reviewer (pending founder confirmation) | Yes |
+| CI/workflow integrity and required-check baseline | Technical Lead (Codex) | CTO reviewer | Yes for required-gate changes on `main` |
+| Deploy targets and promotion ownership (Vercel launchpad, runtime surfaces) | Technical Lead (Codex) | Founder visibility + CTO reviewer | Yes |
+| Launchpad -> Paperclip handoff contract ownership | Technical Lead (Codex) | CTO reviewer | Yes if user-facing/auth-flow impact |
+| Secrets inventory and source-of-truth mapping | Technical Lead (Codex) | Founder visibility + CTO reviewer | Yes |
+| Secret rotation execution | Technical Lead (Codex) | Founder visibility | Yes for policy/cadence decisions |
+| Rollback execution authority | Technical Lead (Codex) | Founder notified immediately | Yes (authority boundary confirmation) |
+| Incident escalation ownership | Technical Lead (Codex) | CTO reviewer + Founder | Yes (SLA and escalation chain confirmation) |
 
-## Runbook Owners
+## Track A Audit Evidence Snapshot (2026-03-17)
 
-### 1) Repo and branch protection runbook
-- Owner: Technical Lead (Codex)
-- Coverage:
-  - ensure protected `main`
-  - required status checks and review gates for medium/high risk changes
-  - branch naming and merge strategy alignment
+### A2 — Repo/Branch Protection + CI Ownership Evidence
 
-### 2) Deploy environment runbook
-- Owner: Technical Lead (Codex)
-- Coverage:
-  - staging/prod environment mapping
-  - deploy promotion sequence
-  - release verification and smoke expectations
+**PixelPort repo (`Analog-Labs/pixelport-launchpad`):**
+- default branch is `main`
+- `main` is currently **unprotected**
+- `branches/main/protection` returns `404 Branch not protected`
+- repo rulesets and branch rules for `main` are empty (`[]`)
+- CODEOWNERS lookup returns `404` for `CODEOWNERS`, `.github/CODEOWNERS`, and `docs/CODEOWNERS`
+- one visible dynamic workflow/check context:
+  - workflow: `CodeQL` (`dynamic/github-code-scanning/codeql`)
+  - latest `main` check-run context observed: `Analyze (javascript-typescript)`
 
-### 3) Secrets source-of-truth and rotation runbook
-- Owner: Technical Lead (Codex)
-- Coverage:
-  - per-surface secret inventory (launchpad API, Paperclip runtime API/auth, droplet provisioning)
-  - storage-of-record and sync rules
-  - rotation checklist and evidence logging
+**Paperclip reference repo (`paperclipai/paperclip`):**
+- default branch is `master`
+- branch reports `protected: true`
+- active ruleset observed on `master` includes:
+  - `deletion`
+  - `non_fast_forward`
+  - `pull_request`
+- local clone workflow files present at `/Users/sanchal/paperclip/.github/workflows/`:
+  - `e2e.yml`
+  - `pr-policy.yml`
+  - `pr-verify.yml`
+  - `refresh-lockfile.yml`
+  - `release.yml`
 
-### 4) Rollback runbook
-- Owner: Technical Lead (Codex)
-- Coverage:
-  - rollback triggers (failed deploy, failing canary, truthfulness regression, auth mismatch)
-  - rollback execution order (runtime first, bridge second when needed)
-  - validation checks after rollback
+### A3 — Deploy Ownership Evidence
 
-### 5) Incident escalation runbook
-- Owner: Technical Lead (Codex)
-- Coverage:
-  - detection channels and severity classes
-  - founder notification SLA by severity
-  - CTO review handoff for medium/high incidents
+- Vercel user signal: `npx vercel whoami` -> `sanchalr`
+- Vercel team scope signal: project owner is `sanchalr's projects` (`sanchalrs-projects`)
+- Vercel production source signal: recent production deployments show `githubCommitRef: main`
+- Railway ownership signal:
+  - `railway whoami` -> `sanchal02@gmail.com`
+  - workspace listed as `sanchalr's Projects`
+  - project signal: `pixelport-litellm`
+- DigitalOcean ownership signal:
+  - account name/email/team are visible from account endpoint
+  - token scope is limited on some endpoints (billing/balance endpoints return `403`)
 
-## Acceptance Gates for P1 Bootstrap Ownership Lock
+### A4 — Secrets Inventory Signals (Names Only)
 
-- [ ] Canonical Paperclip fork repo URL and default branch are documented in runtime handoff docs.
-- [ ] Branch protection and required checks are enabled for the Paperclip runtime repo.
-- [ ] Deploy ownership is assigned for staging + production runtime targets.
-- [ ] Launchpad-to-Paperclip handoff contract owner and reviewer are explicitly assigned.
-- [ ] Secret inventory lists each key, storage system, owner, and rotation owner.
-- [ ] Rollback authority and incident escalation path are confirmed.
-- [ ] Founder-approved decision boundaries are acknowledged before cutover work begins.
+**Launchpad (Vercel env listing evidence):**
+- `API_KEY_ENCRYPTION_KEY`
+- `DO_API_TOKEN`
+- `INNGEST_EVENT_KEY`
+- `INNGEST_SIGNING_KEY`
+- `LITELLM_MASTER_KEY`
+- `LITELLM_URL`
+- `MEMORY_OPENAI_API_KEY`
+- `SLACK_APP_TOKEN`
+- `SLACK_CLIENT_ID`
+- `SLACK_CLIENT_SECRET`
+- `SLACK_SIGNING_SECRET`
+- `SSH_PRIVATE_KEY`
+- `SUPABASE_PROJECT_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-## Founder Decision Boundaries (Must Be Explicitly Approved)
+**Handoff contract vars (required by route/contract code):**
+- `PAPERCLIP_RUNTIME_URL`
+- `PAPERCLIP_HANDOFF_SECRET`
+- `PAPERCLIP_HANDOFF_TTL_SECONDS`
 
-- Any change to product-visible onboarding/auth flow tied to Paperclip runtime handoff.
-- Any production cutover timing decision or rollback policy change.
-- Any net-new vendor/provider decision for auth, hosting, or secret management.
-- Any UX/policy change that alters who can provision or launch runtime workspaces.
+**Droplet runtime/provisioning surfaces (from provisioning/runtime codepaths):**
+- `OPENCLAW_IMAGE`
+- `OPENCLAW_RUNTIME_IMAGE`
+- `PROVISIONING_DROPLET_IMAGE`
+- `PROVISIONING_DROPLET_SIZE`
+- `PROVISIONING_DROPLET_REGION`
+- `PIXELPORT_DROPLET_IMAGE`
+- `PIXELPORT_DROPLET_SIZE`
+- `PIXELPORT_DROPLET_REGION`
+- `DO_GOLDEN_IMAGE_ID`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `PIXELPORT_API_KEY`
+- `AGENTMAIL_API_KEY`
+- `GEMINI_API_KEY`
+
+**LiteLLM service surface (Railway variable names observed):**
+- `LITELLM_DATABASE_URL`
+- `LITELLM_MASTER_KEY`
+- `LITELLM_UI_TOKEN`
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`
+- `GEMINI_API_KEY`
+
+**Important evidence gap:**
+- `PAPERCLIP_*` handoff vars are **not visible** in current Vercel production env listing evidence.
+
+### A5 — Rollback/Incident Boundary Evidence State
+
+- Decision-boundary text exists in this contract and in `AGENTS.md`.
+- Explicit founder-level confirmation for rollback authority boundaries and escalation closure is still pending.
+- No fabricated owner signoff is recorded in this document.
+
+## Track A Status (Do Not Close Without Explicit Confirmation)
+
+| Item | Status | Why still open |
+|------|--------|----------------|
+| A1 Publish ownership contract | ✅ Closed | Contract exists with matrix + runbook ownership intent |
+| A2 Repo/branch protection + CI owners/backups | ⏳ Open | PixelPort `main` unprotected, no CODEOWNERS, required checks/review gates not enforced |
+| A3 Deploy ownership confirmation | ⏳ Open | Ownership signals exist, but explicit founder confirmation of named owners/backups is pending |
+| A4 Secrets + rotation + rollback authority | ⏳ Open | Inventory signal captured, but source-of-truth/rotation ownership and handoff var placement are not founder-closed |
+| A5 Incident escalation + founder boundaries | ⏳ Open | Boundaries documented, but explicit founder confirmation for closure is pending |
+
+## Founder Decisions Needed (To Close A2-A5)
+
+1. Approve exact `main` protection policy on `Analog-Labs/pixelport-launchpad`:
+   - required checks
+   - required PR review baseline
+   - named reviewer backup path (since no CODEOWNERS)
+2. Approve deploy ownership model across launchpad/runtime surfaces:
+   - primary owner
+   - backup owner
+   - who can promote/rollback production
+3. Approve secrets source-of-truth and rotation model:
+   - where handoff vars (`PAPERCLIP_*`) are stored
+   - rotation owner and cadence
+   - escalation policy for missing/misaligned secrets
+4. Approve rollback and incident-command authority boundary:
+   - who can execute immediate rollback
+   - founder notification SLA by severity
+   - CTO escalation/review trigger points
+
+## Founder Decision Boundaries (Must Stay Explicit)
+
+- Any product-visible onboarding/auth flow change tied to runtime handoff
+- Production cutover timing or rollback policy changes
+- Net-new vendor/provider decisions for hosting, auth, or secrets
+- UX/policy changes that alter provisioning/launch permissions
 
 ## Operating Notes
 
-- This contract does not replace `AGENTS.md`; it clarifies execution ownership for P1 bootstrap only.
-- If any conflict exists, pivot lock decisions in `docs/pixelport-pivot-plan-2026-03-16.md` win.
+- This contract clarifies P1 bootstrap ownership; it does not replace `AGENTS.md`.
+- If any conflict exists, `docs/pixelport-pivot-plan-2026-03-16.md` remains authoritative.

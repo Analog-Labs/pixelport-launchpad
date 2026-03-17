@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (first P1 handoff slice merged to `main` at `4e1dfb91602d9686df6aa0b4b990881448882813`, deployed, and production-smoked on 2026-03-17; Track A ownership signoff items remain open).  
+**Status:** Active (first P1 handoff slice merged to `main` at `4e1dfb91602d9686df6aa0b4b990881448882813`, deployed, and production-smoked on 2026-03-17; Track A ownership-audit evidence captured on 2026-03-17; top-level A2-A5 remain open).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -29,6 +29,13 @@
 - [ ] A4: Confirm secret inventory + rotation ownership and rollback authority.
 - [ ] A5: Confirm incident escalation path and founder decision boundaries.
 
+Track A audit evidence recorded (without closure fabrication):
+- [x] A2-evidence: PixelPort `main` defaults and protection/ruleset/CODEOWNERS state documented.
+- [x] A2-evidence: Paperclip default/protected branch and active ruleset/workflow signals documented.
+- [x] A3-evidence: Vercel/Railway/DO ownership signals documented with source commands.
+- [x] A4-evidence: secrets inventory key names captured by surface; `PAPERCLIP_*` visibility gap noted.
+- [x] A5-evidence: founder decision gates listed explicitly for closure.
+
 #### Track B — First Runtime Handoff Slice
 - [x] B1: Implement first launchpad-to-Paperclip runtime handoff API contract (additive).
 - [x] B2: Define required handoff env contract and diagnostics coverage.
@@ -45,8 +52,10 @@
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
-| Paperclip fork repo/deploy ownership details not fully confirmed | P1 cutover prep and subsequent runtime migration slices | Technical Lead + Founder |
-| Secret authority mapping for runtime bootstrap surfaces | Safe cutover execution | Technical Lead + Founder |
+| PixelPort `main` lacks enforced branch protection/review/check gates and explicit backup reviewer assignment | A2 closure and cutover-safe governance | Technical Lead + Founder |
+| Deploy ownership signals exist but explicit founder approval of named primary/backup owners is pending | A3 closure and runtime cutover prep | Founder + Technical Lead |
+| Handoff/runtime secret source-of-truth and rotation authority are not founder-closed; `PAPERCLIP_*` vars are not visible in current Vercel env listing evidence | A4 closure and safe runtime handoff | Founder + Technical Lead |
+| Rollback authority and incident escalation chain are documented but not explicitly founder-confirmed for closure | A5 closure and incident readiness | Founder + Technical Lead |
 | Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
 
 ### Notes
@@ -60,6 +69,9 @@
   - CTO prompt: `docs/build-briefs/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice-cto-prompt.md`
   - QA evidence: `docs/qa/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice.md`
   - release smoke evidence: `docs/qa/2026-03-17-pivot-p1-handoff-release-smoke.md`
+  - ownership-audit brief: `docs/build-briefs/2026-03-17-pivot-p1-ownership-audit-slice.md`
+  - ownership-audit CTO prompt: `docs/build-briefs/2026-03-17-pivot-p1-ownership-audit-slice-cto-prompt.md`
+  - ownership-audit QA evidence: `docs/qa/2026-03-17-pivot-p1-ownership-audit.md`
 
 ---
 

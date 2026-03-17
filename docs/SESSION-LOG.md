@@ -7,6 +7,40 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 75)
+- **Who worked:** Codex + sub-agents (Dirac, Locke, Banach)
+- **What was done:**
+  - Started Step 2 on branch `codex/pivot-p1-ownership-audit` to execute Phase P1 Track A ownership-lock evidence capture.
+  - Ran parallel ownership audits for:
+    - repo/branch protection + CI ownership signals
+    - deploy ownership + secrets inventory + escalation boundary signals
+  - Confirmed and documented key facts:
+    - `Analog-Labs/pixelport-launchpad` default branch is `main` and currently unprotected.
+    - no active `main` rulesets/branch rules were found for PixelPort repo.
+    - no `CODEOWNERS` file exists in PixelPort repo.
+    - `paperclipai/paperclip` default branch is `master` and reports protected with active branch rules (`deletion`, `non_fast_forward`, `pull_request`).
+    - Vercel/Railway/DO ownership signals were captured, including DO scope limits on billing endpoints (`403`).
+    - handoff-related `PAPERCLIP_*` env vars are defined in code contract but are not visible in current Vercel env listing evidence.
+  - Updated Track A docs and artifacts without fabricating closure:
+    - `docs/paperclip-fork-bootstrap-ownership.md`
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/pixelport-project-status.md`
+    - `docs/build-briefs/2026-03-17-pivot-p1-ownership-audit-slice.md`
+    - `docs/build-briefs/2026-03-17-pivot-p1-ownership-audit-slice-cto-prompt.md`
+    - `docs/qa/2026-03-17-pivot-p1-ownership-audit.md`
+  - Ran QA review on the full ownership-audit doc slice:
+    - verdict: `APPROVED`
+    - no findings.
+- **What's next:**
+  - Commit and merge the ownership-audit docs slice.
+  - Close founder decisions needed for A2-A5:
+    - branch protection/review/check policy for PixelPort `main`
+    - deploy ownership + rollback authority model
+    - secret source-of-truth + rotation ownership, including `PAPERCLIP_*` vars
+    - incident escalation/notification SLA boundaries
+  - After founder approval, execute enforcement/config updates for A2-A5 closure.
+- **Blockers:** A2-A5 closure still requires explicit founder confirmations and (for A2) real branch-protection enforcement changes.
+
 - **Date:** 2026-03-17 (session 74)
 - **Who worked:** Codex
 - **What was done:**

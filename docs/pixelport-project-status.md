@@ -71,6 +71,26 @@ First P1 handoff release slice from `codex/pivot-p1-bootstrap-handoff` is now me
   - `GET /api/debug/env-check` without secret -> `401` (debug auth guard)
 - QA evidence: `docs/qa/2026-03-17-pivot-p1-handoff-release-smoke.md`
 
+## Pivot Execution Update (2026-03-17 Ownership Audit)
+
+Track A ownership-audit evidence is now documented (without fabricated closure):
+
+- evidence artifact: `docs/qa/2026-03-17-pivot-p1-ownership-audit.md`
+- ownership contract updated with factual audit snapshot:
+  - PixelPort repo `Analog-Labs/pixelport-launchpad` default branch `main`, currently unprotected, no rulesets on `main`, no CODEOWNERS file
+  - one visible dynamic CodeQL workflow/check-run context (`Analyze (javascript-typescript)`)
+  - Paperclip reference repo `paperclipai/paperclip` default branch `master`, branch reports protected, active ruleset includes `deletion`, `non_fast_forward`, and `pull_request`
+  - local Paperclip clone workflows confirmed under `/Users/sanchal/paperclip/.github/workflows/*`
+- deploy ownership evidence captured:
+  - Vercel ownership/scope signal: `sanchalr` / `sanchalrs-projects`
+  - Vercel production branch signal: `main`
+  - Railway workspace owner signal and DO account ownership signal observed
+  - DO token scope limits observed on billing/balance endpoints (`403`)
+- secrets inventory signal captured by surface (names only), with explicit note that `PAPERCLIP_*` handoff vars are not visible in current Vercel env listing evidence
+
+Track A closure state remains unchanged:
+- A2, A3, A4, A5 are still open pending explicit enforcement/configuration and founder-level confirmations.
+
 ---
 
 ## 1. Strategic Context
@@ -692,16 +712,17 @@ Constraints (locked):
 
 First P1 handoff slice is shipped on `main` (`4e1dfb91602d9686df6aa0b4b990881448882813`), deployed, and production-smoked for route/auth guardrails.
 
-1. Close remaining bootstrap ownership contract signoffs for the PixelPort-owned Paperclip fork:
-   - repo/branch protection + CI ownership
-   - deploy environment ownership
-   - secrets + rotation ownership
-   - rollback authority + incident escalation ownership
-2. Confirm explicit owner signoff for the ownership contract items before cutover-critical execution.
-3. Run an authenticated production smoke for `POST /api/runtime/handoff` success path (`200`) with a valid test token/session.
-4. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract.
-5. Keep launchpad scoped to marketing, billing, and thin provisioning bridge responsibilities while cutover work proceeds.
-6. Set `PROVISIONING_DROPLET_IMAGE` in production before strict golden-image-only enforcement.
+1. Close A2 by configuring real enforcement on `Analog-Labs/pixelport-launchpad` `main`:
+   - required checks
+   - review gate baseline
+   - explicit backup reviewer model
+2. Close A3 with explicit founder approval of deploy ownership for launchpad/runtime staging+production and rollback authority.
+3. Close A4 with explicit founder approval for secrets source-of-truth and rotation owners, including final placement of `PAPERCLIP_*` handoff vars.
+4. Close A5 with explicit founder approval of incident escalation chain and notification SLAs.
+5. Run an authenticated production smoke for `POST /api/runtime/handoff` success path (`200`) with a valid test token/session.
+6. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract after A2-A5 closure criteria are satisfied or explicitly waived.
+7. Keep launchpad scoped to marketing, billing, and thin provisioning bridge responsibilities while cutover work proceeds.
+8. Set `PROVISIONING_DROPLET_IMAGE` in production before strict golden-image-only enforcement.
 
 ### Scope Boundaries (Current)
 
