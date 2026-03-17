@@ -37,9 +37,9 @@ Record post-merge truth for runtime-target handoff hardening and strict provisio
 ## Critical Follow-Up Truth
 
 - `PAPERCLIP_HANDOFF_SECRET` is present in Vercel env.
-- `PROVISIONING_DROPLET_IMAGE` is not present in current `vercel env ls` evidence.
-- With strict enforcement active, fresh provisioning will fail until `PROVISIONING_DROPLET_IMAGE` is set.
+- `PROVISIONING_DROPLET_IMAGE` was set in production to `ubuntu-24-04-x64` on 2026-03-17.
+- With strict enforcement active, missing-env blocker is now cleared; remaining follow-up is promotion to a maintained PixelPort golden image artifact.
 
 ## Verdict
 
-`pass` for this slice: runtime-targeted handoff behavior is validated in production (including authenticated `200` path), and strict golden-image enforcement is live with a known operational blocker until production selector env is configured.
+`pass` for this slice: runtime-targeted handoff behavior is validated in production (including authenticated `200` path), and strict golden-image enforcement is live with missing-env blocker cleared; follow-up is promotion to a maintained PixelPort golden image artifact.

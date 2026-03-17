@@ -7,6 +7,24 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 78)
+- **Who worked:** Codex
+- **What was done:**
+  - Applied founder-approved production env update:
+    - `PROVISIONING_DROPLET_IMAGE=ubuntu-24-04-x64`
+  - Verified Vercel env truth after update:
+    - `PROVISIONING_DROPLET_IMAGE` now appears in production env listing.
+    - `PAPERCLIP_HANDOFF_SECRET` remains present.
+  - Triggered redeploy so the new env value is active on current production alias.
+  - Ran authenticated production status check:
+    - `GET /api/debug/test-provision?mode=status` -> `200 {"action":"status","tenants":[]}`
+  - Updated active coordination docs to remove stale "missing image env" blocker and reflect the new operational state.
+- **What's next:**
+  - Continue Track A closure work (A2-A5) with founder-confirmed ownership decisions.
+  - Run/record a fresh-tenant provisioning canary specifically against the strict-selector path and capture cleanup evidence.
+  - Start the next approved Paperclip-consumer integration slice.
+- **Blockers:** No active blocker remains for missing `PROVISIONING_DROPLET_IMAGE`; Track A governance closure (A2-A5) is still open.
+
 - **Date:** 2026-03-17 (session 77)
 - **Who worked:** Codex
 - **What was done:**

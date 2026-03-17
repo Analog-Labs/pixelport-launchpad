@@ -57,5 +57,5 @@ Harden runtime handoff targeting and remove provisioning compatibility fallback 
 ## Operational Follow-Up
 
 - `PAPERCLIP_HANDOFF_SECRET` is now present in Vercel env.
-- `PROVISIONING_DROPLET_IMAGE` is not currently present in `vercel env ls`.
-- Because strict enforcement is live, fresh provisioning is blocked until `PROVISIONING_DROPLET_IMAGE` is configured.
+- `PROVISIONING_DROPLET_IMAGE` was later set in production to `ubuntu-24-04-x64` on 2026-03-17.
+- Strict enforcement is no longer blocked by missing env; remaining follow-up is promotion to a maintained PixelPort golden image artifact.

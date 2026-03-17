@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (`688c4e3` is merged/deployed; authenticated production smoke now confirms `POST /api/runtime/handoff` success-path `200`; Track A top-level A2-A5 remain open; strict provisioning now requires a configured golden image selector).  
+**Status:** Active (`688c4e3` is merged/deployed; authenticated production smoke now confirms `POST /api/runtime/handoff` success-path `200`; production selector env is now set to `ubuntu-24-04-x64`; Track A top-level A2-A5 remain open).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -56,7 +56,7 @@ Track A audit evidence recorded (without closure fabrication):
 | PixelPort `main` lacks enforced branch protection/review/check gates and explicit backup reviewer assignment | A2 closure and cutover-safe governance | Technical Lead + Founder |
 | Deploy ownership signals exist but explicit founder approval of named primary/backup owners is pending | A3 closure and runtime cutover prep | Founder + Technical Lead |
 | Handoff/runtime secret source-of-truth and rotation authority are not founder-closed | A4 closure and safe runtime handoff | Founder + Technical Lead |
-| Production `PROVISIONING_DROPLET_IMAGE` is not configured while strict golden enforcement is active | Fresh tenant provisioning and onboarding continuity | Founder + Technical Lead |
+| Production selector is set to compatibility slug (`ubuntu-24-04-x64`) rather than a maintained PixelPort golden artifact | Long-term reproducibility and bootstrap drift control | Founder + Technical Lead |
 | Rollback authority and incident escalation chain are documented but not explicitly founder-confirmed for closure | A5 closure and incident readiness | Founder + Technical Lead |
 | Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
 

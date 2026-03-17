@@ -133,8 +133,8 @@ Production smoke truth:
 
 Operational follow-up truth:
 - `PAPERCLIP_HANDOFF_SECRET` now exists in Vercel env.
-- `PROVISIONING_DROPLET_IMAGE` is not present in current `vercel env ls` evidence.
-- with strict enforcement enabled, fresh provisioning fails until golden image selector env is set.
+- `PROVISIONING_DROPLET_IMAGE` is now configured in production as `ubuntu-24-04-x64` (set 2026-03-17).
+- strict enforcement is no longer blocked by missing env; follow-up is promotion from compatibility selector to a maintained PixelPort golden artifact.
 
 ---
 
@@ -762,7 +762,7 @@ Latest P1 runtime-target/golden-enforcement slice is shipped on `main` (`688c4e3
    - review gate baseline
    - explicit backup reviewer model
 2. Close A3 with explicit founder approval of deploy ownership for launchpad/runtime staging+production and rollback authority.
-3. Set `PROVISIONING_DROPLET_IMAGE` in production immediately; strict enforcement is active and fresh provisioning is currently blocked without it.
+3. Promote `PROVISIONING_DROPLET_IMAGE` from compatibility selector (`ubuntu-24-04-x64`) to a maintained PixelPort golden image artifact and capture fresh-tenant canary evidence.
 4. Close A4 with explicit founder approval for secrets source-of-truth and rotation owners, including final ownership model for `PAPERCLIP_*` handoff vars.
 5. Close A5 with explicit founder approval of incident escalation chain and notification SLAs.
 6. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract after A2-A5 closure criteria are satisfied or explicitly waived.
