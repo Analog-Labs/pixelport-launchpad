@@ -191,6 +191,43 @@ Operational implication:
 Evidence artifact:
 - `docs/qa/2026-03-17-pivot-p1-managed-golden-promotion-and-managed-only-canary.md`
 
+## Pivot Execution Update (2026-03-17 Managed Golden Rebuild Closure)
+
+Founder-approved Option 1 recovery was executed end-to-end to restore strict managed-only provisioning:
+
+- Temporary compatibility bootstrap (to rebuild golden image):
+  - set `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=false`
+  - set `PROVISIONING_DROPLET_IMAGE=ubuntu-24-04-x64`
+  - production redeploy: `https://pixelport-launchpad-ceju3vqx8-sanchalrs-projects.vercel.app`
+- Bootstrap canary passed:
+  - tenant `2c7b413a-d034-40df-9455-4cdec1c0786e` reached `active`
+  - droplet `559040968` / `104.248.61.186`
+  - gateway health `200`
+- New managed snapshot minted from bootstrap canary:
+  - snapshot action: `3095700311` (`completed`)
+  - image id: `221035422`
+  - image name: `pixelport-paperclip-golden-2026-03-17-rebuild-4c24047`
+- Managed-only production config restored:
+  - `PROVISIONING_DROPLET_IMAGE=221035422`
+  - `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
+  - production redeploy: `https://pixelport-launchpad-geushz7cg-sanchalrs-projects.vercel.app`
+- Strict managed-only canary passed:
+  - tenant `c19aa8eb-96b8-434a-8fa5-79a9da6c7060` reached `active`
+  - droplet `559042841` / `157.230.10.108`
+  - gateway health `200`
+  - droplet image truth: `221035422`
+  - cleanup removed tenant row (`TENANT_AFTER=[]`)
+
+Closure status:
+- managed-only rollout blocker is resolved.
+- strict provisioning path is now validated against a live managed snapshot image.
+
+Residual operations risk:
+- DO token still cannot delete droplets (`HTTP 403`), so cleanup endpoint removes tenant rows but leaves dry-run droplets running unless manually deleted.
+
+Evidence artifact:
+- `docs/qa/2026-03-17-pivot-p1-managed-golden-rebuild-closure.md`
+
 ---
 
 ## 1. Strategic Context
@@ -810,17 +847,16 @@ Constraints (locked):
 
 ### Active Program: Paperclip-Primary Pivot (Phase P1)
 
-Latest P1 runtime-target/golden-enforcement slice is shipped on `main` (`688c4e3`), deployed, and production-smoked including authenticated `POST /api/runtime/handoff` `200`.
+Latest P1 runtime-target/golden-enforcement slices are shipped on `main` (`688c4e3`, `9faee29`) and managed-only golden-image recovery closure is recorded on 2026-03-17.
 
 1. Close A2 by configuring real enforcement on `Analog-Labs/pixelport-launchpad` `main`:
    - required checks
    - review gate baseline
    - explicit backup reviewer model
 2. Close A3 with explicit founder approval of deploy ownership for launchpad/runtime staging+production and rollback authority.
-3. Unblock managed-only rollout closure by resolving DigitalOcean infra constraints:
-   - free droplet capacity (delete stale `pixelport-dry-run*` droplets or raise account limit)
-   - provide delete-capable DO scope for cleanup automation or owner-run cleanup path
-   - rerun strict managed-only fresh-tenant canary and record closure evidence
+3. Close DO cleanup-scope gap for unattended operations hygiene:
+   - grant delete-capable DO token scope for cleanup automation, or
+   - keep manual founder cleanup as an explicit operational runbook step after canaries
 4. Close A4 with explicit founder approval for secrets source-of-truth and rotation owners, including final ownership model for `PAPERCLIP_*` handoff vars.
 5. Close A5 with explicit founder approval of incident escalation chain and notification SLAs.
 6. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract after A2-A5 closure criteria are satisfied or explicitly waived.

@@ -7,6 +7,43 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 81)
+- **Who worked:** Codex
+- **What was done:**
+  - Executed founder-approved Option 1 recovery for managed-only rollout:
+    - temporary compatibility bootstrap:
+      - set `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=false`
+      - set `PROVISIONING_DROPLET_IMAGE=ubuntu-24-04-x64`
+      - redeploy alias: `https://pixelport-launchpad-ceju3vqx8-sanchalrs-projects.vercel.app`
+    - bootstrap canary:
+      - tenant `2c7b413a-d034-40df-9455-4cdec1c0786e` (`pixelport-dry-run-mmv5mnoe`)
+      - reached `active` (poll 13)
+      - droplet `559040968` / `104.248.61.186`
+      - gateway health `200`
+    - built new managed snapshot:
+      - snapshot action `3095700311` (`completed`)
+      - image `221035422` (`pixelport-paperclip-golden-2026-03-17-rebuild-4c24047`)
+    - restored managed-only production config:
+      - `PROVISIONING_DROPLET_IMAGE=221035422`
+      - `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
+      - redeploy alias: `https://pixelport-launchpad-geushz7cg-sanchalrs-projects.vercel.app`
+    - strict managed-only canary:
+      - tenant `c19aa8eb-96b8-434a-8fa5-79a9da6c7060` (`pixelport-dry-run-mmv5wck7`)
+      - reached `active` (poll 7)
+      - droplet `559042841` / `157.230.10.108`
+      - gateway health `200`
+      - image truth: `droplet_get(559042841).image.id = 221035422`
+      - cleanup: tenant row deleted (`TENANT_AFTER=[]`)
+  - Confirmed original blocker was resolved:
+    - prior managed image `220984246` had been deleted (`image_destroy` action `3094840018`)
+    - strict mode now succeeds using new managed image `221035422`
+  - Added new QA evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p1-managed-golden-rebuild-closure.md`
+- **What's next:**
+  - Keep Track A closure work (A2-A5) moving with founder-confirmed ownership decisions.
+  - Decide whether to grant delete-capable DO scope for automated dry-run cleanup or keep manual founder cleanup.
+- **Blockers:** Managed-only canary closure blocker is resolved. Residual operations risk: current DO token still cannot delete droplets (`HTTP 403`), so dry-run droplets can accumulate without manual cleanup.
+
 - **Date:** 2026-03-17 (session 80)
 - **Who worked:** Codex
 - **What was done:**
