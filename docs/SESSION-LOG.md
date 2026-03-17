@@ -7,6 +7,29 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 84)
+- **Who worked:** Codex
+- **What was done:**
+  - Merged approved PR `#1` to `main`:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/1`
+    - merge commit: `f8a5b1a`
+  - Confirmed deploy completion for merge commit:
+    - Vercel status: `success`
+    - deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/2WF7uGPwNwYZFu8icQDKSn3iTEem`
+  - Ran same-session targeted production smoke on `https://pixelport-launchpad.vercel.app`:
+    - `GET /api/runtime/handoff` -> `405 {"error":"Method not allowed"}`
+    - `POST /api/runtime/handoff` (no auth) -> `401 {"error":"Missing or invalid Authorization header"}`
+    - `POST /api/runtime/handoff` (invalid bearer) -> `401 {"error":"Invalid or expired token"}`
+    - `GET /api/debug/env-check` -> `404` (`NOT_FOUND`)
+    - `GET /api/debug/test-provision?mode=status` (no secret) -> `401 {"error":"Invalid or missing secret"}`
+    - `POST /api/tenants/onboarding` (no auth) -> `401 {"error":"Missing or invalid Authorization header"}`
+  - Added QA evidence artifact:
+    - `docs/qa/2026-03-17-p1-step5-merge-release-smoke.md`
+- **What's next:**
+  - If founder wants a fresh authenticated end-to-end rerun for onboarding-launch handoff in this exact release window, provide QA fixture credentials or approve temporary service-role test-user flow for one additional smoke pass.
+  - Continue Track A closure work (A2-A5) with founder approvals.
+- **Blockers:** No blocker for targeted post-merge smoke. Residual verification gap is only authenticated onboarding-launch handoff rerun in this specific session context.
+
 - **Date:** 2026-03-17 (session 83)
 - **Who worked:** Codex
 - **What was done:**
