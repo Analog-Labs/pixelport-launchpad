@@ -44,7 +44,7 @@ type DropletBaseline = {
   image: string;
   size: string;
   region: string;
-  imageSource: 'configured' | 'legacy_fallback';
+  imageSource: 'configured' | 'missing';
 };
 
 const supabaseUrl = process.env.SUPABASE_PROJECT_URL;
@@ -70,7 +70,6 @@ const OPENCLAW_RUNTIME_IMAGE = resolveOpenClawRuntimeImage(
   OPENCLAW_BASE_IMAGE,
   process.env.OPENCLAW_RUNTIME_IMAGE,
 );
-const LEGACY_FALLBACK_DROPLET_IMAGE = 'ubuntu-24-04-x64';
 const RECOMMENDED_GOLDEN_IMAGE_SELECTOR = 'pixelport-paperclip-golden-2026-03-16';
 const DEFAULT_PROVISIONING_DROPLET_SIZE = 's-4vcpu-8gb';
 const DEFAULT_PROVISIONING_DROPLET_REGION = 'nyc1';
@@ -102,14 +101,24 @@ export function resolveDropletBaseline(env: NodeJS.ProcessEnv = process.env): Dr
   );
 
   return {
-    image: configuredImage || LEGACY_FALLBACK_DROPLET_IMAGE,
+    image: configuredImage || '',
     size: configuredSize || DEFAULT_PROVISIONING_DROPLET_SIZE,
     region: configuredRegion || DEFAULT_PROVISIONING_DROPLET_REGION,
-    imageSource: configuredImage ? 'configured' : 'legacy_fallback',
+    imageSource: configuredImage ? 'configured' : 'missing',
   };
 }
 
 const DROPLET_BASELINE = resolveDropletBaseline();
+
+export function assertGoldenImageConfigured(baseline: DropletBaseline): void {
+  if (baseline.imageSource !== 'configured' || !baseline.image) {
+    throw new Error(
+      `Missing provisioning golden image selector. Set PROVISIONING_DROPLET_IMAGE ` +
+      `(recommended baseline: ${RECOMMENDED_GOLDEN_IMAGE_SELECTOR}). ` +
+      `Accepted inputs: PROVISIONING_DROPLET_IMAGE, PIXELPORT_DROPLET_IMAGE, DO_GOLDEN_IMAGE_ID.`
+    );
+  }
+}
 
 export function resolveOpenClawRuntimeImage(
   baseImage: string,
@@ -246,6 +255,7 @@ export const provisionTenant = inngest.createFunction(
         ? firstNonEmpty(testDropletSize, DROPLET_BASELINE.size) || DROPLET_BASELINE.size
         : DROPLET_BASELINE.size;
       const requestedRegion = firstNonEmpty(regionOverride, DROPLET_BASELINE.region) || DROPLET_BASELINE.region;
+      assertGoldenImageConfigured(DROPLET_BASELINE);
       const requestedImage = DROPLET_BASELINE.image;
 
       // Generate agent API key for Chief → Vercel API auth
@@ -312,14 +322,6 @@ export const provisionTenant = inngest.createFunction(
       }
 
       const result = (await response.json()) as { droplet: { id: number } };
-
-      if (DROPLET_BASELINE.imageSource === 'legacy_fallback') {
-        console.warn(
-          `[provision-tenant] No provisioning golden image override configured; ` +
-          `falling back to compatibility image ${DROPLET_BASELINE.image}. ` +
-          `Set PROVISIONING_DROPLET_IMAGE (recommended baseline: ${RECOMMENDED_GOLDEN_IMAGE_SELECTOR}).`
-        );
-      }
 
       return {
         dropletId: String(result.droplet.id),

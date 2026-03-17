@@ -2,13 +2,13 @@ import { createHmac } from "crypto";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PAPERCLIP_HANDOFF_TTL_SECONDS,
-  PaperclipHandoffConfigError,
   PAPERCLIP_HANDOFF_CONTRACT_VERSION,
+  PAPERCLIP_RUNTIME_PORT,
   buildPaperclipHandoffPayload,
   getMissingPaperclipHandoffEnv,
-  isValidPaperclipRuntimeUrl,
   isPaperclipHandoffReadyStatus,
   resolvePaperclipHandoffConfig,
+  resolvePaperclipRuntimeUrlFromDropletIp,
   resolvePaperclipHandoffTtlSeconds,
   signPaperclipHandoffPayload,
 } from "../../api/lib/paperclip-handoff-contract";
@@ -30,29 +30,34 @@ describe("paperclip handoff contract", () => {
   });
 
   it("reports missing required env vars", () => {
-    expect(getMissingPaperclipHandoffEnv({} as NodeJS.ProcessEnv)).toEqual([
-      "PAPERCLIP_RUNTIME_URL",
-      "PAPERCLIP_HANDOFF_SECRET",
-    ]);
+    expect(getMissingPaperclipHandoffEnv({} as NodeJS.ProcessEnv)).toEqual(["PAPERCLIP_HANDOFF_SECRET"]);
 
     expect(
       getMissingPaperclipHandoffEnv({
-        PAPERCLIP_RUNTIME_URL: "https://runtime.pixelport.app",
-      } as NodeJS.ProcessEnv),
-    ).toEqual(["PAPERCLIP_HANDOFF_SECRET"]);
-  });
-
-  it("validates runtime URL format and rejects malformed values", () => {
-    expect(isValidPaperclipRuntimeUrl("https://paperclip.pixelport.app")).toBe(true);
-    expect(isValidPaperclipRuntimeUrl("http://localhost:3000")).toBe(true);
-    expect(isValidPaperclipRuntimeUrl("paperclip.pixelport.app")).toBe(false);
-
-    expect(() =>
-      resolvePaperclipHandoffConfig({
-        PAPERCLIP_RUNTIME_URL: "paperclip.pixelport.app",
         PAPERCLIP_HANDOFF_SECRET: "secret-value",
       } as NodeJS.ProcessEnv),
-    ).toThrow(PaperclipHandoffConfigError);
+    ).toEqual([]);
+  });
+
+  it("derives runtime URL from valid droplet IPs only", () => {
+    expect(resolvePaperclipRuntimeUrlFromDropletIp(undefined)).toBeNull();
+    expect(resolvePaperclipRuntimeUrlFromDropletIp("")).toBeNull();
+    expect(resolvePaperclipRuntimeUrlFromDropletIp("not-an-ip")).toBeNull();
+    expect(resolvePaperclipRuntimeUrlFromDropletIp("999.1.1.1")).toBeNull();
+    expect(resolvePaperclipRuntimeUrlFromDropletIp("1.2.3.4")).toBe(`http://1.2.3.4:${PAPERCLIP_RUNTIME_PORT}`);
+    expect(resolvePaperclipRuntimeUrlFromDropletIp("2001:db8::1")).toBe(
+      `http://[2001:db8::1]:${PAPERCLIP_RUNTIME_PORT}`,
+    );
+  });
+
+  it("resolves handoff config from secret + ttl env", () => {
+    const config = resolvePaperclipHandoffConfig({
+      PAPERCLIP_HANDOFF_SECRET: "secret-value",
+      PAPERCLIP_HANDOFF_TTL_SECONDS: "120",
+    } as NodeJS.ProcessEnv);
+
+    expect(config.handoffSecret).toBe("secret-value");
+    expect(config.ttlSeconds).toBe(120);
   });
 
   it("builds a canonical payload with contract version and expiry", () => {

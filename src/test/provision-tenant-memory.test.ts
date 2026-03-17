@@ -14,6 +14,8 @@ describe("provision tenant memory config", () => {
     process.env.LITELLM_URL = "https://litellm.test";
     process.env.LITELLM_MASTER_KEY = "litellm-master";
     process.env.DO_API_TOKEN = "do-token";
+    process.env.PROVISIONING_DROPLET_IMAGE =
+      "pixelport-paperclip-golden-2026-03-16";
   });
 
   it("emits the validated memorySearch config when native memory is enabled", async () => {
@@ -134,17 +136,34 @@ describe("provision tenant memory config", () => {
     ).toBe("pixelport-openclaw:custom-runtime");
   });
 
-  it("resolves droplet baseline defaults to compatibility image with 4vcpu/8gb sizing", async () => {
-    const { resolveDropletBaseline } = await import(
+  it("marks baseline as missing when no golden image selector is configured", async () => {
+    const { resolveDropletBaseline, assertGoldenImageConfigured } = await import(
       "../../api/inngest/functions/provision-tenant"
     );
 
     const baseline = resolveDropletBaseline({});
 
-    expect(baseline.image).toBe("ubuntu-24-04-x64");
+    expect(baseline.image).toBe("");
+    expect(baseline.imageSource).toBe("missing");
+    expect(() => assertGoldenImageConfigured(baseline)).toThrowError(
+      /Set PROVISIONING_DROPLET_IMAGE/,
+    );
+  });
+
+  it("defaults size and region when image selector is configured", async () => {
+    const { resolveDropletBaseline, assertGoldenImageConfigured } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const baseline = resolveDropletBaseline({
+      PROVISIONING_DROPLET_IMAGE: "pixelport-paperclip-golden-v2",
+    } as NodeJS.ProcessEnv);
+
+    expect(baseline.image).toBe("pixelport-paperclip-golden-v2");
     expect(baseline.size).toBe("s-4vcpu-8gb");
     expect(baseline.region).toBe("nyc1");
-    expect(baseline.imageSource).toBe("legacy_fallback");
+    expect(baseline.imageSource).toBe("configured");
+    expect(() => assertGoldenImageConfigured(baseline)).not.toThrow();
   });
 
   it("resolves droplet baseline from canonical provisioning env vars", async () => {

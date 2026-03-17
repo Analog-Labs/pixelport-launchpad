@@ -41,7 +41,6 @@ describe("POST /api/runtime/handoff", () => {
     vi.clearAllMocks();
     vi.resetModules();
     process.env = { ...originalEnv };
-    delete process.env.PAPERCLIP_RUNTIME_URL;
     delete process.env.PAPERCLIP_HANDOFF_SECRET;
     delete process.env.PAPERCLIP_HANDOFF_TTL_SECONDS;
   });
@@ -77,13 +76,12 @@ describe("POST /api/runtime/handoff", () => {
     expect(res.statusCode).toBe(503);
     expect(res.body).toEqual({
       error: "Paperclip runtime handoff is not configured.",
-      missing: ["PAPERCLIP_RUNTIME_URL", "PAPERCLIP_HANDOFF_SECRET"],
+      missing: ["PAPERCLIP_HANDOFF_SECRET"],
     });
     expect(authenticateRequest).toHaveBeenCalledTimes(1);
   });
 
-  it("returns 503 when runtime URL is malformed", async () => {
-    process.env.PAPERCLIP_RUNTIME_URL = "paperclip.pixelport.app";
+  it("returns 409 when tenant has no droplet runtime target", async () => {
     process.env.PAPERCLIP_HANDOFF_SECRET = "secret-value";
 
     const { default: handler } = await import("../../api/runtime/handoff");
@@ -95,6 +93,7 @@ describe("POST /api/runtime/handoff", () => {
         name: "Tenant",
         status: "active",
         plan: "trial",
+        droplet_ip: null,
       },
     });
 
@@ -103,15 +102,42 @@ describe("POST /api/runtime/handoff", () => {
 
     await handler(req as never, res as never);
 
-    expect(res.statusCode).toBe(503);
+    expect(res.statusCode).toBe(409);
     expect(res.body).toEqual({
-      error: "Paperclip runtime handoff is not configured.",
-      invalid: ["PAPERCLIP_RUNTIME_URL"],
+      error: "Paperclip runtime target unavailable for this tenant.",
+      code: "runtime-target-unavailable",
+    });
+  });
+
+  it("returns 409 when tenant droplet_ip is invalid", async () => {
+    process.env.PAPERCLIP_HANDOFF_SECRET = "secret-value";
+
+    const { default: handler } = await import("../../api/runtime/handoff");
+    authenticateRequest.mockResolvedValue({
+      userId: "user-1",
+      tenant: {
+        id: "tenant-1",
+        slug: "tenant-slug",
+        name: "Tenant",
+        status: "active",
+        plan: "trial",
+        droplet_ip: "invalid-host",
+      },
+    });
+
+    const req = { method: "POST", body: {} };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toEqual({
+      error: "Paperclip runtime target unavailable for this tenant.",
+      code: "runtime-target-unavailable",
     });
   });
 
   it("returns 409 when tenant is not runtime-handoff ready", async () => {
-    process.env.PAPERCLIP_RUNTIME_URL = "https://paperclip.pixelport.app";
     process.env.PAPERCLIP_HANDOFF_SECRET = "secret-value";
 
     const { default: handler } = await import("../../api/runtime/handoff");
@@ -124,6 +150,7 @@ describe("POST /api/runtime/handoff", () => {
         name: "Tenant",
         status: "provisioning",
         plan: "trial",
+        droplet_ip: "157.245.253.88",
       },
     });
 
@@ -140,7 +167,6 @@ describe("POST /api/runtime/handoff", () => {
   });
 
   it("returns signed handoff token when tenant is ready", async () => {
-    process.env.PAPERCLIP_RUNTIME_URL = "https://paperclip.pixelport.app";
     process.env.PAPERCLIP_HANDOFF_SECRET = "secret-value";
     process.env.PAPERCLIP_HANDOFF_TTL_SECONDS = "120";
 
@@ -154,6 +180,7 @@ describe("POST /api/runtime/handoff", () => {
         name: "Tenant",
         status: "active",
         plan: "trial",
+        droplet_ip: "157.245.253.88",
       },
     });
 
@@ -166,7 +193,7 @@ describe("POST /api/runtime/handoff", () => {
 
     const payload = res.body as Record<string, unknown>;
     expect(payload.contract_version).toBe("p1-v1");
-    expect(payload.paperclip_runtime_url).toBe("https://paperclip.pixelport.app");
+    expect(payload.paperclip_runtime_url).toBe("http://157.245.253.88:18789");
     expect(typeof payload.handoff_token).toBe("string");
     expect(typeof payload.expires_at).toBe("string");
     expect(payload.source).toBe("onboarding_launch");
@@ -187,7 +214,6 @@ describe("POST /api/runtime/handoff", () => {
   });
 
   it("routes unexpected errors through errorResponse", async () => {
-    process.env.PAPERCLIP_RUNTIME_URL = "https://paperclip.pixelport.app";
     process.env.PAPERCLIP_HANDOFF_SECRET = "secret-value";
 
     const { default: handler } = await import("../../api/runtime/handoff");

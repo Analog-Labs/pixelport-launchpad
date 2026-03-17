@@ -6,6 +6,7 @@ import {
   isPaperclipHandoffReadyStatus,
   PaperclipHandoffConfigError,
   resolvePaperclipHandoffConfig,
+  resolvePaperclipRuntimeUrlFromDropletIp,
   signPaperclipHandoffPayload,
   PAPERCLIP_HANDOFF_CONTRACT_VERSION,
 } from '../lib/paperclip-handoff-contract';
@@ -46,6 +47,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
+    const runtimeUrl = resolvePaperclipRuntimeUrlFromDropletIp(tenant.droplet_ip);
+    if (!runtimeUrl) {
+      return res.status(409).json({
+        error: 'Paperclip runtime target unavailable for this tenant.',
+        code: 'runtime-target-unavailable',
+      });
+    }
+
     let config;
     try {
       config = resolvePaperclipHandoffConfig(process.env);
@@ -53,9 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       if (error instanceof PaperclipHandoffConfigError) {
         return res.status(503).json({
           error: 'Paperclip runtime handoff is not configured.',
-          ...(error.code === 'missing_env'
-            ? { missing: error.fields }
-            : { invalid: error.fields }),
+          missing: error.fields,
         });
       }
       throw error;
@@ -76,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     return res.status(200).json({
       contract_version: PAPERCLIP_HANDOFF_CONTRACT_VERSION,
-      paperclip_runtime_url: config.runtimeUrl,
+      paperclip_runtime_url: runtimeUrl,
       handoff_token: handoffToken,
       expires_at: new Date(payload.exp * 1000).toISOString(),
       tenant: {

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
+import type { Tenant } from '../lib/auth';
 import { applyTenantMemorySettingsDefaults } from '../lib/tenant-memory-settings';
 import { isEmailAllowedForProvisioning, parseProvisioningAllowlist } from '../lib/provisioning-allowlist';
 
@@ -178,8 +179,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       completed_at: new Date().toISOString(),
     };
 
-    let newTenant: Record<string, any> | null = null;
-    let insertError: { code?: string; message?: string } | null = null;
+    let newTenant: Tenant | null = null;
+    let insertError: PostgrestError | null = null;
 
     for (let attempt = 1; attempt <= 10; attempt += 1) {
       const candidateSlug = withSlugSuffix(slug, attempt);
@@ -201,7 +202,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .select('*')
         .single();
 
-      newTenant = result.data;
+      newTenant = result.data as Tenant | null;
       insertError = result.error;
 
       if (!insertError && newTenant) {

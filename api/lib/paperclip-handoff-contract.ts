@@ -1,7 +1,9 @@
 import { createHmac, randomUUID } from 'crypto';
+import { isIP } from 'net';
 
 export const PAPERCLIP_HANDOFF_CONTRACT_VERSION = 'p1-v1';
 export const DEFAULT_PAPERCLIP_HANDOFF_TTL_SECONDS = 300;
+export const PAPERCLIP_RUNTIME_PORT = 18789;
 
 const PAPERCLIP_HANDOFF_READY_STATUSES = new Set(['ready', 'active']);
 
@@ -21,18 +23,17 @@ export interface PaperclipHandoffPayload {
 }
 
 export interface PaperclipHandoffConfig {
-  runtimeUrl: string;
   handoffSecret: string;
   ttlSeconds: number;
 }
 
 export class PaperclipHandoffConfigError extends Error {
-  code: 'missing_env' | 'invalid_env';
+  code: 'missing_env';
   fields: string[];
 
   constructor(
     message: string,
-    code: 'missing_env' | 'invalid_env',
+    code: 'missing_env',
     fields: string[],
   ) {
     super(message);
@@ -68,21 +69,31 @@ export function resolvePaperclipHandoffTtlSeconds(rawValue: string | undefined):
   return Math.min(parsed, 3600);
 }
 
-export function isValidPaperclipRuntimeUrl(runtimeUrl: string): boolean {
-  try {
-    const parsed = new URL(runtimeUrl);
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-  } catch {
-    return false;
+function normalizeDropletIp(rawDropletIp: string | null | undefined): string {
+  if (typeof rawDropletIp !== 'string') {
+    return '';
   }
+
+  return rawDropletIp.trim();
+}
+
+export function resolvePaperclipRuntimeUrlFromDropletIp(rawDropletIp: string | null | undefined): string | null {
+  const dropletIp = normalizeDropletIp(rawDropletIp);
+  if (!dropletIp) {
+    return null;
+  }
+
+  const ipVersion = isIP(dropletIp);
+  if (ipVersion === 0) {
+    return null;
+  }
+
+  const host = ipVersion === 6 ? `[${dropletIp}]` : dropletIp;
+  return `http://${host}:${PAPERCLIP_RUNTIME_PORT}`;
 }
 
 export function getMissingPaperclipHandoffEnv(env: NodeJS.ProcessEnv = process.env): string[] {
   const missing: string[] = [];
-
-  if (!normalizeEnvValue(env.PAPERCLIP_RUNTIME_URL)) {
-    missing.push('PAPERCLIP_RUNTIME_URL');
-  }
 
   if (!normalizeEnvValue(env.PAPERCLIP_HANDOFF_SECRET)) {
     missing.push('PAPERCLIP_HANDOFF_SECRET');
@@ -101,17 +112,7 @@ export function resolvePaperclipHandoffConfig(env: NodeJS.ProcessEnv = process.e
     );
   }
 
-  const runtimeUrl = normalizeEnvValue(env.PAPERCLIP_RUNTIME_URL);
-  if (!isValidPaperclipRuntimeUrl(runtimeUrl)) {
-    throw new PaperclipHandoffConfigError(
-      'Invalid PAPERCLIP_RUNTIME_URL. Expected an absolute http(s) URL.',
-      'invalid_env',
-      ['PAPERCLIP_RUNTIME_URL'],
-    );
-  }
-
   return {
-    runtimeUrl,
     handoffSecret: normalizeEnvValue(env.PAPERCLIP_HANDOFF_SECRET),
     ttlSeconds: resolvePaperclipHandoffTtlSeconds(env.PAPERCLIP_HANDOFF_TTL_SECONDS),
   };

@@ -7,7 +7,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * NOT for production use — remove after debugging.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
-  const secret = typeof req.query.secret === 'string' ? req.query.secret : '';
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+  if (isProduction) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+
+  const secretHeader = req.headers['x-debug-secret'];
+  const secret = typeof secretHeader === 'string' ? secretHeader : Array.isArray(secretHeader) ? secretHeader[0] : '';
   const expected = process.env.API_KEY_ENCRYPTION_KEY;
   if (!expected || secret !== expected) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -38,7 +44,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     'DO_GOLDEN_IMAGE_ID',
     'PIXELPORT_DROPLET_SIZE',
     'PIXELPORT_DROPLET_REGION',
-    'PAPERCLIP_RUNTIME_URL',
     'PAPERCLIP_HANDOFF_SECRET',
     'PAPERCLIP_HANDOFF_TTL_SECONDS',
   ];
