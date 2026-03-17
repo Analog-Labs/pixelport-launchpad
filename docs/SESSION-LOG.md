@@ -12,7 +12,7 @@
 - **What was done:**
   - Started Track A2 governance guardrails implementation on branch `codex/p1-a2-governance-guardrails`.
   - Applied live branch protection on `main` for `Analog-Labs/pixelport-launchpad`:
-    - required status check: `Analyze (javascript-typescript)` with strict mode
+    - required status checks: `Analyze (javascript-typescript)` (CodeQL) and `validate` (CI), with strict mode
     - required pull request approvals: `1`
     - code-owner review required: `true`
     - stale review dismissal: `true`

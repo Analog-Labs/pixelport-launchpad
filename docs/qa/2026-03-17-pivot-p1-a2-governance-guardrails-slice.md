@@ -27,7 +27,9 @@ Applied branch protection directly to `main` via GitHub API.
 Observed protection truth after apply:
 
 - `main` protected: `true`
-- required status checks: `["Analyze (javascript-typescript)"]`
+- required status checks:
+  - `Analyze (javascript-typescript)` (CodeQL check run)
+  - `validate` (CI workflow check run from `.github/workflows/ci.yml`)
 - strict required status checks: `true`
 - required approving reviews: `1`
 - code owner reviews required: `true`

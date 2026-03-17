@@ -29,7 +29,10 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - default branch is `main`
 - `main` branch protection is now enabled (`protected: true`)
 - enforced branch-protection baseline on `main`:
-  - required status checks: `Analyze (javascript-typescript)` (`strict: true`)
+  - required status checks:
+    - `Analyze (javascript-typescript)` (CodeQL)
+    - `validate` (CI workflow)
+    - strict mode: `true`
   - required pull-request approvals: `1`
   - code-owner reviews required: `true`
   - stale-review dismissal: `true`
