@@ -7,6 +7,74 @@
 
 ## Last Session
 
+- **Date:** 2026-03-16 (session 70)
+- **Who worked:** Codex + sub-agent implementation contributors (Franklin, Leibniz)
+- **What was done:**
+  - Started execution branch `codex/pivot-p0-implementation` and implemented first P0 pivot build slice.
+  - Implemented onboarding contract in UI as:
+    - `Company -> Provision -> Task -> Launch`
+    - explicit provisioning gate before Task unlock
+    - editable starter task + editable/addable/removable agent suggestions in Task/Launch.
+  - Implemented v1 invite gating for tenant provisioning:
+    - added allowlist parser/helper (`api/lib/provisioning-allowlist.ts`)
+    - enforced allowlist checks in `POST /api/tenants`
+    - added parser tests (`src/test/provisioning-allowlist.test.ts`).
+  - Added mission payload compatibility and onboarding hydration resilience:
+    - `POST /api/tenants` now supports both `mission` and `mission_goals`
+    - onboarding hydration now falls back from `mission_goals` -> `mission` -> `goals`.
+  - Corrected Paperclip parity regression discovered during QA review:
+    - Company-step mission/goals field is optional again (not required).
+  - Produced execution artifacts for team alignment:
+    - `docs/build-briefs/2026-03-16-pivot-p0-onboarding-provisioning-slice.md`
+    - `docs/build-briefs/2026-03-16-pivot-p0-onboarding-provisioning-slice-cto-prompt.md`
+    - `docs/qa/2026-03-16-pivot-p0-onboarding-provisioning-slice.md`.
+  - Validation run on branch:
+    - `npx vitest run src/test/provisioning-allowlist.test.ts` (pass, 6/6)
+    - `npx tsc --noEmit` (pass).
+- **What's next:**
+  - Run CTO review for the branch using the new prompt.
+  - Address any CTO findings, then merge and run fresh-tenant production smoke.
+  - Continue P0 Track C work (`C1`, `C3`, `C4`) after this slice is accepted.
+- **Blockers:** CTO review/approval still required before merge per build workflow.
+
+- **Date:** 2026-03-16 (session 69)
+- **Who worked:** Codex + Founder
+- **What was done:**
+  - Ran a full pivot planning session and locked the Paperclip-primary architecture direction.
+  - Locked runtime auth source of truth to Paperclip auth.
+  - Locked the approved pivot contract and published it as:
+    - `docs/pixelport-pivot-plan-2026-03-16.md`
+  - Founder clarified critical workspace-policy constraints:
+    - preserve Paperclip default workspace behavior
+    - no PixelPort functional rewrite of runtime workspace `AGENTS.md` / `HEARTBEAT.md`
+    - additive `SOUL.md` onboarding context is allowed
+    - user-facing terminology can align from `CEO` to `Chief of Staff` without functional changes.
+  - Locked onboarding/provisioning sequence for v1 testing:
+    - `Company -> Provision -> Task -> Launch`
+    - provisioning starts after Company step
+    - Task unlocks only after provisioning `ready`
+    - Task/Launch shows prefilled but editable 3-agent suggestions.
+  - Founder requested a clean slate for repo state:
+    - removed all uncommitted tracked/untracked changes
+    - reset working tree to clean `main`
+  - Updated coordination and plan docs to align all future sessions with the pivot:
+    - `AGENTS.md`, `CLAUDE.md`
+    - `docs/ACTIVE-PLAN.md` (rewritten around Phase P0 pivot)
+    - `docs/project-coordination-system.md`
+    - `docs/pixelport-project-status.md`
+    - `docs/pixelport-master-plan-v2.md` (decision overrides)
+    - `docs/lovable-collaboration-guide.md`
+    - archived previous checklist to `docs/archive/ACTIVE-PLAN-pre-pivot-2026-03-16.md`.
+- **What's next:**
+  - Create the first execution build brief for implementing the pivot in the PixelPort-owned Paperclip fork.
+  - Define implementation-ready contracts for:
+    - Company-step payload schema
+    - Provision-step state machine
+    - starter-task generation logic
+    - launchpad-to-runtime thin bridge handoff.
+  - Start first execution branch for Phase P0 after founder confirms build-brief scope.
+- **Blockers:** No blocker for planning/documentation. Execution kickoff requires Paperclip fork environment/bootstrap ownership setup.
+
 - **Date:** 2026-03-13 (session 68)
 - **Who worked:** Codex
 - **What was done:**

@@ -68,6 +68,11 @@ function missionGoalsFromOnboarding(onboardingData: Record<string, unknown>): st
     return direct;
   }
 
+  const legacyMission = readString(onboardingData.mission).trim();
+  if (legacyMission) {
+    return legacyMission;
+  }
+
   if (!Array.isArray(onboardingData.goals)) {
     return "";
   }
@@ -291,6 +296,7 @@ const Onboarding = () => {
         body: JSON.stringify({
           company_name: companyName,
           company_url: companyUrl || null,
+          mission: missionGoals,
           mission_goals: missionGoals,
           goals: toGoalsArray(missionGoals),
           agent_name: agentName,

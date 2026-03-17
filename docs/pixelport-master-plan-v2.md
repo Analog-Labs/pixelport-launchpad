@@ -3,7 +3,7 @@
 **Version:** 2.0
 **Date:** February 28, 2026
 **Author:** Sanchal Ranjan (Founder) + Claude (CTO / Senior PM)
-**Status:** Active — Source of Truth
+**Status:** Active with Pivot Overrides — Source of Truth
 
 ---
 
@@ -12,8 +12,16 @@
 | Date | Decision | Old | New | Rationale |
 |------|----------|-----|-----|-----------|
 | 2026-03-03 | Auth provider | Clerk (OAuth + Magic Link) | Supabase Auth (Google OAuth + email/password) | Native Lovable integration, zero new vendors, already wired to existing Supabase instance. Migration path to Clerk available Phase 4 if needed for team management. |
+| 2026-03-16 | Runtime architecture | Launchpad-centric runtime assumptions | PixelPort-owned Paperclip fork is the primary product/runtime source of truth. `pixelport-launchpad` remains marketing + billing + thin provisioning bridge. | Founder-approved pivot to reduce complexity and align with Paperclip-native behavior. |
+| 2026-03-16 | Auth source of truth | Supabase Auth primary | Paperclip auth primary for product runtime | Aligns with the Paperclip-primary runtime model and removes dual-auth bridge complexity in the pivot release. |
+| 2026-03-16 | Active dogfood scope | Growth Swarm as active maintenance workstream | Growth Swarm archived/deactivated (historical only) | Focus all active product execution on the pivot path. |
+| 2026-03-16 | Onboarding and provisioning flow | Legacy 3-step launchpad onboarding assumptions | `Company -> Provision -> Task -> Launch` with provisioning gate before task unlock | Matches approved pivot UX and runtime gating model. |
+| 2026-03-16 | Workspace contract policy | PixelPort-specific scaffold evolution | Preserve Paperclip default workspace behavior; additive onboarding context in `SOUL.md`; no enforced 3-agent topology in templates | Preserve upstream behavior and avoid functional drift while branding/customizing safely. |
+| 2026-03-16 | Terminology policy | `CEO` naming in defaults | `Chief of Staff` in user-facing UI/copy/markdown where applied, without changing runtime behavior | Brand alignment with minimal risk. |
+| 2026-03-16 | Provisioning trigger scope | Stripe-first framing in product flow | V1 testing uses onboarding-trigger provisioning with allowlist gating; Stripe trigger explicitly deferred | Enables immediate testing while keeping a clear phase-2 hook. |
 
-> All Clerk references below reflect the original v2.0 spec. The override above takes precedence.
+> The decision override table above takes precedence over older conflicting sections in this spec.
+> Binding pivot execution contract: `docs/pixelport-pivot-plan-2026-03-16.md`.
 
 ---
 

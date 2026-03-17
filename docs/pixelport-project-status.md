@@ -1,10 +1,10 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-03-07
+**Last Updated:** 2026-03-16
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
-**Formerly:** Growth Swarm (now first tenant / dogfood instance of PixelPort)
-**Infrastructure:** OpenClaw on DigitalOcean droplet `openclaw-prod` (ID: `552336242`)
-**Primary Channel:** Slack (LUNA is sole human interface)
+**Formerly:** Growth Swarm (now archived historical context)
+**Primary Runtime Direction:** PixelPort-owned Paperclip fork + per-tenant DO droplets
+**Primary Interfaces:** PixelPort web app + Slack (tenant-configured)
 
 ---
 
@@ -31,11 +31,38 @@ Effective 2026-03-07, PixelPort now uses a standardized build/review/release loo
 
 Detailed founder and CTO handoff steps live in `docs/build-workflow.md`.
 
+## Pivot Override Note (2026-03-16)
+
+The founder approved a Paperclip-primary pivot and this is now the active direction:
+
+- Product runtime source of truth is a PixelPort-owned Paperclip fork.
+- `pixelport-launchpad` remains active for marketing, billing, and thin provisioning bridge responsibilities.
+- Hard cutover applies for the pivot release.
+- Growth Swarm is archived/deactivated from active scope.
+- Binding execution contract is `docs/pixelport-pivot-plan-2026-03-16.md`.
+
+This note overrides conflicting older assumptions in this status file while preserving prior sections as historical record.
+
+## Pivot Execution Update (2026-03-16)
+
+First P0 implementation slice is completed on branch `codex/pivot-p0-implementation`:
+
+- onboarding flow contract shipped in launchpad UI: `Company -> Provision -> Task -> Launch`
+- provisioning gate enforced before Task unlock (`ready`/`active` required)
+- editable starter task + editable agent suggestions shipped
+- invite/allowlist provisioning gate added to `POST /api/tenants`
+- mission payload compatibility added (`mission` + `mission_goals`)
+- QA artifacts added under:
+  - `docs/build-briefs/2026-03-16-pivot-p0-onboarding-provisioning-slice.md`
+  - `docs/qa/2026-03-16-pivot-p0-onboarding-provisioning-slice.md`
+
+Pending before merge: CTO review and post-merge fresh-tenant production smoke.
+
 ---
 
 ## 1. Strategic Context
 
-### Pivot (2026-02-26)
+### Historical Pivot (2026-02-26)
 
 Growth Swarm has been promoted from "internal marketing tool for Analog" to the **dogfood instance of PixelPort** — a productized SaaS that sells AI marketing employees to other companies. Growth Swarm's architecture, agents (LUNA/SCOUT/SPARK), and learnings become the template for every PixelPort customer.
 
@@ -45,7 +72,19 @@ Two parallel workstreams now exist:
 1. **Growth Swarm (dogfood)** — Continue stabilizing and operating the existing agent team on the current DO droplet. Phases D-F of the original plan.
 2. **PixelPort (product)** — Build the SaaS web app, provisioning pipeline, and dashboard. Phases 0-6 of the new build plan.
 
-Full product spec: `docs/pixelport-master-plan-v2.md`
+### Current Strategic Direction (2026-03-16)
+
+PixelPort is now executing a Paperclip-primary product pivot:
+
+1. **Primary runtime/product repo:** PixelPort-owned Paperclip fork
+2. **Launchpad role:** marketing, billing, and thin provisioning bridge
+3. **Onboarding runtime path:** Company -> Provision -> Task -> Launch with provisioning gate before task unlock
+4. **Workspace policy:** preserve Paperclip defaults, additive onboarding context in `SOUL.md`, no enforced 3-agent topology in templates
+5. **Auth source of truth:** Paperclip auth for runtime product flows
+
+Binding references:
+- `docs/pixelport-pivot-plan-2026-03-16.md`
+- `docs/pixelport-master-plan-v2.md` (with decision overrides)
 
 ---
 
@@ -123,14 +162,15 @@ Full product spec: `docs/pixelport-master-plan-v2.md`
 
 ### Canonical docs
 - **Project plan/status:** local repo `docs/pixelport-project-status.md` (this file)
-- **Product spec (v2.0):** local repo `docs/pixelport-master-plan-v2.md`
+- **Pivot contract (active):** `docs/pixelport-pivot-plan-2026-03-16.md`
+- **Product spec (v2.0 + overrides):** local repo `docs/pixelport-master-plan-v2.md`
 - **Build workflow:** `docs/build-workflow.md`
 - **Build brief template:** `docs/build-briefs/template.md`
 - **CTO transition briefing:** `docs/archive/cto-instructions-master-plan-v2-transition.md`
 - **Lovable collaboration guide:** `docs/lovable-collaboration-guide.md`
 - **Infrastructure benchmark:** `docs/cto-founder-infra-benchmark-2026-02-27.md`
 - **OpenClaw reference:** `docs/openclaw-reference.md`
-- **Canonical behavior files (Growth Swarm droplet):**
+- **Historical behavior files (Growth Swarm archive):**
   - `/opt/openclaw/workspace-main/*.md`
   - `/opt/openclaw/workspace-content/*.md`
   - `/opt/openclaw/workspace-growth/*.md`
@@ -635,36 +675,23 @@ Constraints (locked):
 
 ## 10. Immediate Next Actions
 
-### Growth Swarm (dogfood) — maintenance mode
-1. **Phases A-F: ✅ Complete** — all stabilization phases done, G1-G5 gates passed
-2. LUNA keeps operating autonomously on current droplet
-3. Continue daily thread intake in `#vidacious-bot`
-4. Get founder approval on content packs → first publishes
-5. No infrastructure changes until PixelPort Phase 2
+### Active Program: Paperclip-Primary Pivot (Phase P0)
 
-### PixelPort (product) — Phase 2 active
+1. Finalize the first execution build brief from `docs/pixelport-pivot-plan-2026-03-16.md`.
+2. Implement onboarding + provisioning flow in the Paperclip fork:
+   - `Company -> Provision -> Task -> Launch`
+   - Task unlock only after provisioning `ready`
+3. Preserve Paperclip default workspace behavior, with additive `SOUL.md` onboarding context only.
+4. Apply user-facing terminology alignment (`CEO` -> `Chief of Staff`) without functional runtime changes.
+5. Keep launchpad scoped to marketing, billing, and thin provisioning bridge responsibilities.
+6. Execute migration keep/archive/delete checklist with hard-cutover posture.
 
-**Phase 0: ✅ COMPLETE** | **Phase 1: ✅ COMPLETE (gate passed 2026-03-05)**
+### Scope Boundaries (Current)
 
-**Phase 2: 🟡 IN PROGRESS — Dynamic Chief + Real Dashboard Data**
-
-CTO Backend: ✅ COMPLETE + E2E TESTED (session 5+6, 2026-03-05)
-Founder Frontend: ✅ COMPLETE (session 7, 2026-03-05) — all 5 dashboard pages built + wired
-
-**Next Steps:**
-1. CTO: E2E test all dashboard pages against TestCo Phase2 seeded data
-2. CTO: Continue with 2.B11-B15 (image gen, Mem0, Chat WebSocket, Inngest approval workflow)
-3. Founder: Polish pass on any UI issues CTO finds during testing
-
-See `docs/ACTIVE-PLAN.md` for full Phase 2 checklist.
-
-**Critical Vercel patterns (from Phase 0-1):**
-- `api/package.json` with `{"type": "commonjs"}` MUST exist (overrides root ESM)
-- Inngest client must be created inline (no local file imports that re-export)
-- All Inngest polling must use durable `step.run()` + `step.sleep()` (not setTimeout)
-- After deploy, sync Inngest with `curl -X PUT /api/inngest`
-- OpenClaw custom LiteLLM provider required (bypasses OPENAI_BASE_URL)
-- UUID suffix on LiteLLM key_alias and team_alias (prevents re-provision collisions)
+- Growth Swarm is archived/deactivated from active execution.
+- Stripe-trigger provisioning is deferred (phase-2 hook).
+- Customer SSH policy is deferred.
+- V1 provisioning is allowlist/invite gated for controlled testing.
 
 ---
 
@@ -672,7 +699,9 @@ See `docs/ACTIVE-PLAN.md` for full Phase 2 checklist.
 
 | Document | Purpose |
 |----------|---------|
+| `docs/pixelport-pivot-plan-2026-03-16.md` | Binding pivot contract and scope boundaries for active execution |
 | `docs/pixelport-master-plan-v2.md` | Full product spec v2.0 — 52 locked decisions, architecture, build plan |
+| `docs/ACTIVE-PLAN.md` | Current execution checklist for active phase |
 | `docs/pixelport-project-status.md` | This file — execution status |
 | `docs/archive/cto-instructions-master-plan-v2-transition.md` | CTO briefing on v1→v2 changes (archived) |
 | `docs/lovable-collaboration-guide.md` | How founder + Claude work on Lovable frontend |

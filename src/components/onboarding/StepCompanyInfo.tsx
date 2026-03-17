@@ -20,7 +20,6 @@ interface Props {
 const StepCompanyInfo = ({ data, onChange, onNext, submitting, error }: Props) => {
   const valid =
     data.company_name.trim().length >= 2 &&
-    data.mission_goals.trim().length >= 6 &&
     data.agent_name.trim().length >= 1;
 
   return (
@@ -63,7 +62,7 @@ const StepCompanyInfo = ({ data, onChange, onNext, submitting, error }: Props) =
 
       {/* Mission and goals */}
       <div className="space-y-2">
-        <Label htmlFor="mission_goals">Mission and goals</Label>
+        <Label htmlFor="mission_goals">Mission and goals (optional)</Label>
         <Textarea
           id="mission_goals"
           placeholder="What does success look like in the next 30-90 days?"

@@ -38,6 +38,14 @@ describe("provisioning allowlist", () => {
     expect(allowlist.allowedEmails.size).toBe(1);
   });
 
+  it("keeps provisioning open when allowlist env is blank", () => {
+    const allowlist = parseProvisioningAllowlist("   ,  ");
+
+    expect(allowlist.enabled).toBe(false);
+    expect(isEmailAllowedForProvisioning("founder@example.com", allowlist)).toBe(true);
+    expect(isEmailAllowedForProvisioning(undefined, allowlist)).toBe(true);
+  });
+
   it("blocks when allowlist is enabled and email is missing or unmatched", () => {
     const allowlist = parseProvisioningAllowlist("allowed.com");
 

@@ -13,11 +13,10 @@ function normalizeEmail(value: string): string {
 }
 
 export function parseProvisioningAllowlist(rawAllowlist: string | null | undefined): ProvisioningAllowlist {
-  const enabled = rawAllowlist !== undefined && rawAllowlist !== null;
   const allowedEmails = new Set<string>();
   const allowedDomains = new Set<string>();
 
-  if (!enabled) {
+  if (rawAllowlist === undefined || rawAllowlist === null) {
     return {
       enabled: false,
       allowedEmails,
@@ -40,8 +39,10 @@ export function parseProvisioningAllowlist(rawAllowlist: string | null | undefin
     allowedDomains.add(entry);
   }
 
+  const enabled = allowedEmails.size > 0 || allowedDomains.size > 0;
+
   return {
-    enabled: true,
+    enabled,
     allowedEmails,
     allowedDomains,
   };

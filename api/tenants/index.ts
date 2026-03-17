@@ -110,6 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       company_name,
       company_url,
       mission,
+      mission_goals,
       goals,
       agent_name,
       agent_tone,
@@ -119,6 +120,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       company_name?: string;
       company_url?: string;
       mission?: string | null;
+      mission_goals?: string | null;
       goals?: string[];
       agent_name?: string;
       agent_tone?: string;
@@ -142,6 +144,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(400).json({ error: 'mission must be a string' });
     }
 
+    if (mission_goals !== undefined && mission_goals !== null && typeof mission_goals !== 'string') {
+      return res.status(400).json({ error: 'mission_goals must be a string' });
+    }
+
     if (goals !== undefined && (!Array.isArray(goals) || goals.some((goal) => typeof goal !== 'string'))) {
       return res.status(400).json({ error: 'goals must be an array of strings' });
     }
@@ -153,10 +159,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return res.status(400).json({ error: 'company_name must include at least one letter or number' });
     }
 
+    const missionCandidates = [mission, mission_goals];
+    const rawMissionValue = missionCandidates.find(
+      (value): value is string => typeof value === 'string' && value.trim().length > 0,
+    ) ?? null;
+    const normalizedMission = rawMissionValue ? rawMissionValue.trim() : null;
+
     const onboardingData = {
       company_name: normalizedCompanyName,
       company_url: typeof company_url === 'string' && company_url.trim() ? company_url.trim() : null,
-      mission: typeof mission === 'string' && mission.trim() ? mission.trim() : null,
+      mission: normalizedMission,
+      mission_goals: normalizedMission,
       goals: goals || [],
       agent_name: typeof agent_name === 'string' && agent_name.trim() ? agent_name.trim() : 'Luna',
       agent_tone: agent_tone || 'professional',

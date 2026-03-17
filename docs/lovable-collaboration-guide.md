@@ -1,11 +1,13 @@
 # PixelPort — Lovable Collaboration Guide
 
-**Last Updated:** 2026-03-06
+**Last Updated:** 2026-03-16
 **Audience:** Founder + Codex (Technical Lead)
 
 ---
 
 ## What Lovable Is For Now
+
+Pivot context (2026-03-16): runtime product work is now Paperclip-primary per `docs/pixelport-pivot-plan-2026-03-16.md`. This guide still applies to UI collaboration, but functional product behavior should stay aligned with Paperclip-default behavior plus approved PixelPort additions.
 
 Lovable is still useful for fast visual exploration, page composition, and UI-only tweaks.
 

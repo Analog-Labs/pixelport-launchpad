@@ -1,6 +1,6 @@
 # PixelPort — Project Coordination System
 
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-03-16
 **Purpose:** Keep Founder, Codex, and CTO aligned across async sessions without relying on chat memory.
 **Source of Truth:** The GitHub repo.
 
@@ -9,6 +9,7 @@
 ## Operating Model
 
 **Effective 2026-03-06:** PixelPort now runs under a Technical Lead model.
+**Effective 2026-03-16:** Product architecture is Paperclip-primary per `docs/pixelport-pivot-plan-2026-03-16.md`.
 
 - **Founder**
   - Approves major product, architecture, and UX decisions.
@@ -26,7 +27,7 @@ This note changes current operating rules only. Historical session ownership sta
 
 ---
 
-## The 4 Live Files
+## The 5 Live Files
 
 ### 1. `AGENTS.md` / `CLAUDE.md`
 
@@ -63,7 +64,18 @@ Use it for:
 
 Only one phase should be marked current.
 
-### 4. `docs/pixelport-project-status.md`
+### 4. `docs/pixelport-pivot-plan-2026-03-16.md`
+
+The binding pivot contract.
+
+Use it for:
+- locked architecture and scope decisions for the current Paperclip-primary pivot
+- onboarding/provisioning flow behavior for the pivot release
+- migration keep/archive/delete rules
+
+If older docs conflict with this file, this pivot plan wins until those docs are updated.
+
+### 5. `docs/pixelport-project-status.md`
 
 The long-form history and decisions library.
 
@@ -83,8 +95,9 @@ Do not rewrite history there. Add dated notes instead.
 
 1. Read `docs/SESSION-LOG.md`
 2. Read `docs/ACTIVE-PLAN.md`
-3. Read deeper docs only as needed for the task
-4. Confirm whether the task needs founder approval before changing direction
+3. Read `docs/pixelport-pivot-plan-2026-03-16.md`
+4. Read deeper docs only as needed for the task
+5. Confirm whether the task needs founder approval before changing direction
 
 ### During work
 
