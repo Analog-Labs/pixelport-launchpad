@@ -390,6 +390,30 @@ const Onboarding = () => {
         throw new Error(result.error || "Failed to save onboarding setup.");
       }
 
+      // Step 5: fire handoff - thin bridge wire-in (runtime redirect deferred to founder UX decision)
+      try {
+        void fetch('/api/runtime/handoff', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ source: 'onboarding-launch' }),
+        })
+          .then((handoffRes) => {
+            if (!handoffRes.ok) {
+              // Non-fatal - log but don't block navigation
+              console.warn('[handoff] fire failed', handoffRes.status);
+            }
+          })
+          .catch((handoffErr) => {
+            // Non-fatal - swallow
+            console.warn('[handoff] fire error', handoffErr);
+          });
+      } catch (handoffErr) {
+        console.warn('[handoff] fire setup error', handoffErr);
+      }
+
       await refreshTenant();
       navigate(redirectPath, { replace: true });
     } catch (error) {

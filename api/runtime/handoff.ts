@@ -81,6 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     });
     const handoffToken = signPaperclipHandoffPayload(payload, config.handoffSecret);
 
+    // V1-ONLY: paperclip_runtime_url is http://. Acceptable for internal DO networking in V1. Replace with per-tenant https subdomain before GA.
     return res.status(200).json({
       contract_version: PAPERCLIP_HANDOFF_CONTRACT_VERSION,
       paperclip_runtime_url: runtimeUrl,

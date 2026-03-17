@@ -77,6 +77,7 @@ function normalizeDropletIp(rawDropletIp: string | null | undefined): string {
   return rawDropletIp.trim();
 }
 
+// V1 NOTE: Runtime URL uses plaintext HTTP (port 18789). TLS deferred to V1.1. Tokens short-lived and HMAC-signed.
 export function resolvePaperclipRuntimeUrlFromDropletIp(rawDropletIp: string | null | undefined): string | null {
   const dropletIp = normalizeDropletIp(rawDropletIp);
   if (!dropletIp) {

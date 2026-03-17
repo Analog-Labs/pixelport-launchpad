@@ -7,6 +7,51 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 83)
+- **Who worked:** Codex
+- **What was done:**
+  - Executed the requested post-session QA follow-up tasks on branch `codex/p1-c1-step5` with three discrete commits:
+    - `73ffeb6` — `security: remove debug env-check endpoint and test`
+      - removed `api/debug/env-check.ts`
+      - removed `src/test/debug-env-check-route.test.ts`
+      - confirmed no remaining `/api/debug/env-check` or `env-check` references in `api/`, `vercel.json`, or `src/test`
+    - `12dc963` — `feat(p1): wire runtime handoff into onboarding launch (step 5 thin integration)`
+      - `src/pages/Onboarding.tsx` now fires non-fatal fire-and-forget `POST /api/runtime/handoff` with `{ source: "onboarding-launch" }` after successful onboarding save
+      - handoff failures only `console.warn`; existing `refreshTenant()` + `navigate()` flow is unchanged
+    - `7f88024` — `docs(p1): add V1 HTTP plaintext notice to handoff contract and route`
+      - added the exact V1 plaintext-HTTP notice above `resolvePaperclipRuntimeUrlFromDropletIp` in `api/lib/paperclip-handoff-contract.ts`
+      - added the exact V1-ONLY plaintext-HTTP notice above the `200` response in `api/runtime/handoff.ts`
+  - Validation:
+    - `npx tsc --noEmit` (pass before each commit sequence)
+  - CTO QA follow-up note check:
+    - `npx tsc --noEmit` surfaced no TypeScript errors in `api/inngest/functions/activate-slack.ts`, `api/lib/workspace-contract.ts`, `api/lib/onboarding-bootstrap.ts`, or `api/commands/index.ts`
+- **What's next:**
+  - Push `codex/p1-c1-step5` and open CTO review PR with the required pre-existing TypeScript error note (`none encountered`).
+  - After CTO approval, merge and run post-merge production smoke for handoff/provisioning surfaces.
+- **Blockers:** No local implementation blocker; review/merge is pending.
+
+- **Date:** 2026-03-17 (session 82)
+- **Who worked:** Codex
+- **What was done:**
+  - Removed the debug-only endpoint `api/debug/env-check.ts` entirely.
+  - Confirmed no dangling route/config references remained:
+    - `vercel.json` has no `/api/debug/env-check` rewrite or function entry
+    - `api/index.ts` does not exist
+    - `rg -n "env-check" api` returned no remaining imports/usages after deletion
+  - Wired Step 5 thin integration into onboarding launch:
+    - `src/pages/Onboarding.tsx` now fires non-fatal `POST /api/runtime/handoff` after successful `/api/tenants/onboarding` save
+    - handoff failures only warn and do not block `refreshTenant()` or navigation
+  - Added V1 contract notice to `api/lib/paperclip-handoff-contract.ts`:
+    - runtime URL remains plaintext `http://<droplet_ip>:18789`
+    - TLS is deferred to V1.1
+    - handoff tokens are short-lived and HMAC-signed
+  - Validation:
+    - `npx tsc --noEmit` (pass)
+- **What's next:**
+  - Create branch `codex/p1-c1-debug-removal-step5-handoff` in a git-writable environment.
+  - Commit the security cleanup and Step 5 thin integration, then hand the branch to CTO for review.
+- **Blockers:** Current session sandbox denies writes under `.git`, so local branch creation and commit creation could not be completed in-session.
+
 - **Date:** 2026-03-17 (session 81)
 - **Who worked:** Codex
 - **What was done:**
