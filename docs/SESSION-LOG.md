@@ -7,6 +7,40 @@
 
 ## Last Session
 
+- **Date:** 2026-03-16 (session 72)
+- **Who worked:** Codex + sub-agent CTO reviewer (Lorentz)
+- **What was done:**
+  - Ran full CTO review workflow for branch `codex/pivot-p0-implementation` against `main` using the two approved pivot build briefs and CTO prompts.
+  - CTO review result returned explicit approval:
+    - `Verdict: APPROVED`
+    - `Approved to merge and deploy.`
+  - Fast-forward merged `codex/pivot-p0-implementation` into `main` and pushed:
+    - merged head on `main`: `a6a2ad0`
+  - Verified deploy signal on `a6a2ad0`:
+    - GitHub commit status: `success`
+    - Vercel target: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/Dcn4hjt5rW449Eq2TmJieU5fCmAT`
+  - Ran same-session fresh-tenant production smoke canary on live alias `https://pixelport-launchpad.vercel.app`:
+    - canary tenant: `pixelport-dry-run-mmu2ladg` (`b31603b5-89e0-4f6c-9e71-7658ece7fdcc`)
+    - canary email: `test-pixelport-dry-run-mmu2ladg@pixelport-test.local`
+    - droplet: `558840407` / `157.245.253.88`
+    - tenant reached `active`; `/api/tenants/status` returned `bootstrap_status=accepted`, `task_step_unlocked=true`, `contract_version=pivot-p0-v1`
+    - gateway health on droplet returned `{"ok":true,"status":"live"}`
+    - authenticated API truth checks:
+      - `/api/tasks`: `3` running tasks
+      - `/api/vault`: `5` sections (`populating`)
+      - `/api/competitors`: `0`
+    - DB truth checks matched the live surface at capture (`agents=1`, `agent_tasks=3`, `vault_sections=5`, `vault_non_pending=5`, `competitors=0`, `sessions_log=0`).
+  - Ran quota-safe cleanup path:
+    - tenant rows cleaned up successfully
+    - droplet deletion still reported `droplet_deleted=false` (known DO token scope limitation).
+  - Recorded release-smoke evidence:
+    - `docs/qa/2026-03-16-pivot-p0-release-smoke.md`
+  - Updated active coordination docs and build-brief acceptance checkboxes to reflect review/merge/smoke completion.
+- **What's next:**
+  - Set `PROVISIONING_DROPLET_IMAGE` to a valid golden image selector before enforcing strict golden-only provisioning behavior.
+  - Start next post-P0 phase focused on Paperclip fork bootstrap/environment ownership and cutover execution.
+- **Blockers:** Technical ownership/bootstrap details for the PixelPort-owned Paperclip fork remain the primary next-phase blocker.
+
 - **Date:** 2026-03-16 (session 71)
 - **Who worked:** Codex + sub-agents (Peirce, Bohr)
 - **What was done:**

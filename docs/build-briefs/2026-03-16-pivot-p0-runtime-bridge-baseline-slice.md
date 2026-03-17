@@ -69,8 +69,8 @@ Complete remaining P0 Track C definition/implementation work needed for safe piv
 - [x] Migration prune checklist doc exists with keep/deprecate/archive classification.
 - [x] `npx vitest run src/test/provision-tenant-memory.test.ts src/test/provisioning-allowlist.test.ts src/test/runtime-bridge-contract.test.ts` passes.
 - [x] `npx tsc --noEmit` passes.
-- [ ] CTO review approves merge/deploy.
-- [ ] Post-merge production smoke validates fresh tenant provisioning under configured baseline envs.
+- [x] CTO review approves merge/deploy.
+- [x] Post-merge production smoke validates fresh tenant provisioning under configured baseline envs.
 
 ## CTO Handoff Prompt
 

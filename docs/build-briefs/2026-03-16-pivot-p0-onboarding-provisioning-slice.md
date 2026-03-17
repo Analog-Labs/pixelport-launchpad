@@ -66,8 +66,8 @@ Implement the founder-approved pivot onboarding contract in `pixelport-launchpad
 - [x] Empty allowlist env is treated as disabled (open provisioning), not block-all.
 - [x] `npx vitest run src/test/provisioning-allowlist.test.ts` passes.
 - [x] `npx tsc --noEmit` passes.
-- [ ] CTO review approves merge/deploy.
-- [ ] Post-merge production smoke validates fresh-tenant onboarding/provisioning.
+- [x] CTO review approves merge/deploy.
+- [x] Post-merge production smoke validates fresh-tenant onboarding/provisioning.
 
 ## CTO Handoff Prompt
 

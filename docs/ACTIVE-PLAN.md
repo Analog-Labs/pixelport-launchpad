@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P0 — Paperclip-Primary Pivot Foundation
 
-**Status:** Active (first two implementation slices completed on 2026-03-16; CTO review + production smoke pending).
+**Status:** Active (P0 implementation slices are merged/deployed and production-smoked on 2026-03-16; next blocker is Paperclip fork bootstrap ownership).
 **Goal:** Shift active product execution to a PixelPort-owned Paperclip fork while keeping launchpad focused on marketing, billing, and thin bridge duties.
 **Binding spec:** `docs/pixelport-pivot-plan-2026-03-16.md`
 
@@ -52,7 +52,7 @@
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
-| Paperclip fork bootstrap and environment ownership details | Implementation branch kickoff | Technical Lead |
+| Paperclip fork bootstrap and environment ownership details | Next post-P0 implementation phase kickoff | Technical Lead |
 | Allowlist owner/process for testing tenant creation | Safe v1 testing rollout | Founder + Technical Lead |
 
 ### Notes
@@ -68,6 +68,10 @@
   - CTO prompt: `docs/build-briefs/2026-03-16-pivot-p0-runtime-bridge-baseline-slice-cto-prompt.md`
   - QA evidence: `docs/qa/2026-03-16-pivot-p0-runtime-bridge-baseline-slice.md`
   - Migration checklist: `docs/migration/launchpad-runtime-prune-checklist.md`
+- Release execution artifacts:
+  - CTO verdict: `APPROVED` (session 72)
+  - Deploy target: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/Dcn4hjt5rW449Eq2TmJieU5fCmAT`
+  - Production smoke: `docs/qa/2026-03-16-pivot-p0-release-smoke.md`
 
 ---
 
