@@ -1,6 +1,6 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-03-16
+**Last Updated:** 2026-03-17
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
 **Formerly:** Growth Swarm (now archived historical context)
 **Primary Runtime Direction:** PixelPort-owned Paperclip fork + per-tenant DO droplets
@@ -56,7 +56,20 @@ First P0 implementation slice is completed on branch `codex/pivot-p0-implementat
   - `docs/build-briefs/2026-03-16-pivot-p0-onboarding-provisioning-slice.md`
   - `docs/qa/2026-03-16-pivot-p0-onboarding-provisioning-slice.md`
 
-Pending before merge: CTO review and post-merge fresh-tenant production smoke.
+This pre-merge checkpoint was completed later the same day (CTO review, merge to `main`, and production smoke all passed on 2026-03-16).
+
+## Pivot Execution Update (2026-03-17)
+
+First P1 handoff release slice from `codex/pivot-p1-bootstrap-handoff` is now merged and deployed:
+
+- `main` head: `4e1dfb91602d9686df6aa0b4b990881448882813`
+- Vercel deploy: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/HhkBXxcaf1rMayfqkjgWSE435C84`
+- Production smoke on `https://pixelport-launchpad.vercel.app` confirmed:
+  - `GET /api/runtime/handoff` -> `405` (method guard)
+  - `POST /api/runtime/handoff` without auth -> `401` (auth guard)
+  - `POST /api/runtime/handoff` with invalid bearer -> `401` (token validation guard)
+  - `GET /api/debug/env-check` without secret -> `401` (debug auth guard)
+- QA evidence: `docs/qa/2026-03-17-pivot-p1-handoff-release-smoke.md`
 
 ---
 
@@ -677,14 +690,16 @@ Constraints (locked):
 
 ### Active Program: Paperclip-Primary Pivot (Phase P1)
 
-1. Lock bootstrap ownership contract for the PixelPort-owned Paperclip fork:
+First P1 handoff slice is shipped on `main` (`4e1dfb91602d9686df6aa0b4b990881448882813`), deployed, and production-smoked for route/auth guardrails.
+
+1. Close remaining bootstrap ownership contract signoffs for the PixelPort-owned Paperclip fork:
    - repo/branch protection + CI ownership
    - deploy environment ownership
    - secrets + rotation ownership
    - rollback authority + incident escalation ownership
-2. Confirm explicit owner signoff for the ownership contract items before cutover execution.
-3. Run CTO review for `codex/pivot-p1-bootstrap-handoff` and merge approved P1 slice.
-4. Run same-session production smoke on the handoff route after deploy.
+2. Confirm explicit owner signoff for the ownership contract items before cutover-critical execution.
+3. Run an authenticated production smoke for `POST /api/runtime/handoff` success path (`200`) with a valid test token/session.
+4. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract.
 5. Keep launchpad scoped to marketing, billing, and thin provisioning bridge responsibilities while cutover work proceeds.
 6. Set `PROVISIONING_DROPLET_IMAGE` in production before strict golden-image-only enforcement.
 

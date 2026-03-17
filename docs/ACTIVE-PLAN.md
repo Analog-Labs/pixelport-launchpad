@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (P1 ownership + first handoff implementation complete on branch; CTO review pending on 2026-03-16).  
+**Status:** Active (first P1 handoff slice merged to `main` at `4e1dfb91602d9686df6aa0b4b990881448882813`, deployed, and production-smoked on 2026-03-17; Track A ownership signoff items remain open).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -37,15 +37,15 @@
 
 #### Track C — Review and Release
 - [x] C1: Create P1 build brief and CTO handoff prompt for this slice.
-- [ ] C2: Complete CTO review on `codex/*` branch.
-- [ ] C3: Merge approved P1 slice to `main`.
-- [ ] C4: Run same-session targeted production smoke for handoff-related surfaces.
+- [x] C2: Complete CTO review on `codex/*` branch.
+- [x] C3: Merge approved P1 slice to `main`.
+- [x] C4: Run same-session targeted production smoke for handoff-related surfaces.
 
 ### Blockers
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
-| Paperclip fork repo/deploy ownership details not fully confirmed | P1 implementation closure and cutover prep | Technical Lead + Founder |
+| Paperclip fork repo/deploy ownership details not fully confirmed | P1 cutover prep and subsequent runtime migration slices | Technical Lead + Founder |
 | Secret authority mapping for runtime bootstrap surfaces | Safe cutover execution | Technical Lead + Founder |
 | Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
 
@@ -54,11 +54,12 @@
 - If any older checklist conflicts with the pivot plan, pivot plan wins.
 - P0 implementation and release artifacts remain valid and shipped:
   - `docs/qa/2026-03-16-pivot-p0-release-smoke.md`
-- P1 kickoff artifacts:
+- P1 artifacts:
   - ownership contract: `docs/paperclip-fork-bootstrap-ownership.md`
   - build brief: `docs/build-briefs/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice.md`
   - CTO prompt: `docs/build-briefs/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice-cto-prompt.md`
   - QA evidence: `docs/qa/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice.md`
+  - release smoke evidence: `docs/qa/2026-03-17-pivot-p1-handoff-release-smoke.md`
 
 ---
 

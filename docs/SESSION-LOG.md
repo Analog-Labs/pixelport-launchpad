@@ -7,6 +7,29 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 74)
+- **Who worked:** Codex
+- **What was done:**
+  - Completed Phase P1 Track C closeout for the first launchpad-to-Paperclip handoff slice.
+  - Confirmed CTO-approved branch `codex/pivot-p1-bootstrap-handoff` was merged to `main`.
+  - Confirmed release head on `main`:
+    - `4e1dfb91602d9686df6aa0b4b990881448882813`
+  - Confirmed Vercel deploy success:
+    - `https://vercel.com/sanchalrs-projects/pixelport-launchpad/HhkBXxcaf1rMayfqkjgWSE435C84`
+  - Ran targeted production smoke on live alias `https://pixelport-launchpad.vercel.app` and captured exact outcomes:
+    - `GET /api/runtime/handoff` -> `405 {"error":"Method not allowed"}`
+    - `POST /api/runtime/handoff` (no auth) -> `401 {"error":"Missing or invalid Authorization header"}`
+    - `POST /api/runtime/handoff` (invalid bearer) -> `401 {"error":"Invalid or expired token"}`
+    - `GET /api/debug/env-check` (no secret) -> `401 {"error":"Unauthorized"}`
+  - Added release-smoke evidence doc:
+    - `docs/qa/2026-03-17-pivot-p1-handoff-release-smoke.md`
+  - Updated active planning/status docs to mark P1 Track C (`C2/C3/C4`) complete while keeping unresolved ownership dependencies open.
+- **What's next:**
+  - Close remaining P1 Track A ownership signoffs (repo/CI, deploy owners, secret rotation authority, rollback/escalation authority).
+  - Run an authenticated production check for `POST /api/runtime/handoff` success path (`200`) once a safe test token/session is available.
+  - Start next approved P1 slice after ownership dependencies are advanced.
+- **Blockers:** Ownership confirmation details (repo/deploy/secrets/rollback/escalation) are still open and remain the main blocker for cutover-critical follow-on work.
+
 - **Date:** 2026-03-16 (session 73)
 - **Who worked:** Codex
 - **What was done:**
