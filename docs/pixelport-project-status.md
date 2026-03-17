@@ -675,16 +675,18 @@ Constraints (locked):
 
 ## 10. Immediate Next Actions
 
-### Active Program: Paperclip-Primary Pivot (Phase P0)
+### Active Program: Paperclip-Primary Pivot (Phase P1)
 
-1. Finalize the first execution build brief from `docs/pixelport-pivot-plan-2026-03-16.md`.
-2. Implement onboarding + provisioning flow in the Paperclip fork:
-   - `Company -> Provision -> Task -> Launch`
-   - Task unlock only after provisioning `ready`
-3. Preserve Paperclip default workspace behavior, with additive `SOUL.md` onboarding context only.
-4. Apply user-facing terminology alignment (`CEO` -> `Chief of Staff`) without functional runtime changes.
-5. Keep launchpad scoped to marketing, billing, and thin provisioning bridge responsibilities.
-6. Execute migration keep/archive/delete checklist with hard-cutover posture.
+1. Lock bootstrap ownership contract for the PixelPort-owned Paperclip fork:
+   - repo/branch protection + CI ownership
+   - deploy environment ownership
+   - secrets + rotation ownership
+   - rollback authority + incident escalation ownership
+2. Confirm explicit owner signoff for the ownership contract items before cutover execution.
+3. Run CTO review for `codex/pivot-p1-bootstrap-handoff` and merge approved P1 slice.
+4. Run same-session production smoke on the handoff route after deploy.
+5. Keep launchpad scoped to marketing, billing, and thin provisioning bridge responsibilities while cutover work proceeds.
+6. Set `PROVISIONING_DROPLET_IMAGE` in production before strict golden-image-only enforcement.
 
 ### Scope Boundaries (Current)
 

@@ -7,6 +7,40 @@
 
 ## Last Session
 
+- **Date:** 2026-03-16 (session 73)
+- **Who worked:** Codex
+- **What was done:**
+  - Kicked off Phase P1 after P0 release completion, focused on bootstrap ownership lock for the Paperclip-primary runtime direction.
+  - Published the new ownership contract:
+    - `docs/paperclip-fork-bootstrap-ownership.md`
+  - Advanced execution tracking from P0 to P1 in active planning docs:
+    - `docs/ACTIVE-PLAN.md`
+  - Created P1 execution artifacts for this ownership + first handoff slice:
+    - `docs/build-briefs/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice.md`
+    - `docs/build-briefs/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice-cto-prompt.md`
+  - Updated project status immediate actions to reflect P1 kickoff and ownership-first sequencing.
+  - Implemented first additive launchpad-to-Paperclip handoff contract:
+    - helper/signing module: `api/lib/paperclip-handoff-contract.ts`
+    - route: `POST /api/runtime/handoff`
+    - env diagnostics update: `api/debug/env-check.ts`
+    - tests:
+      - `src/test/paperclip-handoff-contract.test.ts`
+      - `src/test/runtime-handoff-route.test.ts`
+  - Ran local validation:
+    - `npx tsc --noEmit` (pass)
+    - `npx vitest run src/test/paperclip-handoff-contract.test.ts src/test/runtime-handoff-route.test.ts` (pass, 12/12)
+  - Ran QA sub-agent review and applied required fixes before merge handoff:
+    - moved env diagnostics behind auth on `/api/runtime/handoff` (no unauthenticated config disclosure)
+    - added strict runtime URL validation for `PAPERCLIP_RUNTIME_URL` (absolute `http(s)` only)
+    - synced planning docs/checklists to match implemented branch state.
+  - Recorded QA evidence:
+    - `docs/qa/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice.md`
+- **What's next:**
+  - Run CTO review for `codex/pivot-p1-bootstrap-handoff`.
+  - Address any blocked findings, then merge/deploy approved P1 slice.
+  - Run same-session production smoke for the new handoff surface.
+- **Blockers:** Ownership confirmation details (repo/deploy/secrets/rollback) still need explicit signoff completion before cutover work can proceed.
+
 - **Date:** 2026-03-16 (session 72)
 - **Who worked:** Codex + sub-agent CTO reviewer (Lorentz)
 - **What was done:**

@@ -38,6 +38,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     'DO_GOLDEN_IMAGE_ID',
     'PIXELPORT_DROPLET_SIZE',
     'PIXELPORT_DROPLET_REGION',
+    'PAPERCLIP_RUNTIME_URL',
+    'PAPERCLIP_HANDOFF_SECRET',
+    'PAPERCLIP_HANDOFF_TTL_SECONDS',
   ];
 
   const results = vars.map((name) => {
