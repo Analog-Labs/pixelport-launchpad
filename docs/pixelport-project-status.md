@@ -102,7 +102,39 @@ Authenticated production smoke was executed for `POST /api/runtime/handoff` usin
   - tenant deleted: `true`
   - user deleted: `true`
 
-Conclusion: auth path is validated up to config gating; success-path `200` remains blocked until required handoff env vars are set.
+Conclusion at that time: auth path was validated up to config gating and success-path `200` was blocked by missing handoff env vars. This was later resolved in the `688c4e3` runtime-target update below.
+
+## Pivot Execution Update (2026-03-17 Runtime Target + Golden Enforcement)
+
+Post-merge update after `688c4e3` on `main`:
+
+- commit: `688c4e3`
+- deploy status: `success`
+- deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/7wihkxTEH7eRPevqicduNULohfcX`
+
+Implemented outcomes:
+- `api/debug/env-check.ts` is production-gated and header-auth only (`x-debug-secret`).
+- `api/tenants/index.ts` removed `Record<string, any>` in favor of typed body handling.
+- `/api/runtime/handoff` derives `paperclip_runtime_url` from tenant `droplet_ip` as `http://<ip>:18789` and no longer depends on `PAPERCLIP_RUNTIME_URL`.
+- missing/invalid runtime target returns `409` (`runtime-target-unavailable`).
+- provisioning enforces strict golden image selector (no compatibility fallback image).
+
+Validation recorded:
+- local `npx tsc --noEmit` pass
+- local vitest suite pass (4 files / 29 tests)
+- QA reviewer verdict: approved with no findings
+
+Production smoke truth:
+- `GET /api/debug/env-check` -> `404 {"error":"Not found"}`
+- `POST /api/runtime/handoff` without auth -> `401`
+- `POST /api/runtime/handoff` invalid bearer -> `401`
+- authenticated temporary user+tenant rerun -> `200` with `paperclip_runtime_url=http://157.245.253.88:18789`
+- cleanup: tenant deleted `true`, user deleted `true`
+
+Operational follow-up truth:
+- `PAPERCLIP_HANDOFF_SECRET` now exists in Vercel env.
+- `PROVISIONING_DROPLET_IMAGE` is not present in current `vercel env ls` evidence.
+- with strict enforcement enabled, fresh provisioning fails until golden image selector env is set.
 
 ---
 
@@ -723,20 +755,18 @@ Constraints (locked):
 
 ### Active Program: Paperclip-Primary Pivot (Phase P1)
 
-First P1 handoff slice is shipped on `main` (`4e1dfb91602d9686df6aa0b4b990881448882813`), deployed, and production-smoked for route/auth guardrails.
+Latest P1 runtime-target/golden-enforcement slice is shipped on `main` (`688c4e3`), deployed, and production-smoked including authenticated `POST /api/runtime/handoff` `200`.
 
 1. Close A2 by configuring real enforcement on `Analog-Labs/pixelport-launchpad` `main`:
    - required checks
    - review gate baseline
    - explicit backup reviewer model
 2. Close A3 with explicit founder approval of deploy ownership for launchpad/runtime staging+production and rollback authority.
-3. Set `PAPERCLIP_RUNTIME_URL` and `PAPERCLIP_HANDOFF_SECRET` in production env, then redeploy.
-4. Re-run authenticated production smoke for `POST /api/runtime/handoff` and confirm success-path `200`.
-5. Close A4 with explicit founder approval for secrets source-of-truth and rotation owners, including final placement/ownership of `PAPERCLIP_*` handoff vars.
-6. Close A5 with explicit founder approval of incident escalation chain and notification SLAs.
-7. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract after A2-A5 closure criteria are satisfied or explicitly waived.
-8. Keep launchpad scoped to marketing, billing, and thin provisioning bridge responsibilities while cutover work proceeds.
-9. Set `PROVISIONING_DROPLET_IMAGE` in production before strict golden-image-only enforcement.
+3. Set `PROVISIONING_DROPLET_IMAGE` in production immediately; strict enforcement is active and fresh provisioning is currently blocked without it.
+4. Close A4 with explicit founder approval for secrets source-of-truth and rotation owners, including final ownership model for `PAPERCLIP_*` handoff vars.
+5. Close A5 with explicit founder approval of incident escalation chain and notification SLAs.
+6. Start the next approved P1 slice for Paperclip-fork consumer integration of the handoff contract after A2-A5 closure criteria are satisfied or explicitly waived.
+7. Keep launchpad scoped to marketing, billing, and thin provisioning bridge responsibilities while cutover work proceeds.
 
 ### Scope Boundaries (Current)
 

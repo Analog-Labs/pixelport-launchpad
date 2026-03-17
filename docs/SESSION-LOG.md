@@ -7,6 +7,39 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 77)
+- **Who worked:** Codex
+- **What was done:**
+  - Completed runtime-target and golden-enforcement implementation slice and merged to `main` at `688c4e3`.
+  - Recorded implementation outcomes from `688c4e3`:
+    - `api/debug/env-check.ts` is now production-gated and header-auth only (`x-debug-secret`).
+    - `api/tenants/index.ts` replaced `Record<string, any>` usage with typed request-body handling.
+    - `/api/runtime/handoff` now derives `paperclip_runtime_url` from tenant `droplet_ip` as `http://<ip>:18789` and no longer depends on `PAPERCLIP_RUNTIME_URL`.
+    - missing/invalid runtime target now returns `409` with `runtime-target-unavailable`.
+    - golden image enforcement is strict in provisioning path (no compatibility fallback image).
+  - Validation recorded:
+    - `npx tsc --noEmit` (pass)
+    - vitest suite (4 files / 29 tests) (pass)
+    - QA reviewer verdict: `APPROVED` with no findings.
+  - Confirmed production deploy truth for `main` commit `688c4e3`:
+    - status: `success`
+    - deploy: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/7wihkxTEH7eRPevqicduNULohfcX`
+  - Confirmed production smoke truth:
+    - `GET /api/debug/env-check` -> `404 {"error":"Not found"}`
+    - `POST /api/runtime/handoff` (no auth) -> `401`
+    - `POST /api/runtime/handoff` (invalid bearer) -> `401`
+    - authenticated temporary user+tenant rerun -> `200` with `paperclip_runtime_url=http://157.245.253.88:18789`
+    - cleanup: tenant deleted `true`, user deleted `true`.
+  - Captured follow-up env truth:
+    - `PAPERCLIP_HANDOFF_SECRET` exists in Vercel env.
+    - `PROVISIONING_DROPLET_IMAGE` is not present in `vercel env ls` evidence.
+    - strict golden enforcement is active, so fresh provisioning will fail until selector env is set.
+- **What's next:**
+  - Set `PROVISIONING_DROPLET_IMAGE` in production to unblock fresh tenant provisioning under strict enforcement.
+  - Continue Track A closure work (A2-A5) with founder-confirmed ownership decisions.
+  - Start the next approved Paperclip-consumer integration slice now that authenticated `200` handoff is verified.
+- **Blockers:** Fresh provisioning is currently blocked by missing production `PROVISIONING_DROPLET_IMAGE` under strict golden-enforcement mode.
+
 - **Date:** 2026-03-17 (session 76)
 - **Who worked:** Codex
 - **What was done:**
