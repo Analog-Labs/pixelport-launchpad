@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P3 — Launchpad Runtime Prune (Track C4 Batch 1)
 
-**Status:** Active (P2 is closed/merged on `main`; implementation branch `codex/p3-c4-prune-batch1-chat-content-approvals` is prepared for CTO review).  
+**Status:** Active (P2 is closed/merged on `main`; implementation PR `#9` is open for CTO review on `codex/p3-c4-prune-batch1-chat-content-approvals`).  
 **Goal:** Incrementally prune unused legacy launchpad runtime route groups while preserving active thin-bridge provisioning responsibilities.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/migration/launchpad-runtime-prune-checklist.md`
 
@@ -29,7 +29,7 @@
 
 #### Track B — Review and Release
 - [x] B1: Create P3 build brief and CTO review prompt.
-- [ ] B2: Open CTO review PR for `codex/p3-c4-prune-batch1-chat-content-approvals`.
+- [x] B2: Open CTO review PR for `codex/p3-c4-prune-batch1-chat-content-approvals` (`#9`).
 - [ ] B3: Merge approved P3 slice to `main`.
 - [ ] B4: Run same-session production smoke for retained active surfaces.
 

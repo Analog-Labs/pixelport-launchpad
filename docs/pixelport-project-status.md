@@ -440,6 +440,7 @@ Evidence artifact:
 Next incremental cutover-prune slice is implemented on branch:
 
 - branch: `codex/p3-c4-prune-batch1-chat-content-approvals`
+- CTO review PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/9`
 - migration contract: `docs/migration/launchpad-runtime-prune-checklist.md`
 
 Implemented deletions (batch 1):

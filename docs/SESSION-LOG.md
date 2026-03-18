@@ -39,8 +39,10 @@
     - `docs/migration/launchpad-runtime-prune-checklist.md`
     - `docs/ACTIVE-PLAN.md`
     - `docs/pixelport-project-status.md`
+  - Opened CTO review PR for this P3 batch:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/9`
 - **What's next:**
-  - Open CTO review PR for batch 1 route-prune branch.
+  - Complete CTO review for PR `#9`.
   - After CTO approval, merge to `main`, monitor deploy, and run same-session smoke on retained active surfaces.
 - **Blockers:** `api/competitors/*` deletion is blocked by active frontend dependency (`src/pages/dashboard/Competitors.tsx`).
 
