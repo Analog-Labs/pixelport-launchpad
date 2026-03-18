@@ -150,6 +150,7 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 ### A5 — Rollback/Incident Boundary Evidence State
 
 - Decision-boundary text exists in this contract and in `AGENTS.md`.
+- Proposed A5 policy baseline is now documented in `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-proposal.md`.
 - Explicit founder-level confirmation for rollback authority boundaries and escalation closure is still pending.
 - No fabricated owner signoff is recorded in this document.
 
@@ -169,6 +170,7 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
    - who can execute immediate rollback
    - founder notification SLA by severity
    - CTO escalation/review trigger points
+   - confirm or edit proposal in `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-proposal.md`
 
 ## Founder Decision Boundaries (Must Stay Explicit)
 

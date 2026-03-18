@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, A2 merge `9eb17df`, and A3 merge `4b06fda` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A2 + A3 are merged and production-smoked; Track A4 is now founder-closed; Track A5 remains open).  
+**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, A2 merge `9eb17df`, A3 merge `4b06fda`, and A4 merge `8e9f2f0` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A2-A4 are merged and production-smoked; Track A5 remains open pending founder boundary confirmation).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -36,7 +36,7 @@ Track A audit evidence recorded (without closure fabrication):
 - [x] A2-evidence: `.github/CODEOWNERS` + `.github/workflows/ci.yml` baseline prepared on `codex/p1-a2-governance-guardrails` for review/merge.
 - [x] A3-evidence: active pivot Vercel/DO ownership signals documented; Railway/LiteLLM retained as legacy-decommission traceability only.
 - [x] A4-evidence: founder-approved Vercel-only source of truth + 90-day rotation + active runtime key coverage in Vercel + legacy Railway decommission stance recorded.
-- [x] A5-evidence: founder decision gates listed explicitly for closure.
+- [x] A5-evidence: founder decision gates + proposed incident/rollback boundary policy are documented for approval.
 
 #### Track B — First Runtime Handoff Slice
 - [x] B1: Implement first launchpad-to-Paperclip runtime handoff API contract (additive).
@@ -94,6 +94,8 @@ Track A audit evidence recorded (without closure fabrication):
   - A3 merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a3-merge-smoke.md`
   - A4 secrets inventory kickoff evidence: `docs/qa/2026-03-17-pivot-p1-a4-secrets-inventory-kickoff.md`
   - A4 secrets closure evidence: `docs/qa/2026-03-17-pivot-p1-a4-secrets-closure.md`
+  - A4 merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a4-merge-smoke.md`
+  - A5 boundary proposal evidence: `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-proposal.md`
 
 ---
 

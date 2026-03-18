@@ -7,6 +7,33 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 91)
+- **Who worked:** Codex
+- **What was done:**
+  - Merged approved PR `#4` to `main`:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/4`
+    - merge commit: `8e9f2f0`
+    - note: merge executed with admin override after founder-confirmed CTO approval because GitHub still showed unresolved review-request state
+  - Confirmed deploy completion for merge commit:
+    - Vercel status: `success`
+    - deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/EZLtsYwKop1bg8cVpqcd3WmRkp6E`
+  - Ran targeted post-merge production smoke on `https://pixelport-launchpad.vercel.app`:
+    - `GET /api/runtime/handoff` -> `405`
+    - `POST /api/runtime/handoff` without auth -> `401`
+    - `POST /api/runtime/handoff` invalid bearer -> `401`
+    - `GET /api/debug/env-check` -> `404`
+  - Added A4 merge-smoke evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p1-a4-merge-smoke.md`
+  - Started Track A5 closure slice on branch `codex/p1-a5-incident-boundary-closure`:
+    - added decision-ready incident/rollback boundary proposal for founder approval
+    - linked proposal in ownership contract and plan/status docs
+  - Added A5 proposal evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-proposal.md`
+- **What's next:**
+  - Get founder approval (or edits) on the A5 incident/rollback boundary proposal.
+  - After founder approval, mark A5 closed and open CTO review PR for final Track A closure.
+- **Blockers:** Track A5 remains open pending explicit founder confirmation of incident-command and rollback boundary policy.
+
 - **Date:** 2026-03-17 (session 90)
 - **Who worked:** Founder + Codex
 - **What was done:**
