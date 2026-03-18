@@ -181,6 +181,7 @@ describe("POST /api/runtime/handoff", () => {
         status: "active",
         plan: "trial",
         droplet_ip: "157.245.253.88",
+        gateway_token: "gw-123",
       },
     });
 
@@ -194,6 +195,8 @@ describe("POST /api/runtime/handoff", () => {
     const payload = res.body as Record<string, unknown>;
     expect(payload.contract_version).toBe("p1-v1");
     expect(payload.paperclip_runtime_url).toBe("http://157.245.253.88:18789");
+    expect(payload.workspace_launch_url).toBe("http://157.245.253.88:18789/#token=gw-123");
+    expect(payload.launch_auth_mode).toBe("gateway-token");
     expect(typeof payload.handoff_token).toBe("string");
     expect(typeof payload.expires_at).toBe("string");
     expect(payload.source).toBe("onboarding_launch");
@@ -211,6 +214,36 @@ describe("POST /api/runtime/handoff", () => {
     expect(segments).toHaveLength(2);
     expect(segments[0].length).toBeGreaterThan(0);
     expect(segments[1].length).toBeGreaterThan(0);
+  });
+
+  it("returns 409 when gateway auth token is unavailable", async () => {
+    process.env.PAPERCLIP_HANDOFF_SECRET = "secret-value";
+
+    const { default: handler } = await import("../../api/runtime/handoff");
+
+    authenticateRequest.mockResolvedValue({
+      userId: "user-1",
+      tenant: {
+        id: "tenant-1",
+        slug: "tenant-slug",
+        name: "Tenant",
+        status: "active",
+        plan: "trial",
+        droplet_ip: "157.245.253.88",
+        gateway_token: null,
+      },
+    });
+
+    const req = { method: "POST", body: { source: "onboarding_launch" } };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toEqual({
+      error: "Paperclip runtime auth token unavailable for this tenant.",
+      code: "runtime-auth-unavailable",
+    });
   });
 
   it("routes unexpected errors through errorResponse", async () => {

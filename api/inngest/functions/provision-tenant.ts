@@ -59,9 +59,10 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 const DO_API_TOKEN = process.env.DO_API_TOKEN;
 const AGENTMAIL_API_KEY = process.env.AGENTMAIL_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const PAPERCLIP_HANDOFF_SECRET = process.env.PAPERCLIP_HANDOFF_SECRET;
 
-if (!DO_API_TOKEN || !OPENAI_API_KEY) {
-  throw new Error('Missing one or more required env vars: DO_API_TOKEN, OPENAI_API_KEY');
+if (!DO_API_TOKEN || !OPENAI_API_KEY || !PAPERCLIP_HANDOFF_SECRET) {
+  throw new Error('Missing one or more required env vars: DO_API_TOKEN, OPENAI_API_KEY, PAPERCLIP_HANDOFF_SECRET');
 }
 
 const OPENCLAW_BASE_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.3.11';
@@ -253,6 +254,7 @@ export const provisionTenant = inngest.createFunction(
         openclawBaseImage: OPENCLAW_BASE_IMAGE,
         openclawRuntimeImage: OPENCLAW_RUNTIME_IMAGE,
         openaiApiKey: OPENAI_API_KEY,
+        paperclipHandoffSecret: PAPERCLIP_HANDOFF_SECRET,
         memoryOpenAiApiKey: memoryProvisioningPlan.memoryOpenAiApiKey,
         memoryNativeEnabled: memoryProvisioningPlan.effectiveNativeEnabled,
         geminiApiKey: process.env.GEMINI_API_KEY || '',
@@ -656,6 +658,7 @@ export function buildCloudInit(params: {
   openclawBaseImage: string;
   openclawRuntimeImage: string;
   openaiApiKey: string;
+  paperclipHandoffSecret: string;
   memoryOpenAiApiKey: string;
   memoryNativeEnabled: boolean;
   geminiApiKey: string;
@@ -710,7 +713,11 @@ mkdir -p /opt/openclaw/workspace-main
 mkdir -p /opt/openclaw/canvas
 mkdir -p /opt/openclaw/cron
 mkdir -p /opt/openclaw/agents
-docker pull ${params.openclawRuntimeImage}
+if docker image inspect ${params.openclawRuntimeImage} >/dev/null 2>&1; then
+  echo "Using preloaded runtime image ${params.openclawRuntimeImage}"
+else
+  docker pull ${params.openclawRuntimeImage}
+fi
 
 # 3. Write agent configuration candidates
 cat > /opt/openclaw/openclaw.with-acp.json << 'OPENCLAW_CONFIG'
@@ -729,6 +736,7 @@ ${workspaceWriteCommands}
 # 5. Write environment secrets (OpenAI + AgentMail + PixelPort API)
 cat > /opt/openclaw/.env << 'ENV_FILE'
 OPENAI_API_KEY=${params.openaiApiKey}
+PAPERCLIP_HANDOFF_SECRET=${params.paperclipHandoffSecret}
 MEMORY_OPENAI_API_KEY=${params.memoryOpenAiApiKey}
 GEMINI_API_KEY=${params.geminiApiKey}
 AGENTMAIL_API_KEY=${params.agentmailApiKey}

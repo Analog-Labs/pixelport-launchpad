@@ -13,6 +13,7 @@ describe("provision tenant memory config", () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
     process.env.DO_API_TOKEN = "do-token";
     process.env.OPENAI_API_KEY = "openai-key";
+    process.env.PAPERCLIP_HANDOFF_SECRET = "handoff-secret";
     process.env.PROVISIONING_DROPLET_IMAGE =
       "pixelport-paperclip-golden-2026-03-16";
   });
@@ -270,6 +271,7 @@ describe("provision tenant memory config", () => {
       openclawBaseImage: "ghcr.io/openclaw/openclaw:2026.3.11",
       openclawRuntimeImage: "ghcr.io/openclaw/openclaw:2026.3.11",
       openaiApiKey: "openai-key",
+      paperclipHandoffSecret: "handoff-secret",
       memoryOpenAiApiKey: "memory-openai-key",
       memoryNativeEnabled: true,
       geminiApiKey: "",
@@ -280,11 +282,13 @@ describe("provision tenant memory config", () => {
       },
     });
 
+    expect(script).toContain("if docker image inspect ghcr.io/openclaw/openclaw:2026.3.11 >/dev/null 2>&1; then");
     expect(script).toContain("docker pull ghcr.io/openclaw/openclaw:2026.3.11");
     expect(script).not.toContain("docker build -t");
     expect(script).not.toContain("/opt/openclaw/image");
     expect(script).not.toContain("--no-install-recommends chromium");
     expect(script).toContain("OPENAI_API_KEY=openai-key");
+    expect(script).toContain("PAPERCLIP_HANDOFF_SECRET=handoff-secret");
     expect(script).not.toContain("OPENAI_BASE_URL=");
     expect(script).toContain("chmod 600 /opt/openclaw/openclaw.json /opt/openclaw/.env");
     expect(script).toContain("normalize_runtime_state_perms()");

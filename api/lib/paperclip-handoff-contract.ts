@@ -93,6 +93,39 @@ export function resolvePaperclipRuntimeUrlFromDropletIp(rawDropletIp: string | n
   return `http://${host}:${PAPERCLIP_RUNTIME_PORT}`;
 }
 
+function normalizeGatewayToken(rawGatewayToken: string | null | undefined): string {
+  if (typeof rawGatewayToken !== 'string') {
+    return '';
+  }
+  return rawGatewayToken.trim();
+}
+
+export function buildGatewayControlUiLaunchUrl(
+  runtimeUrl: string | null,
+  rawGatewayToken: string | null | undefined,
+): string | null {
+  if (!runtimeUrl) {
+    return null;
+  }
+
+  const gatewayToken = normalizeGatewayToken(rawGatewayToken);
+  if (!gatewayToken) {
+    return null;
+  }
+
+  try {
+    const launchUrl = new URL(runtimeUrl);
+    if (launchUrl.protocol !== 'http:' && launchUrl.protocol !== 'https:') {
+      return null;
+    }
+
+    launchUrl.hash = `token=${encodeURIComponent(gatewayToken)}`;
+    return launchUrl.toString();
+  } catch {
+    return null;
+  }
+}
+
 export function getMissingPaperclipHandoffEnv(env: NodeJS.ProcessEnv = process.env): string[] {
   const missing: string[] = [];
 

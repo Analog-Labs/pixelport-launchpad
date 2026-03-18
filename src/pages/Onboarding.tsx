@@ -22,6 +22,8 @@ interface OnboardingFormData {
 interface RuntimeHandoffResponse {
   error?: string;
   paperclip_runtime_url?: string;
+  workspace_launch_url?: string;
+  handoff_token?: string;
 }
 
 const DEFAULT_AGENT_NAME = "Luna";
@@ -63,6 +65,20 @@ function resolveWorkspaceUrl(rawUrl: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+function resolveWorkspaceHandoffUrl(rawRuntimeUrl: unknown, rawHandoffToken: unknown): string | null {
+  const runtimeUrl = resolveWorkspaceUrl(rawRuntimeUrl);
+  const handoffToken = readString(rawHandoffToken).trim();
+
+  if (!runtimeUrl || !handoffToken) {
+    return null;
+  }
+
+  const handoffUrl = new URL("/pixelport/handoff", runtimeUrl);
+  handoffUrl.searchParams.set("handoff_token", handoffToken);
+  handoffUrl.searchParams.set("next", "/");
+  return handoffUrl.toString();
 }
 
 function toGoalsArray(missionGoals: string): string[] {
@@ -416,9 +432,13 @@ const Onboarding = () => {
         throw new Error(handoffResult.error || "Failed to open your Paperclip workspace.");
       }
 
-      const workspaceUrl = resolveWorkspaceUrl(handoffResult.paperclip_runtime_url);
+      const workspaceUrl = resolveWorkspaceUrl(handoffResult.workspace_launch_url)
+        ?? resolveWorkspaceHandoffUrl(
+          handoffResult.paperclip_runtime_url,
+          handoffResult.handoff_token,
+        );
       if (!workspaceUrl) {
-        throw new Error("Paperclip workspace URL is unavailable for this tenant.");
+        throw new Error("Paperclip workspace launch URL is unavailable for this tenant.");
       }
 
       const payload = {

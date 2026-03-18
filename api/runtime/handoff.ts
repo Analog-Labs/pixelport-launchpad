@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import {
+  buildGatewayControlUiLaunchUrl,
   buildPaperclipHandoffPayload,
   getMissingPaperclipHandoffEnv,
   isPaperclipHandoffReadyStatus,
@@ -55,6 +56,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
+    const workspaceLaunchUrl = buildGatewayControlUiLaunchUrl(runtimeUrl, tenant.gateway_token);
+    if (!workspaceLaunchUrl) {
+      return res.status(409).json({
+        error: 'Paperclip runtime auth token unavailable for this tenant.',
+        code: 'runtime-auth-unavailable',
+      });
+    }
+
     let config;
     try {
       config = resolvePaperclipHandoffConfig(process.env);
@@ -85,6 +94,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return res.status(200).json({
       contract_version: PAPERCLIP_HANDOFF_CONTRACT_VERSION,
       paperclip_runtime_url: runtimeUrl,
+      workspace_launch_url: workspaceLaunchUrl,
+      launch_auth_mode: 'gateway-token',
       handoff_token: handoffToken,
       expires_at: new Date(payload.exp * 1000).toISOString(),
       tenant: {

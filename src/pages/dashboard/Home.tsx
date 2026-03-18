@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 type RuntimeHandoffResponse = {
   error?: string;
   paperclip_runtime_url?: string;
+  workspace_launch_url?: string;
+  handoff_token?: string;
 };
 
 function readString(value: unknown): string {
@@ -30,6 +32,20 @@ function resolveWorkspaceUrl(rawUrl: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+function resolveWorkspaceHandoffUrl(rawRuntimeUrl: unknown, rawHandoffToken: unknown): string | null {
+  const runtimeUrl = resolveWorkspaceUrl(rawRuntimeUrl);
+  const handoffToken = readString(rawHandoffToken).trim();
+
+  if (!runtimeUrl || !handoffToken) {
+    return null;
+  }
+
+  const handoffUrl = new URL("/pixelport/handoff", runtimeUrl);
+  handoffUrl.searchParams.set("handoff_token", handoffToken);
+  handoffUrl.searchParams.set("next", "/");
+  return handoffUrl.toString();
 }
 
 export default function Home() {
@@ -69,9 +85,13 @@ export default function Home() {
         throw new Error(payload.error || "Failed to prepare workspace launch.");
       }
 
-      const workspaceUrl = resolveWorkspaceUrl(payload.paperclip_runtime_url);
+      const workspaceUrl = resolveWorkspaceUrl(payload.workspace_launch_url)
+        ?? resolveWorkspaceHandoffUrl(
+          payload.paperclip_runtime_url,
+          payload.handoff_token,
+        );
       if (!workspaceUrl) {
-        throw new Error("Workspace URL is unavailable. Please retry from onboarding.");
+        throw new Error("Workspace launch URL is unavailable. Please retry from onboarding.");
       }
 
       await refreshTenant();

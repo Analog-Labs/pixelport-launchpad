@@ -4,6 +4,7 @@ import {
   DEFAULT_PAPERCLIP_HANDOFF_TTL_SECONDS,
   PAPERCLIP_HANDOFF_CONTRACT_VERSION,
   PAPERCLIP_RUNTIME_PORT,
+  buildGatewayControlUiLaunchUrl,
   buildPaperclipHandoffPayload,
   getMissingPaperclipHandoffEnv,
   isPaperclipHandoffReadyStatus,
@@ -47,6 +48,17 @@ describe("paperclip handoff contract", () => {
     expect(resolvePaperclipRuntimeUrlFromDropletIp("1.2.3.4")).toBe(`http://1.2.3.4:${PAPERCLIP_RUNTIME_PORT}`);
     expect(resolvePaperclipRuntimeUrlFromDropletIp("2001:db8::1")).toBe(
       `http://[2001:db8::1]:${PAPERCLIP_RUNTIME_PORT}`,
+    );
+  });
+
+  it("builds a control-ui launch URL with hash token when runtime + gateway token exist", () => {
+    expect(buildGatewayControlUiLaunchUrl(null, "gw-token")).toBeNull();
+    expect(buildGatewayControlUiLaunchUrl("http://1.2.3.4:18789", null)).toBeNull();
+    expect(buildGatewayControlUiLaunchUrl("notaurl", "gw-token")).toBeNull();
+    expect(buildGatewayControlUiLaunchUrl("ftp://1.2.3.4:18789", "gw-token")).toBeNull();
+    expect(buildGatewayControlUiLaunchUrl("http://1.2.3.4:18789", "  ")).toBeNull();
+    expect(buildGatewayControlUiLaunchUrl("http://1.2.3.4:18789", "gw-token")).toBe(
+      "http://1.2.3.4:18789/#token=gw-token",
     );
   });
 
