@@ -34,8 +34,8 @@ docker image save ghcr.io/openclaw/openclaw:2026.3.11 \
 
 ```bash
 ssh root@<droplet-host-or-ip> \
-  'docker image save ghcr.io/openclaw/openclaw:2026.3.11' \
-  > /Users/sanchal/pixelport-artifacts/golden-image-backups/docker-image-archives/openclaw-2026.3.11-from-droplet.tar
+  'docker save pixelport-paperclip:2026.3.11-handoff-p1 | gzip -1' \
+  > /Users/sanchal/pixelport-artifacts/golden-image-backups/docker-image-archives/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.tar.gz
 ```
 
 ## Capture a Cloud-Init Snapshot
@@ -43,8 +43,8 @@ ssh root@<droplet-host-or-ip> \
 Store the provisioning input that produced the image alongside the tarball:
 
 ```bash
-cp infra/provisioning/cloud-init.yaml \
-  /Users/sanchal/pixelport-artifacts/golden-image-backups/cloud-init-snapshots/cloud-init-2026.3.11.yaml
+cp /Users/sanchal/pixelport-launchpad/api/inngest/functions/provision-tenant.ts \
+  /Users/sanchal/pixelport-artifacts/golden-image-backups/cloud-init-snapshots/2026-03-18-provision-tenant-source.ts
 ```
 
 If you capture generated user-data from a provisioning run, save that exact output in the same folder with a timestamped name.
@@ -54,37 +54,46 @@ If you capture generated user-data from a provisioning run, save that exact outp
 Keep a short manifest for every backup:
 
 ```bash
-cat > /Users/sanchal/pixelport-artifacts/golden-image-backups/manifests/openclaw-2026.3.11.manifest.txt <<'EOF'
-image=ghcr.io/openclaw/openclaw:2026.3.11
-source=droplet-or-local
+cat > /Users/sanchal/pixelport-artifacts/golden-image-backups/manifests/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.manifest.txt <<'EOF'
+image=pixelport-paperclip:2026.3.11-handoff-p1
+source_host=157.230.10.108
+source_type=droplet
 created=2026-03-18
-notes=stable golden image snapshot
+notes=experimental paperclip runtime image backup
 EOF
 ```
 
 ## Generate and Verify Checksums
 
-Generate a checksum after each tar is written:
+Generate a checksum after each tar is written (macOS + Linux-safe):
 
 ```bash
-sha256sum /Users/sanchal/pixelport-artifacts/golden-image-backups/docker-image-archives/openclaw-2026.3.11.tar \
-  > /Users/sanchal/pixelport-artifacts/golden-image-backups/checksums/openclaw-2026.3.11.tar.sha256
+shasum -a 256 /Users/sanchal/pixelport-artifacts/golden-image-backups/docker-image-archives/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.tar.gz \
+  > /Users/sanchal/pixelport-artifacts/golden-image-backups/checksums/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.sha256
 ```
 
 Verify later with:
 
 ```bash
-sha256sum -c /Users/sanchal/pixelport-artifacts/golden-image-backups/checksums/openclaw-2026.3.11.tar.sha256
+shasum -a 256 -c /Users/sanchal/pixelport-artifacts/golden-image-backups/checksums/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.sha256
 ```
 
 ## Restore an Image
 
 ```bash
 docker image load \
-  -i /Users/sanchal/pixelport-artifacts/golden-image-backups/docker-image-archives/openclaw-2026.3.11.tar
+  -i /Users/sanchal/pixelport-artifacts/golden-image-backups/docker-image-archives/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.tar.gz
 ```
 
 After loading, retag if needed before promotion or testing.
+
+## Known Good Backup Artifacts (2026-03-18)
+
+- `docker-image-archives/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.tar.gz`
+- `checksums/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.sha256`
+- `manifests/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.manifest.txt`
+- `cloud-init-snapshots/2026-03-18-provision-tenant-source.ts`
+- `cloud-init-snapshots/2026-03-18-snapshot-notes.txt`
 
 ## Retention Guidance
 

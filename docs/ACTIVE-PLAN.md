@@ -4,10 +4,10 @@
 
 ---
 
-## Current Phase: Phase P6 — Integrations-First Post-Pivot Build
+## Current Phase: Phase P6 — Launch-Critical Handoff Stabilization + Integrations
 
 **Status:** Active (P5 closed on 2026-03-18).  
-**Goal:** Move from pivot cleanup into account/tooling cleanup plus integrations-first build work (Google + Slack), with global PixelPort branding staged in parallel.
+**Goal:** Restore true end-to-end Launch flow first (signup -> onboarding -> provision -> launch -> authenticated runtime -> agent response), then resume integrations-first build work.
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/pixelport-master-plan-v2.md`
 
 ### Confirmed Inputs (Closed from P5)
@@ -20,6 +20,13 @@
 - [x] Founder shut down Railway LiteLLM service (2026-03-18 confirmation)
 
 ### P6 Work Checklist
+
+#### Track 0 — Launch-Critical E2E (Highest Priority)
+- [x] D1: Apply CTO medium fixes (scan fetch timeouts, `docs/` Vercel skip path, missing scan tests)
+- [x] D2: Implement runtime launch URL contract for gateway-token auto-login (`workspace_launch_url`) in handoff + frontend launch paths
+- [x] D3: Add local fail-safe golden image backup runbook and capture first local archive + checksum + manifest
+- [ ] D4: Resolve Control UI secure-context/device-identity blocker on raw droplet HTTP runtime URLs
+- [ ] D5: Merge PR `#17`, deploy to production, and run full canary flow proof (`signup -> onboarding -> provision -> launch -> auto-login -> agent responds`)
 
 #### Track A — TryClam Teardown
 - [x] A1: Inventory any remaining TryClam dependencies (repo/docs/runtime/process)
@@ -39,6 +46,8 @@
 ### Notes
 
 - Major product, architecture, and UX decisions still require founder approval before implementation.
+- Launch-critical QA evidence:
+  - `docs/qa/2026-03-18-p6-handoff-runtime-canary.md`
 - P5 closure evidence:
   - `docs/qa/2026-03-18-p5-merge-order-smoke.md`
   - `docs/qa/2026-03-18-p5-vercel-ignorecommand-hotfix-merge-smoke.md`
@@ -46,7 +55,9 @@
   - `docs/qa/2026-03-18-p6-track-a1-tryclam-inventory.md`
 - P6 Track A runbook: `docs/ops/tryclam-teardown-runbook.md`
 - P6 golden-image backup runbook: `docs/ops/golden-image-backup-runbook.md`
-- Immediate execution order: Track A first, then Track B, with Track C prepared in parallel as non-blocking planning.
+- OpenClaw upgrade note:
+  - candidate bump to latest upstream tag (`v2026.3.13-1`) is queued only after D5 passes and one stable golden image canary is confirmed.
+- Immediate execution order: Track 0 first. Resume Track A/B/C only after launch-critical D4/D5 closure.
 
 ---
 
