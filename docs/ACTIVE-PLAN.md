@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, A2 merge `9eb17df`, A3 merge `4b06fda`, and A4 merge `8e9f2f0` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A2-A4 are merged and production-smoked; Track A5 remains open pending founder boundary confirmation).  
+**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, A2 merge `9eb17df`, A3 merge `4b06fda`, and A4 merge `8e9f2f0` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A2-A5 founder policies are closed in docs on branch `codex/p1-a5-incident-boundary-closure`, pending PR #5 merge).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -27,7 +27,7 @@
 - [x] A2: Confirm repo/branch protection + CI owners and reviewer backups.
 - [x] A3: Confirm deploy ownership for staging/production runtime targets.
 - [x] A4: Confirm secret inventory + rotation ownership and rollback authority.
-- [ ] A5: Confirm incident escalation path and founder decision boundaries.
+- [x] A5: Confirm incident escalation path and founder decision boundaries.
 
 Track A audit evidence recorded (without closure fabrication):
 - [x] A2-evidence: PixelPort `main` defaults and protection/ruleset/CODEOWNERS state documented.
@@ -36,7 +36,7 @@ Track A audit evidence recorded (without closure fabrication):
 - [x] A2-evidence: `.github/CODEOWNERS` + `.github/workflows/ci.yml` baseline prepared on `codex/p1-a2-governance-guardrails` for review/merge.
 - [x] A3-evidence: active pivot Vercel/DO ownership signals documented; Railway/LiteLLM retained as legacy-decommission traceability only.
 - [x] A4-evidence: founder-approved Vercel-only source of truth + 90-day rotation + active runtime key coverage in Vercel + legacy Railway decommission stance recorded.
-- [x] A5-evidence: founder decision gates + proposed incident/rollback boundary policy are documented for approval.
+- [x] A5-evidence: founder-approved incident/rollback boundary policy (`1A`/`2A`/`3A`) is documented and closed.
 
 #### Track B — First Runtime Handoff Slice
 - [x] B1: Implement first launchpad-to-Paperclip runtime handoff API contract (additive).
@@ -56,7 +56,6 @@ Track A audit evidence recorded (without closure fabrication):
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
 | Current DO token cannot delete droplets (`HTTP 403`), so debug cleanup removes tenant rows but leaves dry-run droplets running | Repeat canary cost/quota hygiene and unattended cleanup reliability | Founder + Technical Lead |
-| Rollback authority and incident escalation chain are documented but not explicitly founder-confirmed for closure | A5 closure and incident readiness | Founder + Technical Lead |
 | Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
 
 ### Notes
@@ -96,6 +95,7 @@ Track A audit evidence recorded (without closure fabrication):
   - A4 secrets closure evidence: `docs/qa/2026-03-17-pivot-p1-a4-secrets-closure.md`
   - A4 merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a4-merge-smoke.md`
   - A5 boundary proposal evidence: `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-proposal.md`
+  - A5 boundary closure evidence: `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-closure.md`
 
 ---
 

@@ -308,7 +308,7 @@ Founder approvals have now closed A4 with explicit policy decisions:
 Closure evidence:
 - `docs/qa/2026-03-17-pivot-p1-a4-secrets-closure.md`
 
-Track A closure state after this update:
+Track A closure state after this update (historical snapshot at this checkpoint):
 - A1: closed
 - A2: closed
 - A3: closed
@@ -337,7 +337,7 @@ Evidence artifact:
 
 ## Pivot Execution Update (2026-03-17 Track A5 Incident Boundary Proposal)
 
-Track A5 remains open and now has a concrete decision-ready proposal for founder approval:
+Track A5 remained open at this proposal checkpoint with a concrete decision-ready policy draft:
 
 - rollback authority boundary proposal
 - severity-based founder notification SLA proposal
@@ -345,6 +345,27 @@ Track A5 remains open and now has a concrete decision-ready proposal for founder
 
 Proposal artifact:
 - `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-proposal.md`
+
+## Pivot Execution Update (2026-03-17 Track A5 Incident Boundary Closure)
+
+Founder approved the A5 boundary policy with decisions `1A`, `2A`, and `3A`:
+
+- rollback authority: founder + technical lead immediate rollback; backups only when founder-delegated
+- severity SLA: SEV-0 `5m`, SEV-1 `10m`, SEV-2 `60m`, SEV-3 daily digest
+- CTO escalation triggers: mandatory for rollback, SEV-0/SEV-1, security/auth/secrets incidents, repeated SEV-2
+
+Closure evidence:
+- `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-closure.md`
+
+Merge note:
+- this closure update is prepared on branch `codex/p1-a5-incident-boundary-closure` and is pending PR `#5` merge to `main`.
+
+Track A closure state after this update:
+- A1: closed
+- A2: closed
+- A3: closed
+- A4: closed
+- A5: closed
 
 ---
 

@@ -4,6 +4,16 @@
 **Branch:** `codex/p1-a5-incident-boundary-closure`  
 **Scope:** Founder-approval proposal for incident escalation and rollback authority closure
 
+## Resolution
+
+Founder approved the recommended policy set on 2026-03-17:
+- `1A` rollback authority
+- `2A` severity + founder notification SLA
+- `3A` CTO escalation triggers
+
+This proposal is now resolved and superseded by:
+- `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-closure.md`
+
 ## Objective
 
 Convert A5 from "documented but unconfirmed" into an explicit, founder-approved incident command and rollback policy.
@@ -11,7 +21,7 @@ Convert A5 from "documented but unconfirmed" into an explicit, founder-approved 
 ## Current State
 
 - A1-A4 are closed.
-- A5 remains open pending explicit founder confirmation of:
+- At this proposal checkpoint, A5 was open pending explicit founder confirmation of:
   - rollback execution authority
   - founder notification SLA by severity
   - CTO escalation/review trigger points
@@ -51,10 +61,6 @@ CTO review is mandatory when any of the following occurs:
 
 CTO review is optional for isolated SEV-3 doc/config issues without runtime impact.
 
-## Closure Condition
-
-A5 can be marked **closed** after founder explicitly approves or edits the proposed policy above.
-
 ## Verdict
 
-A5 remains **open** in this artifact until founder confirmation is recorded.
+Resolved proposal artifact. Final closure truth is recorded in the A5 closure evidence file.
