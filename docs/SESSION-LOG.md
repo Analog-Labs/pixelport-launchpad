@@ -7,6 +7,30 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 88)
+- **Who worked:** Codex
+- **What was done:**
+  - Executed Track A3 documentation closure slice on branch `codex/p1-a3-deploy-ownership-closure`.
+  - Opened CTO review PR:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/3`
+  - Added A3 closure QA evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p1-a3-deploy-ownership-closure.md`
+  - Updated ownership contract and closure states:
+    - `docs/paperclip-fork-bootstrap-ownership.md`
+      - A3 moved to `✅ Closed`
+      - A2 wording corrected from stale "pending merge" to merged-on-`main` truth (`9eb17df`)
+      - founder-decision header narrowed to `A4-A5`
+  - Applied founder clarification on deploy-model scope:
+    - Railway/LiteLLM is now explicitly documented as **legacy pre-pivot infra** and **decommission-path only**
+    - active pivot deploy ownership scope is now consistently framed as launchpad GitHub/Vercel + DigitalOcean
+  - Synced planning/status docs to match A3 closure and A4/A5 remaining open:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/pixelport-project-status.md`
+- **What's next:**
+  - Continue Track A4 closure with explicit source-of-truth and rotation ownership for `PAPERCLIP_*` + runtime secrets.
+  - Continue Track A5 closure with founder-confirmed rollback authority and incident escalation boundaries.
+- **Blockers:** A3 blocker is cleared. Remaining founder-confirmation blockers are A4 (secrets/rotation authority) and A5 (incident/rollback boundary closure).
+
 - **Date:** 2026-03-17 (session 87)
 - **Who worked:** Codex
 - **What was done:**

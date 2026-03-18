@@ -84,7 +84,8 @@ Track A ownership-audit evidence is now documented (without fabricated closure):
 - deploy ownership evidence captured:
   - Vercel ownership/scope signal: `sanchalr` / `sanchalrs-projects`
   - Vercel production branch signal: `main`
-  - Railway workspace owner signal and DO account ownership signal observed
+  - Railway workspace owner signal observed as legacy pre-pivot infra traceability only (not active runtime deploy authority)
+  - DO account ownership signal observed
   - DO token scope limits observed on billing/balance endpoints (`403`)
 - secrets inventory signal captured by surface (names only), with explicit note that `PAPERCLIP_*` handoff vars are not visible in current Vercel env listing evidence
 
@@ -227,6 +228,34 @@ Residual operations risk:
 
 Evidence artifact:
 - `docs/qa/2026-03-17-pivot-p1-managed-golden-rebuild-closure.md`
+
+## Pivot Execution Update (2026-03-17 Track A3 Deploy Ownership Closure)
+
+Track A3 is now explicitly closed with named deploy ownership and delegate coverage for launch surfaces:
+
+- evidence artifact: `docs/qa/2026-03-17-pivot-p1-a3-deploy-ownership-closure.md`
+- ownership contract update: `docs/paperclip-fork-bootstrap-ownership.md`
+
+Confirmed ownership signals used for closure:
+- Vercel deploy target scope: `sanchalrs-projects/pixelport-launchpad`
+- DigitalOcean owner signal: `sanchal@analog.one` (`My Team`)
+- launchpad repo ownership/governance signal: `Analog-Labs/pixelport-launchpad` on `main`
+
+Legacy infra note:
+- Railway/LiteLLM (`pixelport-litellm`) remains running from pre-pivot architecture but is not part of active Paperclip-primary deploy ownership scope; it is tracked as legacy-to-decommission.
+
+Named deploy ownership model:
+- primary owner: `sanchalr` / `sanchal@analog.one`
+- backup delegates: `haider-rs` (primary), `penumbra23` (secondary)
+- promotion authority: primary by default; backups when founder-delegated
+- rollback authority: primary immediate; backups when founder-delegated; founder notification required immediately after rollback
+
+Track A closure state after this update:
+- A1: closed
+- A2: closed
+- A3: closed
+- A4: open
+- A5: open
 
 ---
 
