@@ -80,3 +80,26 @@ Define what `pixelport-launchpad` keeps vs retires after Paperclip cutover, with
   - explicit branch-scoped diff
   - CTO review
   - same-session smoke evidence.
+
+## Batch Progress Snapshot (2026-03-17)
+
+### Batch 1 (chat/content/approvals) — Completed on implementation branch
+- Removed route files:
+  - `api/chat.ts`
+  - `api/chat/history.ts`
+  - `api/content/index.ts`
+  - `api/content/[id].ts`
+  - `api/approvals/index.ts`
+  - `api/approvals/[id]/decide.ts`
+- Removed now-empty directories:
+  - `api/chat/`
+  - `api/content/`
+  - `api/approvals/`
+- Validation completed:
+  - `npx tsc --noEmit` (`pass`)
+  - `npm test -- --exclude src/test/tenants-status-route.test.ts` (`pass`)
+  - dependency scans show no active frontend/inngest/test dependencies on removed groups
+
+### Deferred from Batch 1
+- `api/competitors/*` remains active and was intentionally not deleted:
+  - active frontend dependency: `src/pages/dashboard/Competitors.tsx` -> `GET /api/competitors`

@@ -7,6 +7,43 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 96)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Started next unblocked pivot slice: launchpad runtime prune Track C4 batch 1 on branch:
+    - `codex/p3-c4-prune-batch1-chat-content-approvals`
+  - Executed dependency-first deletion of confirmed-unused legacy route groups:
+    - deleted:
+      - `api/chat.ts`
+      - `api/chat/history.ts`
+      - `api/content/index.ts`
+      - `api/content/[id].ts`
+      - `api/approvals/index.ts`
+      - `api/approvals/[id]/decide.ts`
+    - removed now-empty directories:
+      - `api/chat/`
+      - `api/content/`
+      - `api/approvals/`
+  - Verified prune constraints before/after deletion:
+    - no active `src` runtime calls to `/api/chat`, `/api/content`, `/api/approvals`
+    - no route/test/inngest dependency on deleted groups
+    - `api/competitors/*` explicitly retained because dashboard still calls `GET /api/competitors`
+  - Validation:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test -- --exclude src/test/tenants-status-route.test.ts` (`pass`, 26 files / 103 tests)
+  - Added P3 batch artifacts:
+    - build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice.md`
+    - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice-cto-prompt.md`
+    - QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1.md`
+  - Updated migration and planning/status docs for P3:
+    - `docs/migration/launchpad-runtime-prune-checklist.md`
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/pixelport-project-status.md`
+- **What's next:**
+  - Open CTO review PR for batch 1 route-prune branch.
+  - After CTO approval, merge to `main`, monitor deploy, and run same-session smoke on retained active surfaces.
+- **Blockers:** `api/competitors/*` deletion is blocked by active frontend dependency (`src/pages/dashboard/Competitors.tsx`).
+
 - **Date:** 2026-03-17 (session 95)
 - **Who worked:** Founder + Codex
 - **What was done:**

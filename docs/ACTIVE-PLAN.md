@@ -4,46 +4,51 @@
 
 ---
 
-## Current Phase: Phase P2 — Paperclip Handoff Consumer and Workspace Launch Redirect
+## Current Phase: Phase P3 — Launchpad Runtime Prune (Track C4 Batch 1)
 
-**Status:** Active (PR `#6` is merged on `main` as `cba0625`; P2 implementation PR `#7` is merged/deployed on `main` as `a2d179d`; required checks and same-session production smoke are passing).  
-**Goal:** Consume the existing `/api/runtime/handoff` contract during onboarding Launch and redirect users directly to their tenant Paperclip workspace URL.  
-**Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
+**Status:** Active (P2 is closed/merged on `main`; implementation branch `codex/p3-c4-prune-batch1-chat-content-approvals` is prepared for CTO review).  
+**Goal:** Incrementally prune unused legacy launchpad runtime route groups while preserving active thin-bridge provisioning responsibilities.  
+**Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/migration/launchpad-runtime-prune-checklist.md`
 
 ### Locked Decisions (Carry Forward)
 
-- [x] Runtime source of truth remains the PixelPort-owned Paperclip fork.
-- [x] Preserve Paperclip default workspace behavior; do not modify `agents.md`/`heartbeat.md` templates from launchpad.
-- [x] Keep `SOUL.md` additive with onboarding-captured context only.
-- [x] Launch should redirect to the tenant Paperclip workspace URL returned by handoff.
-- [x] `launch_completed_at` should persist only after successful handoff and successful onboarding save.
-- [x] Railway/LiteLLM remains legacy/decommission path and is not part of active pivot runtime architecture.
+- [x] Launchpad remains marketing + billing + thin provisioning bridge.
+- [x] Pruning is incremental; no big-bang deletion.
+- [x] Remove only route groups with confirmed no active frontend/inngest dependencies.
+- [x] Keep `api/competitors/*` for now (dashboard still depends on it).
+- [x] Keep all onboarding/provisioning keep-now surfaces intact.
 
-### P2 Work Checklist
+### P3 Work Checklist
 
-#### Track A — Launch Redirect Consumer
-- [x] A1: Wire onboarding Launch to blocking `POST /api/runtime/handoff` (`source=onboarding-launch`).
-- [x] A2: Validate `paperclip_runtime_url` and redirect with `window.location.assign(...)`.
-- [x] A3: Persist `launch_completed_at` only after handoff success and onboarding save success.
-- [x] A4: Update launch-step UX copy from dashboard language to workspace language.
-- [x] A5: Validate with local checks + independent QA sub-agent review.
+#### Track A — Batch 1 Implementation (Chat/Content/Approvals)
+- [x] A1: Verify no active frontend runtime calls to `/api/chat`, `/api/content`, `/api/approvals`.
+- [x] A2: Verify no route/test/inngest dependencies on those route groups.
+- [x] A3: Delete `chat`, `content`, and `approvals` route files and emptied directories.
+- [x] A4: Run local validation (`npx tsc --noEmit`, CI-equivalent tests).
+- [x] A5: Record QA evidence for this batch.
 
 #### Track B — Review and Release
-- [x] B1: Create P2 build brief and CTO review prompt.
-- [x] B2: Open CTO review PR for `codex/p2-paperclip-launch-redirect` (`#7`).
-- [x] B3: Merge approved P2 slice to `main`.
-- [x] B4: Run same-session production smoke for onboarding launch + handoff surfaces.
+- [x] B1: Create P3 build brief and CTO review prompt.
+- [ ] B2: Open CTO review PR for `codex/p3-c4-prune-batch1-chat-content-approvals`.
+- [ ] B3: Merge approved P3 slice to `main`.
+- [ ] B4: Run same-session production smoke for retained active surfaces.
 
 ### Blockers
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
+| `api/competitors/*` cannot be pruned yet because dashboard still calls `GET /api/competitors` (`src/pages/dashboard/Competitors.tsx`) | Route-prune batch 2 planning/execution | Technical Lead (+ Founder approval if UX surface changes) |
 | Current DO token cannot delete droplets (`HTTP 403`), so debug cleanup removes tenant rows but leaves dry-run droplets running | Repeat canary cost/quota hygiene and unattended cleanup reliability | Founder + Technical Lead |
 | Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
 
 ### Notes
 
 - If any older checklist conflicts with the pivot plan, pivot plan wins.
+- P3 artifacts:
+  - migration checklist: `docs/migration/launchpad-runtime-prune-checklist.md`
+  - build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice.md`
+  - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice-cto-prompt.md`
+  - QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1.md`
 - P2 artifacts:
   - build brief: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice.md`
   - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice-cto-prompt.md`

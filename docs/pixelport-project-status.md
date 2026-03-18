@@ -435,6 +435,40 @@ Targeted production smoke on `https://pixelport-launchpad.vercel.app` passed:
 Evidence artifact:
 - `docs/qa/2026-03-17-pivot-p2-launch-workspace-redirect-merge-smoke.md`
 
+## Pivot Execution Update (2026-03-17 P3 Runtime Prune Batch 1 — Implementation Prepared)
+
+Next incremental cutover-prune slice is implemented on branch:
+
+- branch: `codex/p3-c4-prune-batch1-chat-content-approvals`
+- migration contract: `docs/migration/launchpad-runtime-prune-checklist.md`
+
+Implemented deletions (batch 1):
+- `api/chat.ts`
+- `api/chat/history.ts`
+- `api/content/index.ts`
+- `api/content/[id].ts`
+- `api/approvals/index.ts`
+- `api/approvals/[id]/decide.ts`
+- removed now-empty route directories:
+  - `api/chat/`
+  - `api/content/`
+  - `api/approvals/`
+
+Dependency/guardrail truth:
+- no active frontend runtime calls to `/api/chat`, `/api/content`, or `/api/approvals`
+- no inngest dependency on deleted groups
+- no route/test imports of deleted groups
+- `api/competitors/*` intentionally retained because dashboard still calls `GET /api/competitors` from `src/pages/dashboard/Competitors.tsx`
+
+Validation recorded:
+- `npx tsc --noEmit` -> `pass`
+- `npm test -- --exclude src/test/tenants-status-route.test.ts` -> `pass` (26 files / 103 tests)
+
+Artifacts:
+- build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice.md`
+- CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice-cto-prompt.md`
+- QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1.md`
+
 ---
 
 ## 1. Strategic Context
