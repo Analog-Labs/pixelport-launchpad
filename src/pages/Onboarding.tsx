@@ -22,6 +22,7 @@ interface OnboardingFormData {
 interface RuntimeHandoffResponse {
   error?: string;
   paperclip_runtime_url?: string;
+  handoff_token?: string;
 }
 
 const DEFAULT_AGENT_NAME = "Luna";
@@ -63,6 +64,13 @@ function resolveWorkspaceUrl(rawUrl: unknown): string | null {
   } catch {
     return null;
   }
+}
+
+function buildPaperclipHandoffUrl(workspaceUrl: string, handoffToken: string): string {
+  const handoffUrl = new URL("/api/auth/pixelport/handoff", workspaceUrl);
+  handoffUrl.searchParams.set("handoff_token", handoffToken);
+  handoffUrl.searchParams.set("next", "/");
+  return handoffUrl.toString();
 }
 
 function toGoalsArray(missionGoals: string): string[] {
@@ -421,6 +429,11 @@ const Onboarding = () => {
         throw new Error("Paperclip workspace URL is unavailable for this tenant.");
       }
 
+      const handoffToken = readString(handoffResult.handoff_token).trim();
+      if (!handoffToken) {
+        throw new Error("Paperclip handoff token is unavailable for this tenant.");
+      }
+
       const payload = {
         ...basePayload,
         launch_completed_at: new Date().toISOString(),
@@ -446,7 +459,7 @@ const Onboarding = () => {
         throw new Error(saveResult.error || "Failed to save onboarding setup.");
       }
 
-      window.location.assign(workspaceUrl);
+      window.location.assign(buildPaperclipHandoffUrl(workspaceUrl, handoffToken));
       return;
     } catch (error) {
       setLaunchError(error instanceof Error ? error.message : "Failed to finalize onboarding.");

@@ -4,75 +4,59 @@
 
 ---
 
-## Current Phase: Phase P3 — Launchpad Runtime Prune (Track C4 Batch 3)
+## Current Phase: Phase P4 — Paperclip Authenticated Handoff Consumer
 
-**Status:** Active (P2 is closed/merged on `main`; P3 batches 1 and 2 are merged/deployed on `main`; batch-3 implementation is prepared on `codex/p3-c4-prune-batch3-chat-settings-legacy` pending CTO review).  
-**Goal:** Incrementally prune unused legacy launchpad runtime route groups while preserving active thin-bridge provisioning responsibilities.  
-**Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/migration/launchpad-runtime-prune-checklist.md`
+**Status:** Active (`P3` is now closed on `main`; PR `#12` merged as `4d80c49`).  
+**Goal:** Complete the last-mile launch experience so `Launch -> Paperclip workspace` lands the user already authenticated.  
+**Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `api/lib/paperclip-handoff-contract.ts`
 
 ### Locked Decisions (Carry Forward)
 
 - [x] Launchpad remains marketing + billing + thin provisioning bridge.
-- [x] Pruning is incremental; no big-bang deletion.
-- [x] Remove only route groups with confirmed no active frontend/inngest dependencies.
-- [x] Remove vestigial dashboard pages in the same batch as the dependent API deletions.
-- [x] Keep all onboarding/provisioning keep-now surfaces intact.
-- [x] Workspace bootstrap guidance is workspace-first and must not depend on removed legacy runtime APIs.
+- [x] Runtime handoff contract stays `p1-v1` and remains HMAC-signed with short TTL.
+- [x] Runtime URL remains per-tenant (`droplet_ip:18789`) for V1; TLS cutover is deferred.
+- [x] Launchpad onboarding save flow remains unchanged except redirect target composition.
+- [x] Paperclip consumes handoff token at `/api/auth/pixelport/handoff` and sets Better Auth session cookie.
 
-### P3 Work Checklist
+### P4 Work Checklist
 
-#### Track A — Batch 1 Implementation (Chat/Content/Approvals)
-- [x] A1: Verify no active frontend runtime calls to `/api/chat`, `/api/content`, `/api/approvals`.
-- [x] A2: Verify no route/test/inngest dependencies on those route groups.
-- [x] A3: Delete `chat`, `content`, and `approvals` route files and emptied directories.
-- [x] A4: Run local validation (`npx tsc --noEmit`, CI-equivalent tests).
-- [x] A5: Record QA evidence for this batch.
+#### Track A — Paperclip Consumer Implementation
+- [x] A1: Add Better Auth plugin endpoint `GET /api/auth/pixelport/handoff`.
+- [x] A2: Verify HMAC handoff token contract (`iss/aud/v/iat/exp/signature`) in Paperclip.
+- [x] A3: Ensure/create board principal (`authUsers`), `instance_admin` role, and owner memberships.
+- [x] A4: Create Better Auth session cookie and redirect to workspace path (`next`, default `/`).
+- [x] A5: Add token-verification unit tests in Paperclip and run server typecheck/tests.
 
-#### Track B — Review and Release
-- [x] B1: Create P3 build brief and CTO review prompt.
-- [x] B2: Open CTO review PR for `codex/p3-c4-prune-batch1-chat-content-approvals` (`#9`).
-- [x] B3: Merge approved P3 slice to `main`.
-- [x] B4: Run same-session production smoke for retained active surfaces.
+#### Track B — Launchpad Redirect Wiring
+- [x] B1: Keep existing `/api/runtime/handoff` request behavior in onboarding launch.
+- [x] B2: Require `handoff_token` and redirect to `/api/auth/pixelport/handoff?handoff_token=...&next=/`.
+- [x] B3: Keep existing launch ordering (`runtime handoff` -> `save onboarding` -> `redirect`).
+- [x] B4: Run launchpad compile validation (`npx tsc --noEmit`).
 
-#### Track C — Batch 2 Implementation (Dashboard/API Legacy Removal)
-- [x] C1: Remove dashboard runtime dependencies on legacy task/vault/competitor/command APIs.
-- [x] C2: Delete vestigial dashboard pages/routes (`Content`, `Calendar`, `Vault`, `Competitors`).
-- [x] C3: Delete legacy route groups (`commands`, `tasks`, `vault`, `agent`, `agents`, `competitors`).
-- [x] C4: Update bootstrap/workspace contract guidance to workspace-first instructions (no `/api/agent/*` guidance).
-- [x] C5: Remove dead route tests/libraries tied to deleted groups.
-- [x] C6: Run local validation (`npx tsc --noEmit`, CI-equivalent tests).
-- [x] C7: Record QA evidence for batch 2.
-
-#### Track D — Review and Release (Batch 2)
-- [x] D1: Create batch-2 build brief and CTO review prompt.
-- [x] D2: Open CTO review PR for `codex/p3-c4-prune-batch2-dashboard-runtime-legacy` (`#11`).
-- [x] D3: Merge approved batch-2 slice to `main` (`cfc9daf` via PR `#11`).
-- [x] D4: Run same-session production smoke for retained active surfaces.
-
-#### Track E — Batch 3 Implementation (Chat/Settings Legacy Removal)
-- [x] E1: Remove dashboard chat surfaces (`Chat.tsx`, `ChatWidget.tsx`, `ChatContext.tsx`) and provider wiring.
-- [x] E2: Remove dashboard `Performance` and `Settings` pages/routes/nav references.
-- [x] E3: Delete `api/settings/*` and `api/debug/slack-status.ts`.
-- [x] E4: Fix `src/test/tenants-status-route.test.ts` to current status payload contract.
-- [x] E5: Run local validation (`npx tsc --noEmit`, `npm test`, `npm run build`).
-- [x] E6: Record QA evidence for batch 3.
-
-#### Track F — Review and Release (Batch 3)
-- [x] F1: Create batch-3 build brief and CTO review prompt.
-- [x] F2: Open CTO review PR for `codex/p3-c4-prune-batch3-chat-settings-legacy` (`#12`).
-- [ ] F3: Merge approved batch-3 slice to `main`.
-- [ ] F4: Run same-session production smoke for retained active surfaces.
+#### Track C — Review and Release
+- [x] C1: Sync plan/session docs for multi-agent awareness.
+- [ ] C2: Open CTO review PRs (launchpad + Paperclip fork) for this slice.
+- [ ] C3: Merge approved PRs and run production smoke (`Launch -> authenticated workspace`).
 
 ### Blockers
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
+| Cross-repo deployment ordering: Paperclip consumer must be deployed before launchpad redirect is released globally | Avoid broken redirects to missing endpoint | Technical Lead + Founder |
+| `PAPERCLIP_HANDOFF_SECRET` parity across launchpad and every tenant Paperclip runtime | Prevent invalid-signature handoff failures | Founder + Technical Lead |
 | Current DO token cannot delete droplets (`HTTP 403`), so debug cleanup removes tenant rows but leaves dry-run droplets running | Repeat canary cost/quota hygiene and unattended cleanup reliability | Founder + Technical Lead |
 | Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
 
 ### Notes
 
 - If any older checklist conflicts with the pivot plan, pivot plan wins.
+- P4 implementation branches:
+  - launchpad: `codex/p4-launchpad-handoff-redirect`
+  - Paperclip fork: `codex/pixelport-handoff-autologin`
+- P4 artifacts:
+  - build brief: `docs/build-briefs/2026-03-18-pivot-p4-paperclip-handoff-autologin-slice.md`
+  - CTO prompt: `docs/build-briefs/2026-03-18-pivot-p4-paperclip-handoff-autologin-slice-cto-prompt.md`
+  - QA evidence: `docs/qa/2026-03-18-pivot-p4-paperclip-handoff-autologin.md`
 - P3 artifacts:
   - migration checklist: `docs/migration/launchpad-runtime-prune-checklist.md`
   - build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice.md`
@@ -131,6 +115,7 @@
 
 ## Previous Phases (Historical)
 
+- Phase P3 — Launchpad Runtime Prune (Tracks C4 batches 1-3) ✅
 - Phase P0 — Paperclip-Primary Pivot Foundation ✅
 - Phase 0 — Foundation ✅
 - Phase 1 — Chief of Staff Alive ✅
