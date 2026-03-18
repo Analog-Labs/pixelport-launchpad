@@ -500,6 +500,7 @@ Evidence artifact:
 Next incremental cutover-prune slice is implemented on branch:
 
 - branch: `codex/p3-c4-prune-batch2-dashboard-runtime-legacy`
+- CTO review PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/11`
 - migration contract: `docs/migration/launchpad-runtime-prune-checklist.md`
 
 Implemented batch-2 deletions:

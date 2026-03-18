@@ -45,7 +45,7 @@
 
 #### Track D — Review and Release (Batch 2)
 - [x] D1: Create batch-2 build brief and CTO review prompt.
-- [ ] D2: Open CTO review PR for `codex/p3-c4-prune-batch2-dashboard-runtime-legacy`.
+- [x] D2: Open CTO review PR for `codex/p3-c4-prune-batch2-dashboard-runtime-legacy` (`#11`).
 - [ ] D3: Merge approved batch-2 slice to `main`.
 - [ ] D4: Run same-session production smoke for retained active surfaces.
 

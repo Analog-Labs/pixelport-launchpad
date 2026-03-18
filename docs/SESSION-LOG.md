@@ -37,12 +37,14 @@
     - `npm test -- --exclude src/test/tenants-status-route.test.ts` (`pass`, 17 files / 70 tests)
   - Added batch-2 QA evidence:
     - `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
+  - Opened CTO review PR for this P3 batch:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/11`
   - Updated live planning/status docs:
     - `docs/ACTIVE-PLAN.md`
     - `docs/migration/launchpad-runtime-prune-checklist.md`
     - `docs/pixelport-project-status.md`
 - **What's next:**
-  - Open CTO review PR for `codex/p3-c4-prune-batch2-dashboard-runtime-legacy`.
+  - Complete CTO review for PR `#11`.
   - After CTO approval, merge to `main`, monitor deploy, and run same-session production smoke on retained surfaces.
 - **Blockers:** No new code blocker in this slice. Residual ops blockers remain: DO droplet delete scope (`HTTP 403`) and allowlist control for provisioning tests.
 
