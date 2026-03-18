@@ -1,6 +1,6 @@
 import {
   LayoutDashboard,
-  Plug, Settings, LogOut,
+  Plug, LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
@@ -15,10 +15,6 @@ import {
 const primaryNav = [
   { title: "Home", url: "/dashboard", icon: LayoutDashboard, end: true },
   { title: "Connections", url: "/dashboard/connections", icon: Plug },
-];
-
-const secondaryNav = [
-  { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 
 function getInitials(name?: string | null, email?: string | null): string {
@@ -92,15 +88,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Divider */}
-        <div className="border-t border-zinc-800 my-2 mx-3" />
-
-        {/* Secondary nav */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>{renderNavItems(secondaryNav)}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter className="bg-sidebar border-t border-border">

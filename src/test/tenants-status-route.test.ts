@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { THIN_BRIDGE_CONTRACT_VERSION } from "../../api/lib/thin-bridge-contract";
 
 const authenticateRequest = vi.fn();
 const errorResponse = vi.fn((res: MockResponse, error: unknown) =>
@@ -82,8 +83,10 @@ describe("GET /api/tenants/status", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({
+      contract_version: THIN_BRIDGE_CONTRACT_VERSION,
       status: "active",
       bootstrap_status: "accepted",
+      task_step_unlocked: true,
       has_agent_output: true,
       has_droplet: true,
       has_gateway: true,

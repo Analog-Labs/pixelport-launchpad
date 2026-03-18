@@ -7,6 +7,57 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 99)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Merged approved PR `#11` to `main`:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/11`
+    - merge commit: `cfc9daf`
+  - Confirmed merge-commit checks:
+    - `validate` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23230372932`)
+    - `Analyze (javascript-typescript)` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23230372643`)
+  - Confirmed deploy completion for merge commit:
+    - Vercel status: `success`
+    - deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/8b8EXC2TWkveNLFPSuFv4SW5nkZ1`
+  - Ran targeted post-merge production smoke on `https://pixelport-launchpad.vercel.app`:
+    - retained active surfaces:
+      - `GET /api/runtime/handoff` -> `405 {"error":"Method not allowed"}`
+      - `POST /api/runtime/handoff` without auth -> `401 {"error":"Missing or invalid Authorization header"}`
+      - `GET /api/tenants/status` without auth -> `401 {"error":"Missing or invalid Authorization header"}`
+      - `GET /api/settings` without auth -> `401 {"error":"Missing or invalid Authorization header"}`
+    - deleted-route confirmation:
+      - `GET /api/commands` -> `404`
+      - `GET /api/tasks` -> `404`
+      - `GET /api/vault` -> `404`
+      - `GET /api/agent/memory` -> `404`
+      - `GET /api/competitors` -> `404`
+  - Started next approved pivot slice on branch:
+    - `codex/p3-c4-prune-batch3-chat-settings-legacy`
+  - Added batch-3 implementation artifacts:
+    - build brief: `docs/build-briefs/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy.md`
+    - CTO prompt: `docs/build-briefs/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy-cto-prompt.md`
+  - Implemented batch-3 deletions and contract-test fix:
+    - removed dashboard chat surfaces (`Chat.tsx`, `ChatWidget.tsx`, `ChatContext.tsx`) and provider wiring
+    - removed dashboard `Performance` + `Settings` routes/pages/nav links
+    - deleted `api/settings/*` and `api/debug/slack-status.ts`
+    - fixed `src/test/tenants-status-route.test.ts` to current payload contract (`contract_version`, `task_step_unlocked`)
+  - Validation:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test` (`pass`, 18 files / 71 tests, includes `tenants-status-route.test.ts`)
+    - `npm run build` (`pass`)
+  - Added batch-3 QA evidence:
+    - `docs/qa/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy.md`
+  - Opened CTO review PR for this P3 batch:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/12`
+  - Updated live planning/status docs:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/migration/launchpad-runtime-prune-checklist.md`
+    - `docs/pixelport-project-status.md`
+- **What's next:**
+  - Complete CTO review for PR `#12`.
+  - After CTO approval, merge to `main`, monitor deploy, and run same-session production smoke.
+- **Blockers:** No new code blocker in this slice. Residual ops blockers remain: DO droplet delete scope (`HTTP 403`) and allowlist control for provisioning tests.
+
 - **Date:** 2026-03-17 (session 98)
 - **Who worked:** Founder + Codex
 - **What was done:**

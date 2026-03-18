@@ -132,6 +132,24 @@ Define what `pixelport-launchpad` keeps vs retires after Paperclip cutover, with
 - Additive alignment:
   - bootstrap/workspace contract messaging moved to workspace-first guidance (no `/api/agent/*` instructions)
 
+### Batch 3 (chat/settings legacy removal) — Completed on implementation branch
+- Branch: `codex/p3-c4-prune-batch3-chat-settings-legacy`
+- Removed vestigial dashboard surfaces:
+  - `src/pages/dashboard/Chat.tsx`
+  - `src/components/dashboard/ChatWidget.tsx`
+  - `src/contexts/ChatContext.tsx`
+  - `src/pages/dashboard/Performance.tsx`
+  - `src/pages/dashboard/Settings.tsx`
+  - plus route/nav/provider wiring cleanup in `src/App.tsx`, `src/pages/Dashboard.tsx`, and `src/components/dashboard/AppSidebar.tsx`
+- Removed route groups/endpoints:
+  - `api/settings/*`
+  - `api/debug/slack-status.ts`
+- Validation completed:
+  - `npx tsc --noEmit` (`pass`)
+  - `npm test` (`pass`, `tenants-status-route.test.ts` included)
+  - `npm run build` (`pass`)
+- Contract alignment:
+  - `src/test/tenants-status-route.test.ts` updated to assert current payload fields (`contract_version`, `task_step_unlocked`)
+
 ### Next Deferred Group(s)
 - `api/connections/*` + integration activation functions
-- `api/settings/*` + `api/debug/slack-status.ts`

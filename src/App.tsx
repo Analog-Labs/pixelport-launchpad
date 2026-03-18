@@ -12,10 +12,7 @@ import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/dashboard/Home";
-import Performance from "./pages/dashboard/Performance";
 import Connections from "./pages/dashboard/Connections";
-import Settings from "./pages/dashboard/Settings";
-import Chat from "./pages/dashboard/Chat";
 
 const queryClient = new QueryClient();
 
@@ -33,10 +30,7 @@ const App = () => (
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}>
               <Route index element={<Home />} />
-              <Route path="performance" element={<Performance />} />
               <Route path="connections" element={<Connections />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="chat" element={<Chat />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
