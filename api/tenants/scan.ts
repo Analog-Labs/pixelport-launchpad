@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { isIP } from 'net';
 import { lookup } from 'dns/promises';
 
-const LITELLM_URL = process.env.LITELLM_URL;
-const LITELLM_MASTER_KEY = process.env.LITELLM_MASTER_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const SUPABASE_PROJECT_URL = process.env.SUPABASE_PROJECT_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -212,10 +212,6 @@ async function generateBrandProfile(input: {
   ogDescription: string;
   bodyText: string;
 }): Promise<Record<string, unknown>> {
-  if (!LITELLM_URL || !LITELLM_MASTER_KEY) {
-    return { error: 'LiteLLM is not configured' };
-  }
-
   const prompt = `Analyze this website content and extract a structured brand profile.
 
 Website URL: ${input.url}
@@ -233,39 +229,94 @@ Return only a valid JSON object with:
 - key_products (string[]|null)
 - industry (string|null)`;
 
-  try {
-    const response = await fetch(`${LITELLM_URL}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LITELLM_MASTER_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'You extract structured brand profiles. Return only JSON.' },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.2,
-        max_tokens: 500,
-        response_format: { type: 'json_object' },
-      }),
-    });
-
-    if (!response.ok) {
-      return { error: `LLM request failed: HTTP ${response.status}` };
-    }
-
-    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) {
-      return { error: 'LLM returned empty content' };
-    }
-
-    return JSON.parse(content) as Record<string, unknown>;
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : 'LLM processing failed' };
+  const noLlmConfigured = !OPENAI_API_KEY && !GEMINI_API_KEY;
+  if (noLlmConfigured) {
+    return { error: 'No scan LLM provider is configured' };
   }
+
+  const providerErrors: string[] = [];
+
+  if (OPENAI_API_KEY) {
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'You extract structured brand profiles. Return only JSON.' },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.2,
+          max_tokens: 500,
+          response_format: { type: 'json_object' },
+        }),
+      });
+
+      if (!response.ok) {
+        providerErrors.push(`openai_http_${response.status}`);
+      } else {
+        const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+        const content = data.choices?.[0]?.message?.content;
+        if (!content) {
+          providerErrors.push('openai_empty_content');
+        } else {
+          return JSON.parse(content) as Record<string, unknown>;
+        }
+      }
+    } catch (error) {
+      providerErrors.push(error instanceof Error ? `openai_exception:${error.message}` : 'openai_exception');
+    }
+  }
+
+  if (GEMINI_API_KEY) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.2,
+              responseMimeType: 'application/json',
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        providerErrors.push(`gemini_http_${response.status}`);
+      } else {
+        const data = (await response.json()) as {
+          candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+        };
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!content) {
+          providerErrors.push('gemini_empty_content');
+        } else {
+          return JSON.parse(content) as Record<string, unknown>;
+        }
+      }
+    } catch (error) {
+      providerErrors.push(error instanceof Error ? `gemini_exception:${error.message}` : 'gemini_exception');
+    }
+  }
+
+  return {
+    error: 'LLM processing failed',
+    provider_errors: providerErrors,
+  };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {

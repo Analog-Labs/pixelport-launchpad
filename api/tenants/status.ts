@@ -29,7 +29,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       has_agent_output: bootstrap.progress.hasAgentOutput,
       has_droplet: !!tenant.droplet_id,
       has_gateway: !!tenant.gateway_token,
-      has_litellm: !!tenant.litellm_team_id,
       has_agentmail: !!tenant.agentmail_inbox,
       trial_ends_at: tenant.trial_ends_at ?? null,
       plan: tenant.plan ?? null,
