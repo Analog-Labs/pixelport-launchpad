@@ -40,8 +40,8 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
   - required linear history: `true`
   - enforce admins: `false` (intentional break-glass path)
 - repo rulesets remain empty (`[]`) and branch protection is currently the active enforcement layer
-- reviewer backup roster is now codified in branch slice `codex/p1-a2-governance-guardrails` via `.github/CODEOWNERS` (`@sanchalr @haider-rs @penumbra23`) and is pending merge
-- CI ownership baseline is now codified in branch slice `codex/p1-a2-governance-guardrails` via `.github/workflows/ci.yml` (`npx tsc --noEmit`, `npm test -- --exclude src/test/tenants-status-route.test.ts`) and is pending merge
+- reviewer backup roster is now codified on `main` via `.github/CODEOWNERS` (`@sanchalr @haider-rs @penumbra23`) from merged PR #2 (`9eb17df`)
+- CI ownership baseline is now codified on `main` via `.github/workflows/ci.yml` (`npx tsc --noEmit`, `npm test -- --exclude src/test/tenants-status-route.test.ts`) from merged PR #2 (`9eb17df`)
 - visible dynamic workflow/check context on `main`:
   - workflow: `CodeQL` (`dynamic/github-code-scanning/codeql`)
   - latest `main` check-run context observed: `Analyze (javascript-typescript)`
@@ -62,16 +62,26 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 
 ### A3 — Deploy Ownership Evidence
 
-- Vercel user signal: `npx vercel whoami` -> `sanchalr`
-- Vercel team scope signal: project owner is `sanchalr's projects` (`sanchalrs-projects`)
-- Vercel production source signal: recent production deployments show `githubCommitRef: main`
-- Railway ownership signal:
-  - `railway whoami` -> `sanchal02@gmail.com`
-  - workspace listed as `sanchalr's Projects`
-  - project signal: `pixelport-litellm`
+**Active pivot deploy surfaces (A3 closure scope):**
+- Launchpad repo signal:
+  - `Analog-Labs/pixelport-launchpad` default branch: `main`
+- Vercel ownership signal:
+  - deploy target path includes `sanchalrs-projects/pixelport-launchpad`
+  - production source signal remains `main`
 - DigitalOcean ownership signal:
-  - account name/email/team are visible from account endpoint
-  - token scope is limited on some endpoints (billing/balance endpoints return `403`)
+  - account email: `sanchal@analog.one`
+  - account name: `Sanchal`
+  - team: `My Team` (`ff5818a0-6b80-442d-81cb-c851fb8d17ea`)
+
+**Legacy infra signal (out of active pivot deploy model):**
+- Railway/LiteLLM service is still running (`pixelport-litellm`) but is pre-pivot legacy infra and not part of active A3 deploy ownership scope.
+- It is tracked as legacy-to-decommission and should not be treated as the runtime ownership authority for Paperclip-primary provisioning.
+
+**Named deploy ownership model (A3 closure):**
+- primary deploy owner (all active pivot launch surfaces): `sanchalr` / `sanchal@analog.one`
+- backup deploy owners (operational delegates): `haider-rs` (primary backup), `penumbra23` (secondary backup)
+- promotion authority: primary owner by default; backup owners when founder-delegated
+- rollback authority: primary owner immediate; backup owners when founder-delegated; founder notification required immediately after rollback
 
 ### A4 — Secrets Inventory Signals (Names Only)
 
@@ -112,7 +122,7 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - `AGENTMAIL_API_KEY`
 - `GEMINI_API_KEY`
 
-**LiteLLM service surface (Railway variable names observed):**
+**Legacy LiteLLM service surface (Railway, decommission path only):**
 - `LITELLM_DATABASE_URL`
 - `LITELLM_MASTER_KEY`
 - `LITELLM_UI_TOKEN`
@@ -135,21 +145,17 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 |------|--------|----------------|
 | A1 Publish ownership contract | ✅ Closed | Contract exists with matrix + runbook ownership intent |
 | A2 Repo/branch protection + CI owners/backups | ✅ Closed | `main` branch protection is enforced and requires both `Analyze (javascript-typescript)` + `validate`; CODEOWNERS + CI ownership baseline is merged on `main` via PR #2 (`9eb17df`) |
-| A3 Deploy ownership confirmation | ⏳ Open | Ownership signals exist, but explicit founder confirmation of named owners/backups is pending |
+| A3 Deploy ownership confirmation | ✅ Closed | Named primary + backup deploy ownership and promotion/rollback authority are now explicitly documented for active pivot deploy surfaces (GitHub/Vercel/DO); Railway/LiteLLM is marked legacy-only |
 | A4 Secrets + rotation + rollback authority | ⏳ Open | Inventory signal captured, but source-of-truth/rotation ownership and handoff var placement are not founder-closed |
 | A5 Incident escalation + founder boundaries | ⏳ Open | Boundaries documented, but explicit founder confirmation for closure is pending |
 
-## Founder Decisions Needed (To Close A2-A5)
+## Founder Decisions Needed (To Close A4-A5)
 
-1. Approve deploy ownership model across launchpad/runtime surfaces:
-   - primary owner
-   - backup owner
-   - who can promote/rollback production
-2. Approve secrets source-of-truth and rotation model:
+1. Approve secrets source-of-truth and rotation model:
    - where handoff vars (`PAPERCLIP_*`) are stored
    - rotation owner and cadence
    - escalation policy for missing/misaligned secrets
-3. Approve rollback and incident-command authority boundary:
+2. Approve rollback and incident-command authority boundary:
    - who can execute immediate rollback
    - founder notification SLA by severity
    - CTO escalation/review trigger points
