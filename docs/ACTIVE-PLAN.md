@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, A2 merge `9eb17df`, A3 merge `4b06fda`, and A4 merge `8e9f2f0` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A2-A5 founder policies are closed in docs on branch `codex/p1-a5-incident-boundary-closure`, pending PR #5 merge).  
+**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, A2 merge `9eb17df`, A3 merge `4b06fda`, A4 merge `8e9f2f0`, and A5 merge `38f2bb2` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A1-A5 is now closed on `main`).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -96,6 +96,7 @@ Track A audit evidence recorded (without closure fabrication):
   - A4 merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a4-merge-smoke.md`
   - A5 boundary proposal evidence: `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-proposal.md`
   - A5 boundary closure evidence: `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-closure.md`
+  - A5 merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a5-merge-smoke.md`
 
 ---
 
