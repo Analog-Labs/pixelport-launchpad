@@ -100,6 +100,53 @@ describe("provision tenant memory config", () => {
     });
   });
 
+  it("enables temporary control-ui device-auth breakglass by default", async () => {
+    const { buildOpenClawConfig } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const config = buildOpenClawConfig({
+      tenantSlug: "pixelport-qa",
+      gatewayToken: "gw-token",
+      agentName: "Luna",
+      memoryNativeEnabled: true,
+      geminiApiKey: "",
+      disableAcpDispatch: true,
+    });
+
+    expect(config).toMatchObject({
+      gateway: {
+        controlUi: {
+          dangerouslyDisableDeviceAuth: true,
+        },
+      },
+    });
+  });
+
+  it("supports overriding control-ui device-auth breakglass off", async () => {
+    const { buildOpenClawConfig } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const config = buildOpenClawConfig({
+      tenantSlug: "pixelport-qa",
+      gatewayToken: "gw-token",
+      agentName: "Luna",
+      memoryNativeEnabled: true,
+      geminiApiKey: "",
+      disableAcpDispatch: true,
+      disableControlUiDeviceAuth: false,
+    });
+
+    expect(config).toMatchObject({
+      gateway: {
+        controlUi: {
+          dangerouslyDisableDeviceAuth: false,
+        },
+      },
+    });
+  });
+
   it("resolves runtime image to base image when override is blank", async () => {
     const { resolveOpenClawRuntimeImage } = await import(
       "../../api/inngest/functions/provision-tenant"
@@ -350,6 +397,7 @@ describe("provision tenant memory config", () => {
     expect(script).toContain("PAPERCLIP_HANDOFF_SECRET=handoff-secret");
     expect(script).not.toContain("OPENAI_BASE_URL=");
     expect(script).toContain("chmod 600 /opt/openclaw/openclaw.json /opt/openclaw/.env");
+    expect(script).toContain('"dangerouslyDisableDeviceAuth": true');
     expect(script).toContain("normalize_runtime_state_perms()");
     expect(script).toContain(
       "mkdir -p /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices",

@@ -90,6 +90,7 @@ const DEFAULT_PROVISIONING_DROPLET_SIZE = 's-4vcpu-8gb';
 const DEFAULT_PROVISIONING_DROPLET_REGION = 'nyc1';
 const RUNTIME_SSLIP_TEMPLATE_TOKEN = '__PUBLIC_IPV4_DASH__';
 const DEFAULT_ENABLE_RUNTIME_SSLIP_FALLBACK = true;
+const DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH = true;
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
@@ -141,6 +142,15 @@ function isRuntimeSslipFallbackEnabled(env: NodeJS.ProcessEnv = process.env): bo
   const rawValue = env.PAPERCLIP_RUNTIME_ENABLE_SSLIP_FALLBACK?.trim().toLowerCase();
   if (!rawValue) {
     return DEFAULT_ENABLE_RUNTIME_SSLIP_FALLBACK;
+  }
+
+  return rawValue === '1' || rawValue === 'true' || rawValue === 'yes';
+}
+
+function isControlUiDeviceAuthBreakglassEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const rawValue = env.OPENCLAW_CONTROL_UI_DISABLE_DEVICE_AUTH?.trim().toLowerCase();
+  if (!rawValue) {
+    return DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH;
   }
 
   return rawValue === '1' || rawValue === 'true' || rawValue === 'yes';
@@ -390,6 +400,7 @@ export const provisionTenant = inngest.createFunction(
         tenantName: tenant.name,
         gatewayToken,
         runtimeHostTemplate: runtimeIngressPlan.hostTemplate,
+        disableControlUiDeviceAuth: isControlUiDeviceAuthBreakglassEnabled(),
         openclawBaseImage: OPENCLAW_BASE_IMAGE,
         openclawRuntimeImage: OPENCLAW_RUNTIME_IMAGE,
         openaiApiKey: OPENAI_API_KEY,
@@ -814,6 +825,7 @@ export function buildCloudInit(params: {
   tenantName: string;
   gatewayToken: string;
   runtimeHostTemplate?: string | null;
+  disableControlUiDeviceAuth?: boolean;
   openclawBaseImage: string;
   openclawRuntimeImage: string;
   openaiApiKey: string;
@@ -832,12 +844,24 @@ export function buildCloudInit(params: {
     onboardingData: params.onboardingData,
   });
   const openclawConfigWithAcp = JSON.stringify(
-    buildOpenClawConfig({ ...params, agentName, disableAcpDispatch: true }),
+    buildOpenClawConfig({
+      ...params,
+      agentName,
+      disableAcpDispatch: true,
+      disableControlUiDeviceAuth:
+        params.disableControlUiDeviceAuth ?? DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH,
+    }),
     null,
     2
   );
   const openclawConfigWithoutAcp = JSON.stringify(
-    buildOpenClawConfig({ ...params, agentName, disableAcpDispatch: false }),
+    buildOpenClawConfig({
+      ...params,
+      agentName,
+      disableAcpDispatch: false,
+      disableControlUiDeviceAuth:
+        params.disableControlUiDeviceAuth ?? DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH,
+    }),
     null,
     2
   );
@@ -1024,6 +1048,7 @@ export function buildOpenClawConfig(params: {
   memoryNativeEnabled: boolean;
   geminiApiKey: string;
   disableAcpDispatch: boolean;
+  disableControlUiDeviceAuth?: boolean;
 }): Record<string, unknown> {
   const webToolsConfig = params.geminiApiKey
     ? {
@@ -1048,6 +1073,9 @@ export function buildOpenClawConfig(params: {
       bind: 'lan',
       controlUi: {
         dangerouslyAllowHostHeaderOriginFallback: true,
+        // Temporary D4 break-glass to unblock Launch->workspace over public HTTPS hosts.
+        dangerouslyDisableDeviceAuth:
+          params.disableControlUiDeviceAuth ?? DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH,
       },
     },
     ...(params.disableAcpDispatch
