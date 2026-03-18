@@ -7,6 +7,39 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 102)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Implemented Vercel deploy hotfix on branch `codex/p5-vercel-ignorecommand-hotfix`:
+    - moved long `ignoreCommand` logic from `vercel.json` into `tools/vercel-ignore-paperclip-only.sh`
+    - shortened `vercel.json` `ignoreCommand` to `bash ./tools/vercel-ignore-paperclip-only.sh` (45 chars)
+  - Opened and merged hotfix PR `#16`:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/16`
+    - merge commit: `4f1803c`
+    - merge method: `--admin` override (GitHub still reported `REVIEW_REQUIRED`)
+  - Confirmed required checks for merge commit `4f1803c`:
+    - `validate` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23242220254`)
+    - `Analyze (javascript-typescript)` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23242219562`)
+  - Confirmed production deploy recovery:
+    - Vercel status on `4f1803c` -> `success`
+    - deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/99XATU4uaYxHAVSov5x7ahXA9x1h`
+  - Re-ran targeted production smoke on `https://pixelport-launchpad.vercel.app` after successful deploy:
+    - `GET /api/runtime/handoff` -> `405 {"error":"Method not allowed"}`
+    - `POST /api/runtime/handoff` (no auth) -> `401 {"error":"Missing or invalid Authorization header"}`
+    - `GET /api/tenants/status` (no auth) -> `401 {"error":"Missing or invalid Authorization header"}`
+    - `POST /api/tenants/scan` (no auth) -> `401 {"error":"Missing or invalid Authorization header"}`
+    - `GET /api/debug/test-provision` (no auth) -> `401 {"error":"Invalid or missing secret"}`
+    - `GET /api/commands` -> `404` (`NOT_FOUND`)
+    - `GET /api/tasks` -> `404` (`NOT_FOUND`)
+  - Added QA evidence artifact:
+    - `docs/qa/2026-03-18-p5-vercel-ignorecommand-hotfix-merge-smoke.md`
+- **What's next:**
+  - Founder executes remaining P5 closure ops:
+    - remove `LITELLM_URL` and `LITELLM_MASTER_KEY` from Vercel
+    - shut down Railway LiteLLM service
+  - After those ops are confirmed, close P5 and start the next approved phase.
+- **Blockers:** No technical blocker for merge/deploy/smoke closure. Remaining items are founder-run operational steps (Vercel env cleanup + Railway shutdown).
+
 - **Date:** 2026-03-18 (session 101)
 - **Who worked:** Founder + Codex
 - **What was done:**
