@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Navigate, useLocation, useNavigate, Link } from "react-router-dom";
+import { Navigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import PixelPortLogo from "@/components/PixelPortLogo";
 import StepIndicator from "@/components/onboarding/StepIndicator";
@@ -17,6 +17,11 @@ interface OnboardingFormData {
   agent_name: string;
   starter_task: string;
   agent_suggestions: AgentSuggestionInput[];
+}
+
+interface RuntimeHandoffResponse {
+  error?: string;
+  paperclip_runtime_url?: string;
 }
 
 const DEFAULT_AGENT_NAME = "Luna";
@@ -40,6 +45,24 @@ function isProvisionReady(status: string | null | undefined): boolean {
 
 function isLaunchCompleted(onboardingData: Record<string, unknown> | null | undefined): boolean {
   return readString(onboardingData?.launch_completed_at).trim().length > 0;
+}
+
+function resolveWorkspaceUrl(rawUrl: unknown): string | null {
+  const trimmed = readString(rawUrl).trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
 }
 
 function toGoalsArray(missionGoals: string): string[] {
@@ -164,7 +187,6 @@ const Onboarding = () => {
     tenantLoading,
     refreshTenant,
   } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
 
   const [step, setStep] = useState(1);
@@ -363,7 +385,7 @@ const Onboarding = () => {
         }))
         .filter((suggestion) => suggestion.role || suggestion.name || suggestion.focus);
 
-      const payload = {
+      const basePayload = {
         ...existingOnboarding,
         company_name: data.company_name.trim(),
         company_url: data.company_url.trim() || null,
@@ -372,10 +394,39 @@ const Onboarding = () => {
         agent_name: cleanAgentName,
         starter_task: cleanStarterTask,
         agent_suggestions: cleanSuggestions.length > 0 ? cleanSuggestions : buildDefaultAgentSuggestions(cleanAgentName),
+      };
+
+      const handoffRes = await fetch("/api/runtime/handoff", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ source: "onboarding-launch" }),
+      });
+
+      let handoffResult: RuntimeHandoffResponse = {};
+      try {
+        handoffResult = (await handoffRes.json()) as RuntimeHandoffResponse;
+      } catch {
+        handoffResult = {};
+      }
+
+      if (!handoffRes.ok) {
+        throw new Error(handoffResult.error || "Failed to open your Paperclip workspace.");
+      }
+
+      const workspaceUrl = resolveWorkspaceUrl(handoffResult.paperclip_runtime_url);
+      if (!workspaceUrl) {
+        throw new Error("Paperclip workspace URL is unavailable for this tenant.");
+      }
+
+      const payload = {
+        ...basePayload,
         launch_completed_at: new Date().toISOString(),
       };
 
-      const res = await fetch("/api/tenants/onboarding", {
+      const saveRes = await fetch("/api/tenants/onboarding", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -384,38 +435,19 @@ const Onboarding = () => {
         body: JSON.stringify(payload),
       });
 
-      const result = (await res.json()) as { error?: string };
-
-      if (!res.ok) {
-        throw new Error(result.error || "Failed to save onboarding setup.");
-      }
-
-      // Step 5: fire handoff - thin bridge wire-in (runtime redirect deferred to founder UX decision)
+      let saveResult: { error?: string } = {};
       try {
-        void fetch('/api/runtime/handoff', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ source: 'onboarding-launch' }),
-        })
-          .then((handoffRes) => {
-            if (!handoffRes.ok) {
-              // Non-fatal - log but don't block navigation
-              console.warn('[handoff] fire failed', handoffRes.status);
-            }
-          })
-          .catch((handoffErr) => {
-            // Non-fatal - swallow
-            console.warn('[handoff] fire error', handoffErr);
-          });
-      } catch (handoffErr) {
-        console.warn('[handoff] fire setup error', handoffErr);
+        saveResult = (await saveRes.json()) as { error?: string };
+      } catch {
+        saveResult = {};
       }
 
-      await refreshTenant();
-      navigate(redirectPath, { replace: true });
+      if (!saveRes.ok) {
+        throw new Error(saveResult.error || "Failed to save onboarding setup.");
+      }
+
+      window.location.assign(workspaceUrl);
+      return;
     } catch (error) {
       setLaunchError(error instanceof Error ? error.message : "Failed to finalize onboarding.");
     } finally {

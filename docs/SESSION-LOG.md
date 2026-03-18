@@ -7,6 +7,41 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 94)
+- **Who worked:** Founder + Codex + QA sub-agent (Einstein)
+- **What was done:**
+  - Confirmed PR `#6` merged to `main`:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/6`
+    - merge commit: `cba0625`
+  - Started approved P2 launch consumer slice on branch `codex/p2-paperclip-launch-redirect`.
+  - Implemented onboarding launch redirect to tenant Paperclip workspace URL:
+    - `src/pages/Onboarding.tsx`
+      - launch now performs blocking `POST /api/runtime/handoff` (`source=onboarding-launch`)
+      - validates returned `paperclip_runtime_url` (`http/https` only) before redirect
+      - persists `launch_completed_at` only after handoff success and onboarding save success
+      - redirects via `window.location.assign(workspaceUrl)` on success
+    - `src/components/onboarding/StepConnectTools.tsx`
+      - updated copy/CTA from dashboard destination to workspace destination
+  - Validation and QA:
+    - `npx tsc --noEmit` (`pass`)
+    - `npx vitest run src/test/runtime-handoff-route.test.ts` (`pass`, 7/7)
+    - `npx vitest run src/test/onboarding-bootstrap.test.ts` (`pass`, 2/2)
+    - independent QA sub-agent verdict: `PASS` with no findings
+  - Added P2 documentation artifacts:
+    - build brief: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice.md`
+    - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice-cto-prompt.md`
+    - QA evidence: `docs/qa/2026-03-17-pivot-p2-launch-workspace-redirect.md`
+  - Updated live planning/status docs for P2 execution:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/pixelport-project-status.md`
+  - Opened CTO review PR for this P2 slice:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/7`
+    - required checks: `validate` (`pass`), `Analyze (javascript-typescript)` (`pass`), Vercel preview (`pass`)
+- **What's next:**
+  - Complete CTO review for PR `#7`.
+  - After CTO approval, merge to `main`, monitor deploy, and run same-session production smoke.
+- **Blockers:** No technical blocker for this branch; known ops risk remains DO token droplet-delete scope (`HTTP 403`) for unattended cleanup.
+
 - **Date:** 2026-03-17 (session 93)
 - **Who worked:** Codex
 - **What was done:**
