@@ -7,6 +7,34 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 95)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Merged approved PR `#7` to `main`:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/7`
+    - merge commit: `a2d179d`
+    - note: merge executed with admin override after founder-confirmed CDO approval because GitHub API still reported `REVIEW_REQUIRED` with no review objects
+  - Confirmed merge-commit checks:
+    - `validate` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23224822531`)
+    - `Analyze (javascript-typescript)` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23224822091`)
+  - Confirmed deploy completion for merge commit:
+    - Vercel status: `success`
+    - deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/BXb3BQFGyZw5J8w1GoVr4ygcNW3S`
+  - Ran targeted post-merge production smoke on `https://pixelport-launchpad.vercel.app`:
+    - `GET /api/runtime/handoff` -> `405 {"error":"Method not allowed"}`
+    - `POST /api/runtime/handoff` without auth -> `401 {"error":"Missing or invalid Authorization header"}`
+    - `POST /api/runtime/handoff` invalid bearer -> `401 {"error":"Invalid or expired token"}`
+    - `GET /api/debug/env-check` -> `404` (`NOT_FOUND`)
+  - Added P2 merge-smoke evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p2-launch-workspace-redirect-merge-smoke.md`
+  - Updated live planning/status docs:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/pixelport-project-status.md`
+- **What's next:**
+  - Capture founder-approved next P2/P3 implementation slice and open a fresh `codex/*` execution branch.
+  - Keep managed-only canary hygiene and founder-led droplet cleanup policy active.
+- **Blockers:** No blocker for this merged slice; residual operational blocker remains DO token droplet-delete scope (`HTTP 403`) for unattended cleanup.
+
 - **Date:** 2026-03-17 (session 94)
 - **Who worked:** Founder + Codex + QA sub-agent (Einstein)
 - **What was done:**
