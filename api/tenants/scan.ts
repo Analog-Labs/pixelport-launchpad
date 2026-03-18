@@ -13,6 +13,7 @@ const BLOCKED_SUFFIXES = ['.local', '.localhost', '.internal'];
 const MAX_HTML_BYTES = 200_000;
 const MAX_TEXT_CHARS = 5_000;
 const REDIRECT_LIMIT = 5;
+const LLM_FETCH_TIMEOUT_MS = 12_000;
 
 type ExtractedData = {
   title: string;
@@ -24,6 +25,38 @@ type ExtractedData = {
   fetchError: string | null;
   finalUrl: string;
 };
+
+type ProviderName = 'openai' | 'gemini';
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+function describeProviderError(provider: ProviderName, error: unknown): string {
+  if (isAbortError(error)) {
+    return `${provider}_timeout_${LLM_FETCH_TIMEOUT_MS}ms`;
+  }
+
+  if (error instanceof Error) {
+    return `${provider}_exception:${error.message}`;
+  }
+
+  return `${provider}_exception`;
+}
+
+async function fetchWithTimeout(input: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), LLM_FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 function getBearerToken(req: VercelRequest): string | null {
   const auth = req.headers.authorization;
@@ -238,7 +271,7 @@ Return only a valid JSON object with:
 
   if (OPENAI_API_KEY) {
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${OPENAI_API_KEY}`,
@@ -268,13 +301,13 @@ Return only a valid JSON object with:
         }
       }
     } catch (error) {
-      providerErrors.push(error instanceof Error ? `openai_exception:${error.message}` : 'openai_exception');
+      providerErrors.push(describeProviderError('openai', error));
     }
   }
 
   if (GEMINI_API_KEY) {
     try {
-      const response = await fetch(
+      const response = await fetchWithTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
@@ -309,7 +342,7 @@ Return only a valid JSON object with:
         }
       }
     } catch (error) {
-      providerErrors.push(error instanceof Error ? `gemini_exception:${error.message}` : 'gemini_exception');
+      providerErrors.push(describeProviderError('gemini', error));
     }
   }
 
