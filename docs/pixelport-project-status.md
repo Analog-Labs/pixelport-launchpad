@@ -384,6 +384,34 @@ Targeted production smoke on `https://pixelport-launchpad.vercel.app` passed:
 Evidence artifact:
 - `docs/qa/2026-03-17-pivot-p1-a5-merge-smoke.md`
 
+## Pivot Execution Update (2026-03-17 PR #6 Merge + P2 Launch Redirect Slice)
+
+Post-Track-A sync PR is merged and the next pivot slice is in implementation review:
+
+- PR `#6` merged:
+  - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/6`
+  - merge commit: `cba0625`
+- P2 launch consumer implementation branch:
+  - `codex/p2-paperclip-launch-redirect`
+
+Implemented behavior on branch:
+- onboarding Launch now performs blocking `POST /api/runtime/handoff` (`source=onboarding-launch`)
+- returned `paperclip_runtime_url` is validated as `http/https` before redirect
+- `launch_completed_at` persistence is ordered after handoff success + onboarding save success
+- successful launch redirects to tenant Paperclip workspace (`window.location.assign(...)`)
+- Step 4 launch copy now reflects workspace destination wording
+
+Validation and QA:
+- `npx tsc --noEmit` -> `pass`
+- `npx vitest run src/test/runtime-handoff-route.test.ts` -> `pass` (7/7)
+- `npx vitest run src/test/onboarding-bootstrap.test.ts` -> `pass` (2/2)
+- independent QA sub-agent verdict: `PASS` (no findings)
+
+Artifacts:
+- build brief: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice.md`
+- CTO prompt: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice-cto-prompt.md`
+- QA evidence: `docs/qa/2026-03-17-pivot-p2-launch-workspace-redirect.md`
+
 ---
 
 ## 1. Strategic Context
