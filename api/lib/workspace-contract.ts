@@ -1,6 +1,5 @@
 import {
   VAULT_SECTION_KEYS,
-  getVaultSectionSnapshotPath,
 } from "./vault-contract";
 
 type JsonValue =
@@ -429,7 +428,7 @@ ${getToneDescription(params.onboardingData)}
 ## Operating Posture
 - Act like one persistent Chief with disposable specialist sub-agents when needed.
 - Do not present permanent named teammates to the human.
-- Keep product truth aligned with PixelPort APIs and the \`pixelport/\` workspace contract.
+- Keep product truth aligned with canonical workspace artifacts under \`pixelport/\`.
 - Be explicit about uncertainty. If evidence is missing, record what you know and what still needs confirmation.
 
 ## Knowledge Base
@@ -449,27 +448,22 @@ ${buildBrandContext(scanResults)}
 - When canonical truth changes materially, refresh the relevant native memory artifact in the same work cycle.
 
 ## Delivery Rules
-- Keep current task, vault, competitor, and image-generation APIs working as the live dashboard path.
-- Use only these task types: \`draft_content\`, \`research\`, \`competitor_analysis\`, \`strategy\`, \`report\`.
-- Use only these task statuses: \`pending\`, \`running\`, \`completed\`, \`failed\`, \`cancelled\`.
-- Treat the dashboard as a projection of real work, not a place for placeholders.
+- Write durable artifacts first; avoid placeholder output.
+- Keep deliverables and snapshots organized under the documented \`pixelport/\` paths.
+- When canonical truth changes materially, refresh native memory in the same work cycle.
 `;
 }
 
 function buildToolsFile(params: {
   apiBaseUrl: string;
 }): string {
-  const vaultRefreshKeys = VAULT_SECTION_KEYS.map((sectionKey) => `\`${sectionKey}\``).join(', ');
+  const vaultSnapshotKeys = VAULT_SECTION_KEYS.map((sectionKey) => `\`${sectionKey}\``).join(', ');
 
   return `# PixelPort Tooling Guide
 
-## Setup
-\`\`\`bash
-API_BASE_URL="${params.apiBaseUrl}"
-: "\${PIXELPORT_API_KEY:?PIXELPORT_API_KEY must already be injected into the running container}"
-\`\`\`
-
-The running OpenClaw container already receives its environment variables at startup. Do not source a host env file from inside the container.
+## Control Plane Reference
+- Launchpad control plane URL: ${params.apiBaseUrl}
+- Runtime canonical truth lives in local workspace files on this droplet.
 
 ## Direct Model Access Checks
 \`\`\`bash
@@ -478,55 +472,13 @@ The running OpenClaw container already receives its environment variables at sta
 : "\${OPENAI_BASE_URL:?OPENAI_BASE_URL is required for direct model access}"
 \`\`\`
 
-## Live Product Writes
-\`\`\`bash
-# Read vault state
-curl -s -H "X-Agent-Key: $PIXELPORT_API_KEY" "$API_BASE_URL/api/agent/vault"
-
-# Update a vault section
-curl -s -X PUT \\
-  -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"content":"Verified markdown content","status":"ready"}' \\
-  "$API_BASE_URL/api/agent/vault/company_profile"
-
-# Create a task
-curl -s -X POST \\
-  -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"agent_role":"Chief of Staff","task_type":"research","task_description":"Research positioning","status":"running"}' \\
-  "$API_BASE_URL/api/agent/tasks"
-
-# Add a competitor
-curl -s -X POST \\
-  -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"company_name":"Example Competitor","summary":"Direct competitor","threat_level":"medium"}' \\
-  "$API_BASE_URL/api/agent/competitors"
-
-# Generate an image
-curl -s -X POST \\
-  -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"prompt":"Editorial campaign concept","provider":"openai","model":"gpt-image-1","size":"1024x1024"}' \\
-  "$API_BASE_URL/api/agent/generate-image"
-\`\`\`
-
-## Workspace Events
-\`\`\`bash
-curl -s -X POST \\
-  -H "X-Agent-Key: $PIXELPORT_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "event_id":"cmd-123-running",
-    "event_type":"command.running",
-    "command_id":"cmd-123",
-    "entity_type":"command",
-    "entity_id":"cmd-123",
-    "payload":{"summary":"Execution started"}
-  }' \\
-  "$API_BASE_URL/api/agent/workspace-events"
-\`\`\`
+## Workspace-First Workflow
+- Read root context: \`SOUL.md\`, \`TOOLS.md\`, \`AGENTS.md\`, \`HEARTBEAT.md\`, \`BOOTSTRAP.md\`.
+- Keep durable artifacts under \`pixelport/\`.
+- Store vault snapshots in \`pixelport/vault/snapshots/\`.
+- Save final deliverables in \`pixelport/content/deliverables/<deliverable-id>/\`.
+- Append notable lifecycle events to \`pixelport/ops/events/<YYYY-MM-DD>.jsonl\`.
+- Keep temporary worker output under \`pixelport/scratch/subagents/\`.
 
 ## Native Memory Workflow
 \`\`\`bash
@@ -540,16 +492,10 @@ openclaw memory index --force
 - Use native memory for fast recall, then verify against canonical workspace truth in root files and \`pixelport/vault/snapshots/\` when correctness matters.
 - If \`MEMORY.md\` or \`memory/*.md\` changes materially, refresh the native memory index in the same work cycle.
 
-## Vault Refresh Commands
-- Valid vault refresh section keys: ${vaultRefreshKeys}
-- A \`vault_refresh\` command always targets exactly one \`vault_section\`.
-- Start by reading the current vault state through \`GET /api/agent/vault\`.
-- When work begins, set the target section to \`"populating"\` through \`PUT /api/agent/vault/<section_key>\`.
-- Update the durable markdown snapshot at \`${getVaultSectionSnapshotPath('company_profile').replace('company_profile', '<section_key>')}\`.
-- Emit \`runtime.artifact.promoted\` with \`entity_type: "vault_section"\` and the same \`entity_id\`.
-- Finish by writing the final markdown and \`status: "ready"\` through \`PUT /api/agent/vault/<section_key>\`.
-- If the refresh must fail or be cancelled after switching to \`"populating"\`, restore the prior content with \`status: "ready"\` before the terminal command event.
-- Emit exactly one terminal command event after the final vault write.
+## Vault Snapshot Keys
+- Canonical vault snapshot keys: ${vaultSnapshotKeys}
+- Keep each snapshot at: \`pixelport/vault/snapshots/<section_key>.md\`
+- Keep \`pixelport/runtime/snapshots/status.json\` aligned with current contract truth.
 
 ## File Placement Rules
 - Durable packages: \`pixelport/content/deliverables/<deliverable-id>/\`
@@ -604,11 +550,10 @@ You are ${agentName} inside the PixelPort workspace for ${params.tenantName} (${
 3. Treat \`pixelport/runtime/snapshots/status.json\` as the local contract summary.
 4. Keep synced vault context in \`pixelport/vault/snapshots/\`.
 5. Keep \`MEMORY.md\` and \`memory/\` as the native fast-recall layer derived from canonical truth.
-6. Emit \`workspace-events\` for command progress and promoted runtime artifacts.
+6. Append meaningful runtime lifecycle notes to \`pixelport/ops/events/\`.
 
 ## Important
-- This foundation slice keeps the current task, vault, and competitor APIs as the live dashboard path.
-- The command ledger is additive; onboarding bootstrap is not retrofitted into it in this slice.
+- Write durable workspace truth first; do not depend on legacy launchpad runtime APIs.
 - Do not invent permanent sub-agent teammates.
 `;
 }

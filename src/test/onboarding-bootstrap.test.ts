@@ -34,7 +34,7 @@ describe("dispatchAgentHookMessage", () => {
 });
 
 describe("buildOnboardingBootstrapMessage", () => {
-  it("adds a native memory refresh requirement without rewriting the earlier contract", () => {
+  it("requires workspace-first durable writes and native memory refresh", () => {
     const message = buildOnboardingBootstrapMessage({
       tenantName: "PixelPort QA",
       onboardingData: {
@@ -45,10 +45,11 @@ describe("buildOnboardingBootstrapMessage", () => {
 
     expect(message).toContain('1. Mark any pending vault sections as "populating" before you work on them.');
     expect(message).toContain(
-      '8. Valid task_type values are exactly: draft_content, research, competitor_analysis, strategy, report. If you need a running status, use "running" instead of "in_progress".',
+      "3. Write concrete findings into canonical workspace artifacts under `pixelport/` (vault snapshots, runtime snapshots, and deliverables).",
     );
     expect(message).toContain(
-      '9. After you materially update canonical vault truth, refresh the relevant native memory artifact in `MEMORY.md` or `memory/` during the same work cycle.',
+      '5. After you materially update canonical truth, refresh the relevant native memory artifact in `MEMORY.md` or `memory/` during the same work cycle.',
     );
+    expect(message).not.toContain("/api/agent/");
   });
 });

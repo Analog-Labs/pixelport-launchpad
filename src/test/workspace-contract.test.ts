@@ -51,7 +51,7 @@ describe("workspace contract", () => {
     expect(scaffold.files["pixelport/runtime/snapshots/status.json"]).toContain('"native_memory": "memory"');
   });
 
-  it("removes permanent Spark and Scout assumptions while preserving current APIs", () => {
+  it("removes permanent Spark and Scout assumptions while using workspace-first guidance", () => {
     const scaffold = buildWorkspaceScaffold({
       tenantName: "PixelPort QA",
       tenantSlug: "pixelport-qa",
@@ -69,16 +69,13 @@ describe("workspace contract", () => {
 
     expect(combinedContent).not.toContain("Spark");
     expect(combinedContent).not.toContain("Scout");
-    expect(combinedContent).toContain("/api/agent/tasks");
-    expect(combinedContent).toContain("/api/agent/workspace-events");
+    expect(combinedContent).not.toContain("/api/agent/");
     expect(combinedContent).toContain("pixelport/scratch/subagents");
-    expect(combinedContent).toContain("## Vault Refresh Commands");
+    expect(combinedContent).toContain("## Vault Snapshot Keys");
     expect(combinedContent).toContain("## Native Memory Workflow");
     expect(combinedContent).toContain("Use native memory for fast recall.");
     expect(combinedContent).toContain("pixelport/vault/snapshots/<section_key>.md");
-    expect(combinedContent).toContain('restore the prior content with `status: "ready"`');
-    expect(combinedContent).not.toContain("/opt/openclaw/.env");
-    expect(combinedContent).toContain("PIXELPORT_API_KEY must already be injected into the running container");
+    expect(combinedContent).toContain("Write durable workspace truth first");
     expect(combinedContent).toContain("OPENAI_BASE_URL is required for direct model access");
     expect(combinedContent).toContain("refresh the relevant native memory artifact in the same work cycle");
   });

@@ -495,6 +495,42 @@ Targeted production smoke on `https://pixelport-launchpad.vercel.app` passed:
 Evidence artifact:
 - `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1-merge-smoke.md`
 
+## Pivot Execution Update (2026-03-17 P3 Runtime Prune Batch 2 — Implementation Prepared)
+
+Next incremental cutover-prune slice is implemented on branch:
+
+- branch: `codex/p3-c4-prune-batch2-dashboard-runtime-legacy`
+- CTO review PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/11`
+- migration contract: `docs/migration/launchpad-runtime-prune-checklist.md`
+
+Implemented batch-2 deletions:
+- vestigial dashboard pages/routes using legacy runtime APIs:
+  - `src/pages/dashboard/Content.tsx`
+  - `src/pages/dashboard/CalendarPage.tsx`
+  - `src/pages/dashboard/Vault.tsx`
+  - `src/pages/dashboard/Competitors.tsx`
+- legacy route groups:
+  - `api/commands/*`
+  - `api/tasks/*`
+  - `api/vault/*`
+  - `api/agent/*`
+  - `api/agents/*`
+  - `api/competitors/*`
+
+Dependency/guardrail truth:
+- no active frontend runtime calls remain to `/api/commands`, `/api/tasks`, `/api/vault`, `/api/agent`, `/api/agents`, or `/api/competitors`
+- keep-now thin-bridge surfaces remain intact (`api/tenants/*`, `api/inngest/*`, `api/runtime/handoff`)
+- onboarding bootstrap/workspace contract guidance is now workspace-first and no longer instructs runtime use of `/api/agent/*`
+
+Validation recorded:
+- `npx tsc --noEmit` -> `pass`
+- `npm test -- --exclude src/test/tenants-status-route.test.ts` -> `pass` (17 files / 70 tests)
+
+Artifacts:
+- build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
+- CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy-cto-prompt.md`
+- QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
+
 ---
 
 ## 1. Strategic Context

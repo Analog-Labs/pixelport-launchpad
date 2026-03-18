@@ -7,6 +7,47 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 98)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Started next approved pivot slice on branch:
+    - `codex/p3-c4-prune-batch2-dashboard-runtime-legacy`
+  - Added batch-2 implementation artifacts:
+    - build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
+    - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy-cto-prompt.md`
+  - Removed vestigial dashboard runtime surfaces that depended on legacy APIs:
+    - removed pages/routes: `Content`, `Calendar`, `Vault`, `Competitors`
+    - removed stale sidebar links for deleted surfaces
+    - repurposed dashboard home into workspace-launch surface via `/api/runtime/handoff`
+  - Executed batch-2 runtime prune deletions:
+    - deleted route groups:
+      - `api/commands/*`
+      - `api/tasks/*`
+      - `api/vault/*`
+      - `api/agent/*`
+      - `api/agents/*`
+      - `api/competitors/*`
+    - removed now-empty route directories for those groups
+  - Removed dead command-route support libraries and route tests tied to deleted surfaces.
+  - Updated bootstrap/workspace contract guidance to workspace-first instructions (no `/api/agent/*` runtime guidance):
+    - `api/lib/onboarding-bootstrap.ts`
+    - `api/lib/workspace-contract.ts`
+  - Validation:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test -- --exclude src/test/tenants-status-route.test.ts` (`pass`, 17 files / 70 tests)
+  - Added batch-2 QA evidence:
+    - `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
+  - Opened CTO review PR for this P3 batch:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/11`
+  - Updated live planning/status docs:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/migration/launchpad-runtime-prune-checklist.md`
+    - `docs/pixelport-project-status.md`
+- **What's next:**
+  - Complete CTO review for PR `#11`.
+  - After CTO approval, merge to `main`, monitor deploy, and run same-session production smoke on retained surfaces.
+- **Blockers:** No new code blocker in this slice. Residual ops blockers remain: DO droplet delete scope (`HTTP 403`) and allowlist control for provisioning tests.
+
 - **Date:** 2026-03-17 (session 97)
 - **Who worked:** Founder + Codex
 - **What was done:**
