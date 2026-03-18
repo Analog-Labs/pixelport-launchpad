@@ -393,6 +393,7 @@ Post-Track-A sync PR is merged and the next pivot slice is in implementation rev
   - merge commit: `cba0625`
 - CTO review PR opened for P2 slice:
   - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/7`
+  - required checks status: `validate` pass, `Analyze (javascript-typescript)` pass, Vercel preview pass
 - P2 launch consumer implementation branch:
   - `codex/p2-paperclip-launch-redirect`
 

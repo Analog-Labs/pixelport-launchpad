@@ -36,6 +36,7 @@
     - `docs/pixelport-project-status.md`
   - Opened CTO review PR for this P2 slice:
     - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/7`
+    - required checks: `validate` (`pass`), `Analyze (javascript-typescript)` (`pass`), Vercel preview (`pass`)
 - **What's next:**
   - Complete CTO review for PR `#7`.
   - After CTO approval, merge to `main`, monitor deploy, and run same-session production smoke.
