@@ -259,6 +259,63 @@ describe("provision tenant memory config", () => {
     ).toThrowError(/Managed golden image selector required/);
   });
 
+  it("prefers tenant base domain for runtime ingress plan when configured", async () => {
+    const { resolveRuntimeIngressPlan } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const plan = resolveRuntimeIngressPlan({
+      tenantSlug: "pixelport-qa",
+      env: {
+        PAPERCLIP_RUNTIME_BASE_DOMAIN: "runtime.pixelport.ai",
+      } as NodeJS.ProcessEnv,
+    });
+
+    expect(plan).toEqual({
+      hostTemplate: "pixelport-qa.runtime.pixelport.ai",
+      source: "base_domain",
+    });
+  });
+
+  it("falls back to sslip runtime ingress plan when base domain is absent", async () => {
+    const { resolveRuntimeIngressPlan } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const plan = resolveRuntimeIngressPlan({
+      tenantSlug: "pixelport-qa",
+      env: {} as NodeJS.ProcessEnv,
+    });
+
+    expect(plan).toEqual({
+      hostTemplate: "pixelport-qa.__PUBLIC_IPV4_DASH__.sslip.io",
+      source: "sslip",
+    });
+  });
+
+  it("resolves final runtime ingress URL from droplet ip and sslip plan", async () => {
+    const {
+      resolveRuntimeIngressFromDroplet,
+      resolveRuntimeIngressPlan,
+    } = await import("../../api/inngest/functions/provision-tenant");
+
+    const plan = resolveRuntimeIngressPlan({
+      tenantSlug: "pixelport-qa",
+      env: {} as NodeJS.ProcessEnv,
+    });
+
+    const resolved = resolveRuntimeIngressFromDroplet({
+      dropletIp: "157.245.253.88",
+      runtimeIngressPlan: plan,
+    });
+
+    expect(resolved).toEqual({
+      host: "pixelport-qa.157-245-253-88.sslip.io",
+      url: "https://pixelport-qa.157-245-253-88.sslip.io",
+      source: "sslip",
+    });
+  });
+
   it("generates cloud-init without chromium build steps", async () => {
     const { buildCloudInit } = await import(
       "../../api/inngest/functions/provision-tenant"
@@ -268,6 +325,7 @@ describe("provision tenant memory config", () => {
       tenantSlug: "pixelport-qa",
       tenantName: "PixelPort QA",
       gatewayToken: "gw-token",
+      runtimeHostTemplate: "pixelport-qa.__PUBLIC_IPV4_DASH__.sslip.io",
       openclawBaseImage: "ghcr.io/openclaw/openclaw:2026.3.11",
       openclawRuntimeImage: "ghcr.io/openclaw/openclaw:2026.3.11",
       openaiApiKey: "openai-key",
@@ -284,6 +342,7 @@ describe("provision tenant memory config", () => {
 
     expect(script).toContain("if docker image inspect ghcr.io/openclaw/openclaw:2026.3.11 >/dev/null 2>&1; then");
     expect(script).toContain("docker pull ghcr.io/openclaw/openclaw:2026.3.11");
+    expect(script).toContain("RUNTIME_HOST_TEMPLATE='pixelport-qa.__PUBLIC_IPV4_DASH__.sslip.io'");
     expect(script).not.toContain("docker build -t");
     expect(script).not.toContain("/opt/openclaw/image");
     expect(script).not.toContain("--no-install-recommends chromium");
@@ -301,5 +360,7 @@ describe("provision tenant memory config", () => {
     expect(script).toContain(
       "chmod 700 /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices",
     );
+    expect(script).toContain("apt-get install -y caddy");
+    expect(script).toContain("reverse_proxy 127.0.0.1:18789");
   });
 });

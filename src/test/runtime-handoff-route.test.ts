@@ -43,6 +43,7 @@ describe("POST /api/runtime/handoff", () => {
     process.env = { ...originalEnv };
     delete process.env.PAPERCLIP_HANDOFF_SECRET;
     delete process.env.PAPERCLIP_HANDOFF_TTL_SECONDS;
+    delete process.env.PAPERCLIP_RUNTIME_BASE_DOMAIN;
   });
 
   it("returns 405 for non-POST methods", async () => {
@@ -214,6 +215,74 @@ describe("POST /api/runtime/handoff", () => {
     expect(segments).toHaveLength(2);
     expect(segments[0].length).toBeGreaterThan(0);
     expect(segments[1].length).toBeGreaterThan(0);
+  });
+
+  it("derives HTTPS runtime URL from tenant base domain env when configured", async () => {
+    process.env.PAPERCLIP_HANDOFF_SECRET = "secret-value";
+    process.env.PAPERCLIP_RUNTIME_BASE_DOMAIN = "runtime.pixelport.ai";
+
+    const { default: handler } = await import("../../api/runtime/handoff");
+
+    authenticateRequest.mockResolvedValue({
+      userId: "user-1",
+      tenant: {
+        id: "tenant-1",
+        slug: "tenant-slug",
+        name: "Tenant",
+        status: "active",
+        plan: "trial",
+        droplet_ip: "157.245.253.88",
+        gateway_token: "gw-123",
+        onboarding_data: {},
+      },
+    });
+
+    const req = { method: "POST", body: {} };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      paperclip_runtime_url: "https://tenant-slug.runtime.pixelport.ai/",
+      workspace_launch_url: "https://tenant-slug.runtime.pixelport.ai/#token=gw-123",
+      launch_auth_mode: "gateway-token",
+    });
+  });
+
+  it("prefers persisted onboarding runtime_url over derived runtime domain", async () => {
+    process.env.PAPERCLIP_HANDOFF_SECRET = "secret-value";
+    process.env.PAPERCLIP_RUNTIME_BASE_DOMAIN = "runtime.pixelport.ai";
+
+    const { default: handler } = await import("../../api/runtime/handoff");
+
+    authenticateRequest.mockResolvedValue({
+      userId: "user-1",
+      tenant: {
+        id: "tenant-1",
+        slug: "tenant-slug",
+        name: "Tenant",
+        status: "active",
+        plan: "trial",
+        droplet_ip: "157.245.253.88",
+        gateway_token: "gw-123",
+        onboarding_data: {
+          runtime_url: "https://persisted-runtime.example.net",
+        },
+      },
+    });
+
+    const req = { method: "POST", body: {} };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      paperclip_runtime_url: "https://persisted-runtime.example.net/",
+      workspace_launch_url: "https://persisted-runtime.example.net/#token=gw-123",
+      launch_auth_mode: "gateway-token",
+    });
   });
 
   it("returns 409 when gateway auth token is unavailable", async () => {
