@@ -73,7 +73,7 @@ First P1 handoff release slice from `codex/pivot-p1-bootstrap-handoff` is now me
 
 ## Pivot Execution Update (2026-03-17 Ownership Audit)
 
-Track A ownership-audit evidence is now documented (without fabricated closure):
+Track A ownership-audit evidence is now documented (without fabricated closure) as a historical snapshot at that checkpoint:
 
 - evidence artifact: `docs/qa/2026-03-17-pivot-p1-ownership-audit.md`
 - ownership contract updated with factual audit snapshot:
@@ -87,9 +87,9 @@ Track A ownership-audit evidence is now documented (without fabricated closure):
   - Railway workspace owner signal observed as legacy pre-pivot infra traceability only (not active runtime deploy authority)
   - DO account ownership signal observed
   - DO token scope limits observed on billing/balance endpoints (`403`)
-- secrets inventory signal captured by surface (names only), with explicit note that `PAPERCLIP_*` handoff vars are not visible in current Vercel env listing evidence
+- secrets inventory signal captured by surface (names only), with an at-the-time note that `PAPERCLIP_*` handoff vars were not visible in then-current Vercel env listing evidence
 
-Track A closure state remains unchanged:
+Track A closure state remained unchanged at that checkpoint:
 - A2, A3, A4, A5 are still open pending explicit enforcement/configuration and founder-level confirmations.
 
 ## Pivot Execution Update (2026-03-17 Authenticated Handoff Smoke)
@@ -308,12 +308,64 @@ Founder approvals have now closed A4 with explicit policy decisions:
 Closure evidence:
 - `docs/qa/2026-03-17-pivot-p1-a4-secrets-closure.md`
 
-Track A closure state after this update:
+Track A closure state after this update (historical snapshot at this checkpoint):
 - A1: closed
 - A2: closed
 - A3: closed
 - A4: closed
 - A5: open
+
+## Pivot Execution Update (2026-03-17 Track A4 Merge + Production Smoke)
+
+A4 documentation closure slice is now merged and deployed:
+
+- PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/4`
+- merge commit: `8e9f2f0`
+- deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/EZLtsYwKop1bg8cVpqcd3WmRkp6E`
+- required checks on merge commit:
+  - `Analyze (javascript-typescript)`: `pass`
+  - `validate`: `pass`
+
+Targeted production smoke on `https://pixelport-launchpad.vercel.app` passed:
+- `GET /api/runtime/handoff` -> `405`
+- `POST /api/runtime/handoff` without auth -> `401`
+- `POST /api/runtime/handoff` invalid bearer -> `401`
+- `GET /api/debug/env-check` -> `404`
+
+Evidence artifact:
+- `docs/qa/2026-03-17-pivot-p1-a4-merge-smoke.md`
+
+## Pivot Execution Update (2026-03-17 Track A5 Incident Boundary Proposal)
+
+Track A5 remained open at this proposal checkpoint with a concrete decision-ready policy draft:
+
+- rollback authority boundary proposal
+- severity-based founder notification SLA proposal
+- CTO escalation/review trigger proposal
+
+Proposal artifact:
+- `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-proposal.md`
+
+## Pivot Execution Update (2026-03-17 Track A5 Incident Boundary Closure)
+
+Founder approved the A5 boundary policy with decisions `1A`, `2A`, and `3A`:
+
+- rollback authority: founder + technical lead immediate rollback; backups only when founder-delegated
+- severity SLA: SEV-0 `5m`, SEV-1 `10m`, SEV-2 `60m`, SEV-3 daily digest
+- CTO escalation triggers: mandatory for rollback, SEV-0/SEV-1, security/auth/secrets incidents, repeated SEV-2
+
+Closure evidence:
+- `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-closure.md`
+
+Merge note:
+- this closure update is prepared on branch `codex/p1-a5-incident-boundary-closure` and is pending PR `#5` merge to `main`.
+
+Track A closure state after this update:
+- A1: closed
+- A2: closed
+- A3: closed
+- A4: closed
+- A5: closed
 
 ---
 

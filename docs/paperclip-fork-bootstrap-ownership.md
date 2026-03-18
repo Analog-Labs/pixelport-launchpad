@@ -12,7 +12,7 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 
 | Surface | Primary owner | Reviewer / backup | Founder approval required to close |
 |---------|---------------|-------------------|------------------------------------|
-| Repo admin and branch policy (`Analog-Labs/pixelport-launchpad`, Paperclip fork governance) | Technical Lead (Codex) | CTO reviewer + named human backup reviewer (pending founder confirmation) | Yes |
+| Repo admin and branch policy (`Analog-Labs/pixelport-launchpad`, Paperclip fork governance) | Technical Lead (Codex) | CTO reviewer + named human backup reviewers (`haider-rs`, `penumbra23`) | Yes |
 | CI/workflow integrity and required-check baseline | Technical Lead (Codex) | CTO reviewer | Yes for required-gate changes on `main` |
 | Deploy targets and promotion ownership (Vercel launchpad, runtime surfaces) | Technical Lead (Codex) | Founder visibility + CTO reviewer | Yes |
 | Launchpad -> Paperclip handoff contract ownership | Technical Lead (Codex) | CTO reviewer | Yes if user-facing/auth-flow impact |
@@ -150,10 +150,12 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 ### A5 — Rollback/Incident Boundary Evidence State
 
 - Decision-boundary text exists in this contract and in `AGENTS.md`.
-- Explicit founder-level confirmation for rollback authority boundaries and escalation closure is still pending.
+- Proposed A5 policy baseline is now documented in `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-proposal.md`.
+- Founder has explicitly approved policy set `1A`, `2A`, `3A` for A5 closure.
+- Final A5 closure artifact: `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-closure.md`.
 - No fabricated owner signoff is recorded in this document.
 
-## Track A Status (Do Not Close Without Explicit Confirmation)
+## Track A Status
 
 | Item | Status | Why still open |
 |------|--------|----------------|
@@ -161,14 +163,11 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 | A2 Repo/branch protection + CI owners/backups | ✅ Closed | `main` branch protection is enforced and requires both `Analyze (javascript-typescript)` + `validate`; CODEOWNERS + CI ownership baseline is merged on `main` via PR #2 (`9eb17df`) |
 | A3 Deploy ownership confirmation | ✅ Closed | Named primary + backup deploy ownership and promotion/rollback authority are now explicitly documented for active pivot deploy surfaces (GitHub/Vercel/DO); Railway/LiteLLM is marked legacy-only |
 | A4 Secrets + rotation + rollback authority | ✅ Closed | Founder-approved source-of-truth (`Vercel-only`), rotation cadence (`90d`), active runtime key availability in Vercel, and legacy Railway decommission stance are now explicitly documented |
-| A5 Incident escalation + founder boundaries | ⏳ Open | Boundaries documented, but explicit founder confirmation for closure is pending |
+| A5 Incident escalation + founder boundaries | ✅ Closed | Founder-approved boundary policy (`1A`/`2A`/`3A`) is documented with rollback authority, severity SLAs, and CTO escalation triggers |
 
-## Founder Decisions Needed (To Close A5)
+## Founder Decisions Needed (Track A)
 
-1. Approve rollback and incident-command authority boundary:
-   - who can execute immediate rollback
-   - founder notification SLA by severity
-   - CTO escalation/review trigger points
+- No remaining founder decisions are required to close Track A (`A1-A5` are now closed).
 
 ## Founder Decision Boundaries (Must Stay Explicit)
 
