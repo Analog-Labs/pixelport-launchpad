@@ -1,6 +1,6 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-03-18
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
 **Formerly:** Growth Swarm (now archived historical context)
 **Primary Runtime Direction:** PixelPort-owned Paperclip fork + per-tenant DO droplets
@@ -70,6 +70,34 @@ First P1 handoff release slice from `codex/pivot-p1-bootstrap-handoff` is now me
   - `POST /api/runtime/handoff` with invalid bearer -> `401` (token validation guard)
   - `GET /api/debug/env-check` without secret -> `401` (debug auth guard)
 - QA evidence: `docs/qa/2026-03-17-pivot-p1-handoff-release-smoke.md`
+
+## Pivot Execution Update (2026-03-18 P4 Auto-Login Consumer)
+
+Next approved slice started to complete the final launch path:
+
+- launchpad branch: `codex/p4-launchpad-handoff-redirect`
+- Paperclip fork branch: `codex/pixelport-handoff-autologin`
+
+Implemented changes:
+- launchpad onboarding launch now requires `handoff_token` from `/api/runtime/handoff` and redirects to:
+  - `/api/auth/pixelport/handoff?handoff_token=...&next=/`
+- Paperclip fork now exposes Better Auth endpoint:
+  - `GET /api/auth/pixelport/handoff`
+  - verifies handoff token (`p1-v1`, HMAC signature, issuer/audience, TTL)
+  - ensures user principal + `instance_admin` role + owner memberships
+  - sets Better Auth session cookie and redirects to workspace path
+
+Validation evidence:
+- launchpad: `npx tsc --noEmit` (`pass`)
+- Paperclip fork:
+  - `pnpm --filter @paperclipai/server typecheck` (`pass`)
+  - `pnpm vitest run server/src/__tests__/pixelport-handoff.test.ts` (`pass`)
+- QA artifact: `docs/qa/2026-03-18-pivot-p4-paperclip-handoff-autologin.md`
+- launchpad review PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/13`
+- Paperclip review PR: `https://github.com/paperclipai/paperclip/pull/1192` (from `sanchalr/paperclip:codex/pixelport-handoff-autologin`)
+
+Release dependency:
+- deploy Paperclip consumer before enabling launchpad redirect globally.
 
 ## Pivot Execution Update (2026-03-17 Ownership Audit)
 
