@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P5 — Monorepo Paperclip + LiteLLM Removal
 
-**Status:** Active (PR A `#14` merged -> `9fe9ac7`; PR B `#15` merged -> `ae082eb`; Vercel deploy blocker on both merge commits).  
+**Status:** Active (PR A `#14` merged -> `9fe9ac7`; PR B `#15` merged -> `ae082eb`; Vercel deploy blocker on both merge commits due `ignoreCommand` length limit).  
 **Goal:** Consolidate Paperclip customizations into this repo and remove LiteLLM from active provisioning/runtime architecture.
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, P5 founder decisions (2026-03-18)
 
@@ -57,6 +57,7 @@
 
 - Merge order completed as requested: `#14` then `#15`.
 - Required GitHub checks are green on both merge commits; Vercel production context is `failure` on both (`9fe9ac7`, `ae082eb`).
+- Vercel root cause confirmed: `vercel.json` `ignoreCommand` exceeds 256-character schema limit; config hotfix is required before production deploy can succeed.
 - Latest smoke evidence is recorded in `docs/qa/2026-03-18-p5-merge-order-smoke.md`; post-deploy rerun is required for closure.
 - Immediate next phase after P5 closure: full TryClam teardown (account-level), then integrations-first track (`Google + Slack`) with global PixelPort branding layer.
 - `tenants.litellm_team_id` remains in schema temporarily (cleanup deferred to later DB migration pass).

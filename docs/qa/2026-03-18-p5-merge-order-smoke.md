@@ -29,6 +29,9 @@
   - target: `https://vercel.com/docs/concepts/projects/project-configuration`
 - `ae082eb` Vercel context: `failure`
   - target: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/8ciZaPmC9HjoV8C7SKE3bb3oD9H5`
+- Vercel deployment API root-cause detail:
+  - `readyStateReason`: `The vercel.json schema validation failed with the following message: ignoreCommand should NOT be longer than 256 characters`
+  - repro confirmed again on follow-up commit `d6f5885` deployment (`dpl_GNueK7N6oPk8UqAn7JmxBsp99Lu1`)
 
 ## Targeted Production Smoke (`https://pixelport-launchpad.vercel.app`)
 

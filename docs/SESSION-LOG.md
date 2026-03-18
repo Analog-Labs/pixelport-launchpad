@@ -28,6 +28,9 @@
   - Observed Vercel deployment failure on both merge commits:
     - `9fe9ac7` -> Vercel status `failure` (`https://vercel.com/docs/concepts/projects/project-configuration`)
     - `ae082eb` -> Vercel status `failure` (`https://vercel.com/sanchalrs-projects/pixelport-launchpad/8ciZaPmC9HjoV8C7SKE3bb3oD9H5`)
+  - Identified root cause via Vercel deployment API inspect:
+    - `vercel.json` schema validation error: `ignoreCommand` exceeds Vercel 256-character limit.
+    - This also reproduced on follow-up docs commit deployment (`d6f5885`).
   - Ran targeted production smoke on `https://pixelport-launchpad.vercel.app` (guard/deletion health check while deploy blocker is active):
     - `GET /api/runtime/handoff` -> `405 {"error":"Method not allowed"}`
     - `POST /api/runtime/handoff` (no auth) -> `401 {"error":"Missing or invalid Authorization header"}`
@@ -39,12 +42,12 @@
   - Added QA evidence artifact:
     - `docs/qa/2026-03-18-p5-merge-order-smoke.md`
 - **What's next:**
-  - Resolve Vercel production deployment failure for merge commits `9fe9ac7` and `ae082eb`.
+  - Ship a short-form `ignoreCommand` fix (<=256 chars) in `vercel.json`, then redeploy `main`.
   - Re-run targeted production smoke after successful deploy of `main` to confirm post-P5 live state.
   - Founder executes remaining P5 closure ops:
     - remove `LITELLM_URL` and `LITELLM_MASTER_KEY` from Vercel
     - shut down Railway LiteLLM service
-- **Blockers:** P5 code is merged, but production deploy for both merge commits is failing on Vercel; full post-merge production validation remains blocked until deploy succeeds.
+- **Blockers:** P5 code is merged, but production deploy for both merge commits is failing on Vercel due `ignoreCommand` length limit (>256 chars); full post-merge production validation remains blocked until config fix + successful deploy.
 
 - **Date:** 2026-03-18 (session 100)
 - **Who worked:** Founder + Codex
