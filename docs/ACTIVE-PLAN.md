@@ -35,14 +35,13 @@
 
 #### Track C — Review and Release
 - [x] C1: Sync plan/session docs for multi-agent awareness.
-- [ ] C2: Open CTO review PRs (launchpad PR `#13` opened; Paperclip PR pending push access).
+- [x] C2: Open CTO review PRs (launchpad PR `#13`; Paperclip PR `paperclipai/paperclip#1192`).
 - [ ] C3: Merge approved PRs and run production smoke (`Launch -> authenticated workspace`).
 
 ### Blockers
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
-| Paperclip upstream push denied (`403` on `paperclipai/paperclip`) from current auth context | Open Paperclip review PR for the consumer slice | Founder + Technical Lead |
 | Cross-repo deployment ordering: Paperclip consumer must be deployed before launchpad redirect is released globally | Avoid broken redirects to missing endpoint | Technical Lead + Founder |
 | `PAPERCLIP_HANDOFF_SECRET` parity across launchpad and every tenant Paperclip runtime | Prevent invalid-signature handoff failures | Founder + Technical Lead |
 | Current DO token cannot delete droplets (`HTTP 403`), so debug cleanup removes tenant rows but leaves dry-run droplets running | Repeat canary cost/quota hygiene and unattended cleanup reliability | Founder + Technical Lead |
@@ -59,6 +58,7 @@
   - CTO prompt: `docs/build-briefs/2026-03-18-pivot-p4-paperclip-handoff-autologin-slice-cto-prompt.md`
   - QA evidence: `docs/qa/2026-03-18-pivot-p4-paperclip-handoff-autologin.md`
   - launchpad CTO review PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/13`
+  - Paperclip CTO review PR: `https://github.com/paperclipai/paperclip/pull/1192`
 - P3 artifacts:
   - migration checklist: `docs/migration/launchpad-runtime-prune-checklist.md`
   - build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice.md`

@@ -41,9 +41,9 @@
     - CTO prompt: `docs/build-briefs/2026-03-18-pivot-p4-paperclip-handoff-autologin-slice-cto-prompt.md`
   - Opened launchpad CTO review PR:
     - `https://github.com/Analog-Labs/pixelport-launchpad/pull/13`
-  - Paperclip push status:
-    - local branch + commit prepared (`codex/pixelport-handoff-autologin`, `11efa79`)
-    - upstream push to `paperclipai/paperclip` failed with `403` (write access required)
+  - Opened Paperclip CTO review PR from fork branch:
+    - fork branch: `sanchalr/paperclip:codex/pixelport-handoff-autologin`
+    - upstream PR: `https://github.com/paperclipai/paperclip/pull/1192`
   - Updated live planning docs:
     - `docs/ACTIVE-PLAN.md`
 - **What's next:**

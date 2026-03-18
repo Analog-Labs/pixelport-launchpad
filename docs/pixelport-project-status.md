@@ -94,7 +94,7 @@ Validation evidence:
   - `pnpm vitest run server/src/__tests__/pixelport-handoff.test.ts` (`pass`)
 - QA artifact: `docs/qa/2026-03-18-pivot-p4-paperclip-handoff-autologin.md`
 - launchpad review PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/13`
-- Paperclip fork push state: local commit prepared (`11efa79`), upstream push to `paperclipai/paperclip` currently blocked (`403`)
+- Paperclip review PR: `https://github.com/paperclipai/paperclip/pull/1192` (from `sanchalr/paperclip:codex/pixelport-handoff-autologin`)
 
 Release dependency:
 - deploy Paperclip consumer before enabling launchpad redirect globally.
