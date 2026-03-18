@@ -357,15 +357,32 @@ Founder approved the A5 boundary policy with decisions `1A`, `2A`, and `3A`:
 Closure evidence:
 - `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-closure.md`
 
-Merge note:
-- this closure update is prepared on branch `codex/p1-a5-incident-boundary-closure` and is pending PR `#5` merge to `main`.
-
 Track A closure state after this update:
 - A1: closed
 - A2: closed
 - A3: closed
 - A4: closed
 - A5: closed
+
+## Pivot Execution Update (2026-03-17 Track A5 Merge + Production Smoke)
+
+A5 documentation closure slice is now merged and deployed:
+
+- PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/5`
+- merge commit: `38f2bb2`
+- deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/7jZhAxmssCoePW6CYsds8exMtkad`
+- required checks on merge commit:
+  - `Analyze (javascript-typescript)`: `pass`
+  - `validate`: `pass`
+
+Targeted production smoke on `https://pixelport-launchpad.vercel.app` passed:
+- `GET /api/runtime/handoff` -> `405`
+- `POST /api/runtime/handoff` without auth -> `401`
+- `POST /api/runtime/handoff` invalid bearer -> `401`
+- `GET /api/debug/env-check` -> `404`
+
+Evidence artifact:
+- `docs/qa/2026-03-17-pivot-p1-a5-merge-smoke.md`
 
 ---
 
