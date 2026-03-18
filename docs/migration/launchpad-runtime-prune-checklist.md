@@ -101,5 +101,37 @@ Define what `pixelport-launchpad` keeps vs retires after Paperclip cutover, with
   - dependency scans show no active frontend/inngest/test dependencies on removed groups
 
 ### Deferred from Batch 1
-- `api/competitors/*` remains active and was intentionally not deleted:
-  - active frontend dependency: `src/pages/dashboard/Competitors.tsx` -> `GET /api/competitors`
+- `api/competitors/*` deletion was deferred in batch 1 because dashboard still called `GET /api/competitors`.
+
+### Batch 2 (dashboard/api legacy removal) — Completed on implementation branch
+- Branch: `codex/p3-c4-prune-batch2-dashboard-runtime-legacy`
+- Removed vestigial dashboard pages/routes that depended on deleted APIs:
+  - `src/pages/dashboard/Content.tsx`
+  - `src/pages/dashboard/CalendarPage.tsx`
+  - `src/pages/dashboard/Vault.tsx`
+  - `src/pages/dashboard/Competitors.tsx`
+  - plus route/nav wiring cleanup in `src/App.tsx` and `src/components/dashboard/AppSidebar.tsx`
+- Removed route groups:
+  - `api/commands/*`
+  - `api/tasks/*`
+  - `api/vault/*`
+  - `api/agent/*`
+  - `api/agents/*`
+  - `api/competitors/*`
+- Removed now-empty route directories:
+  - `api/commands/`
+  - `api/tasks/`
+  - `api/vault/`
+  - `api/agent/`
+  - `api/agents/`
+  - `api/competitors/`
+- Validation completed:
+  - `npx tsc --noEmit` (`pass`)
+  - `npm test -- --exclude src/test/tenants-status-route.test.ts` (`pass`)
+  - dependency scans show no active frontend runtime usage of deleted groups
+- Additive alignment:
+  - bootstrap/workspace contract messaging moved to workspace-first guidance (no `/api/agent/*` instructions)
+
+### Next Deferred Group(s)
+- `api/connections/*` + integration activation functions
+- `api/settings/*` + `api/debug/slack-status.ts`

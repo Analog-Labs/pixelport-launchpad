@@ -4,9 +4,9 @@
 
 ---
 
-## Current Phase: Phase P3 — Launchpad Runtime Prune (Track C4 Batch 1)
+## Current Phase: Phase P3 — Launchpad Runtime Prune (Track C4 Batch 2)
 
-**Status:** Active (P2 is closed/merged on `main`; P3 batch-1 PR `#9` is merged/deployed on `main` as `e39ca89`; required checks and same-session production smoke are passing).  
+**Status:** Active (P2 is closed/merged on `main`; P3 batch-1 is merged/deployed on `main`; P3 batch-2 implementation is prepared on `codex/p3-c4-prune-batch2-dashboard-runtime-legacy` pending CTO review).  
 **Goal:** Incrementally prune unused legacy launchpad runtime route groups while preserving active thin-bridge provisioning responsibilities.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/migration/launchpad-runtime-prune-checklist.md`
 
@@ -15,8 +15,9 @@
 - [x] Launchpad remains marketing + billing + thin provisioning bridge.
 - [x] Pruning is incremental; no big-bang deletion.
 - [x] Remove only route groups with confirmed no active frontend/inngest dependencies.
-- [x] Keep `api/competitors/*` for now (dashboard still depends on it).
+- [x] Remove vestigial dashboard pages in the same batch as the dependent API deletions.
 - [x] Keep all onboarding/provisioning keep-now surfaces intact.
+- [x] Workspace bootstrap guidance is workspace-first and must not depend on removed legacy runtime APIs.
 
 ### P3 Work Checklist
 
@@ -33,11 +34,25 @@
 - [x] B3: Merge approved P3 slice to `main`.
 - [x] B4: Run same-session production smoke for retained active surfaces.
 
+#### Track C — Batch 2 Implementation (Dashboard/API Legacy Removal)
+- [x] C1: Remove dashboard runtime dependencies on legacy task/vault/competitor/command APIs.
+- [x] C2: Delete vestigial dashboard pages/routes (`Content`, `Calendar`, `Vault`, `Competitors`).
+- [x] C3: Delete legacy route groups (`commands`, `tasks`, `vault`, `agent`, `agents`, `competitors`).
+- [x] C4: Update bootstrap/workspace contract guidance to workspace-first instructions (no `/api/agent/*` guidance).
+- [x] C5: Remove dead route tests/libraries tied to deleted groups.
+- [x] C6: Run local validation (`npx tsc --noEmit`, CI-equivalent tests).
+- [x] C7: Record QA evidence for batch 2.
+
+#### Track D — Review and Release (Batch 2)
+- [x] D1: Create batch-2 build brief and CTO review prompt.
+- [ ] D2: Open CTO review PR for `codex/p3-c4-prune-batch2-dashboard-runtime-legacy`.
+- [ ] D3: Merge approved batch-2 slice to `main`.
+- [ ] D4: Run same-session production smoke for retained active surfaces.
+
 ### Blockers
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
-| `api/competitors/*` cannot be pruned yet because dashboard still calls `GET /api/competitors` (`src/pages/dashboard/Competitors.tsx`) | Route-prune batch 2 planning/execution | Technical Lead (+ Founder approval if UX surface changes) |
 | Current DO token cannot delete droplets (`HTTP 403`), so debug cleanup removes tenant rows but leaves dry-run droplets running | Repeat canary cost/quota hygiene and unattended cleanup reliability | Founder + Technical Lead |
 | Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
 
@@ -50,6 +65,9 @@
   - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice-cto-prompt.md`
   - QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1.md`
   - merge smoke evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1-merge-smoke.md`
+  - batch-2 build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
+  - batch-2 CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy-cto-prompt.md`
+  - batch-2 QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
 - P2 artifacts:
   - build brief: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice.md`
   - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice-cto-prompt.md`

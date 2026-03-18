@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, FileText, CalendarDays, Search, BookOpen,
+  LayoutDashboard,
   Plug, Settings, LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -14,10 +14,6 @@ import {
 
 const primaryNav = [
   { title: "Home", url: "/dashboard", icon: LayoutDashboard, end: true },
-  { title: "Content Pipeline", url: "/dashboard/content", icon: FileText },
-  { title: "Calendar", url: "/dashboard/calendar", icon: CalendarDays },
-  { title: "Competitors", url: "/dashboard/competitors", icon: Search },
-  { title: "Knowledge Vault", url: "/dashboard/vault", icon: BookOpen },
   { title: "Connections", url: "/dashboard/connections", icon: Plug },
 ];
 

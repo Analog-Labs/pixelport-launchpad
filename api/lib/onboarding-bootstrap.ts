@@ -95,15 +95,12 @@ export function buildOnboardingBootstrapMessage(params: {
     'Execution requirements:',
     '1. Mark any pending vault sections as "populating" before you work on them.',
     '2. Use the workspace contract files at the root plus the `pixelport/` namespace for durable runtime artifacts.',
-    '3. Create real task records in PixelPort for each major research activity so the dashboard shows backend-driven progress.',
-    '4. Update the vault with concrete findings, add competitor profiles when you have evidence, and create at least one completed strategy or report task summarizing your initial findings.',
-    '5. If you promote a runtime artifact or materially change command state, emit a matching `/api/agent/workspace-events` event.',
-    '6. If you generate content ideas, save them as draft_content tasks that require approval.',
-    '7. If any information is missing, record what you learned and what you still need from the human instead of waiting silently.',
-    '8. Valid task_type values are exactly: draft_content, research, competitor_analysis, strategy, report. If you need a running status, use "running" instead of "in_progress".',
-    '9. After you materially update canonical vault truth, refresh the relevant native memory artifact in `MEMORY.md` or `memory/` during the same work cycle.',
+    '3. Write concrete findings into canonical workspace artifacts under `pixelport/` (vault snapshots, runtime snapshots, and deliverables).',
+    '4. Keep output evidence-backed and avoid placeholder content.',
+    '5. After you materially update canonical truth, refresh the relevant native memory artifact in `MEMORY.md` or `memory/` during the same work cycle.',
+    '6. If any information is missing, record what you learned and what you still need from the human instead of waiting silently.',
     '',
-    'Keep your final reply short. The important part is writing the work back into the PixelPort APIs.',
+    'Keep your final reply short. The important part is writing durable workspace truth.',
   ];
 
   return lines.join('\n');

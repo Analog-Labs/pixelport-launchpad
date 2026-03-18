@@ -12,11 +12,7 @@ import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/dashboard/Home";
-import Content from "./pages/dashboard/Content";
-import CalendarPage from "./pages/dashboard/CalendarPage";
 import Performance from "./pages/dashboard/Performance";
-import Vault from "./pages/dashboard/Vault";
-import Competitors from "./pages/dashboard/Competitors";
 import Connections from "./pages/dashboard/Connections";
 import Settings from "./pages/dashboard/Settings";
 import Chat from "./pages/dashboard/Chat";
@@ -37,11 +33,7 @@ const App = () => (
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}>
               <Route index element={<Home />} />
-              <Route path="content" element={<Content />} />
-              <Route path="calendar" element={<CalendarPage />} />
               <Route path="performance" element={<Performance />} />
-              <Route path="vault" element={<Vault />} />
-              <Route path="competitors" element={<Competitors />} />
               <Route path="connections" element={<Connections />} />
               <Route path="settings" element={<Settings />} />
               <Route path="chat" element={<Chat />} />
