@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P5 — Monorepo Paperclip + LiteLLM Removal
 
-**Status:** Active (PR A opened: `#14`; PR B opened: `#15`).  
+**Status:** Active (PR A `#14` merged -> `9fe9ac7`; PR B `#15` merged -> `ae082eb`; Vercel deploy blocker on both merge commits).  
 **Goal:** Consolidate Paperclip customizations into this repo and remove LiteLLM from active provisioning/runtime architecture.
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, P5 founder decisions (2026-03-18)
 
@@ -47,14 +47,17 @@
 - [x] B10: Open CTO review PR (`#15`)
 
 #### Track C — Merge + Production Closure
-- [ ] C1: Merge PR A after CTO approval
-- [ ] C2: Merge PR B after CTO approval
-- [ ] C3: Run same-session production smoke on retained active surfaces
+- [x] C1: Merge PR A after CTO approval
+- [x] C2: Merge PR B after CTO approval
+- [ ] C3: Run same-session production smoke on retained active surfaces (attempt executed; rerun required after Vercel deploy succeeds for `main`)
 - [ ] C4: Founder manually remove `LITELLM_URL` + `LITELLM_MASTER_KEY` from Vercel
 - [ ] C5: Shut down Railway LiteLLM service
 
 ### Notes
 
+- Merge order completed as requested: `#14` then `#15`.
+- Required GitHub checks are green on both merge commits; Vercel production context is `failure` on both (`9fe9ac7`, `ae082eb`).
+- Latest smoke evidence is recorded in `docs/qa/2026-03-18-p5-merge-order-smoke.md`; post-deploy rerun is required for closure.
 - Immediate next phase after P5 closure: full TryClam teardown (account-level), then integrations-first track (`Google + Slack`) with global PixelPort branding layer.
 - `tenants.litellm_team_id` remains in schema temporarily (cleanup deferred to later DB migration pass).
 

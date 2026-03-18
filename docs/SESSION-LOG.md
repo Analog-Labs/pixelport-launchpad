@@ -7,6 +7,45 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 101)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Merged approved PR `#14` to `main` first:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/14`
+    - merge commit: `9fe9ac7`
+    - merge method: `--admin` override (GitHub still reported `REVIEW_REQUIRED`)
+  - Merged approved PR `#15` to `main` second:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/15`
+    - merge commit: `ae082eb`
+    - merge method: `--admin` override (head not up-to-date after `#14`, merge order preserved)
+  - Confirmed required merge-commit checks:
+    - `#14`:
+      - `validate` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23241707537`)
+      - `Analyze (javascript-typescript)` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23241706984`)
+    - `#15`:
+      - `validate` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23241733480`)
+      - `Analyze (javascript-typescript)` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23241732780`)
+  - Observed Vercel deployment failure on both merge commits:
+    - `9fe9ac7` -> Vercel status `failure` (`https://vercel.com/docs/concepts/projects/project-configuration`)
+    - `ae082eb` -> Vercel status `failure` (`https://vercel.com/sanchalrs-projects/pixelport-launchpad/8ciZaPmC9HjoV8C7SKE3bb3oD9H5`)
+  - Ran targeted production smoke on `https://pixelport-launchpad.vercel.app` (guard/deletion health check while deploy blocker is active):
+    - `GET /api/runtime/handoff` -> `405 {"error":"Method not allowed"}`
+    - `POST /api/runtime/handoff` (no auth) -> `401 {"error":"Missing or invalid Authorization header"}`
+    - `GET /api/tenants/status` (no auth) -> `401 {"error":"Missing or invalid Authorization header"}`
+    - `POST /api/tenants/scan` (no auth) -> `401 {"error":"Missing or invalid Authorization header"}`
+    - `GET /api/debug/test-provision` (no auth) -> `401 {"error":"Invalid or missing secret"}`
+    - `GET /api/commands` -> `404` (`NOT_FOUND`)
+    - `GET /api/tasks` -> `404` (`NOT_FOUND`)
+  - Added QA evidence artifact:
+    - `docs/qa/2026-03-18-p5-merge-order-smoke.md`
+- **What's next:**
+  - Resolve Vercel production deployment failure for merge commits `9fe9ac7` and `ae082eb`.
+  - Re-run targeted production smoke after successful deploy of `main` to confirm post-P5 live state.
+  - Founder executes remaining P5 closure ops:
+    - remove `LITELLM_URL` and `LITELLM_MASTER_KEY` from Vercel
+    - shut down Railway LiteLLM service
+- **Blockers:** P5 code is merged, but production deploy for both merge commits is failing on Vercel; full post-merge production validation remains blocked until deploy succeeds.
+
 - **Date:** 2026-03-18 (session 100)
 - **Who worked:** Founder + Codex
 - **What was done:**
