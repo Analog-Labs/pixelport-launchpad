@@ -1,4 +1,4 @@
-export const THIN_BRIDGE_CONTRACT_VERSION = 'pivot-p0-v1';
+export const THIN_BRIDGE_CONTRACT_VERSION = 'pivot-p0-v2';
 
 const TASK_UNLOCK_STATUSES = new Set(['ready', 'active']);
 
@@ -18,7 +18,6 @@ export interface TenantStatusBridgePayload {
   has_agent_output: boolean;
   has_droplet: boolean;
   has_gateway: boolean;
-  has_litellm: boolean;
   has_agentmail: boolean;
   trial_ends_at: string | null;
   plan: string | null;

@@ -1,4 +1,4 @@
-export const THIN_BRIDGE_CONTRACT_VERSION = "pivot-p0-v1";
+export const THIN_BRIDGE_CONTRACT_VERSION = "pivot-p0-v2";
 
 const TASK_UNLOCK_STATUSES = new Set(["ready", "active"]);
 

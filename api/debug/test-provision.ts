@@ -46,8 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   // Check required provisioning env vars
   const missingVars = [];
-  if (!process.env.LITELLM_URL) missingVars.push('LITELLM_URL');
-  if (!process.env.LITELLM_MASTER_KEY) missingVars.push('LITELLM_MASTER_KEY');
+  if (!process.env.OPENAI_API_KEY) missingVars.push('OPENAI_API_KEY');
   if (!process.env.DO_API_TOKEN) missingVars.push('DO_API_TOKEN');
   if (!process.env.INNGEST_EVENT_KEY) missingVars.push('INNGEST_EVENT_KEY');
   if (missingVars.length > 0) {
@@ -256,17 +255,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       monitor: 'Check Inngest dashboard at https://app.inngest.com for the provision-tenant function execution.',
       expected_steps: [
         '1. validate-tenant',
-        '2. create-litellm-team',
-        '3. generate-litellm-key',
-        '4. create-droplet (was previously blocked — should work now)',
-        '5. wait-for-droplet (polls up to 5 min)',
-        '6. create-agentmail-inbox (skipped if no API key)',
-        '7. store-infra-refs',
-        '8. wait-for-gateway (polls up to 5 min)',
-        '9. configure-agents',
-        '10. create-agent-records',
+        '2. resolve-memory-settings',
+        '3. create-droplet',
+        '4. wait-for-droplet (polls up to 5 min)',
+        '5. create-agentmail-inbox (skipped if no API key)',
+        '6. store-infra-refs',
+        '7. wait-for-gateway (polls up to 10 min)',
+        '8. verify-gateway-config',
+        '9. create-agent-records',
+        '10. seed-vault',
         '11. send-welcome',
         '12. mark-active',
+        '13. trigger-initial-bootstrap',
       ],
       cleanup_url: `POST /api/debug/test-provision?secret=<key>&cleanup=true`,
     });

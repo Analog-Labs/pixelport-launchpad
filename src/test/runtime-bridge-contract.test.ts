@@ -6,7 +6,7 @@ import {
 
 describe("runtime bridge contract", () => {
   it("keeps a pinned contract version marker", () => {
-    expect(THIN_BRIDGE_CONTRACT_VERSION).toBe("pivot-p0-v1");
+    expect(THIN_BRIDGE_CONTRACT_VERSION).toBe("pivot-p0-v2");
   });
 
   it("unlocks task step only for ready and active statuses", () => {
