@@ -250,11 +250,69 @@ Named deploy ownership model:
 - promotion authority: primary by default; backups when founder-delegated
 - rollback authority: primary immediate; backups when founder-delegated; founder notification required immediately after rollback
 
-Track A closure state after this update:
+Track A closure state after this update (historical snapshot at this checkpoint):
 - A1: closed
 - A2: closed
 - A3: closed
 - A4: open
+- A5: open
+
+## Pivot Execution Update (2026-03-17 Track A3 Merge + Production Smoke)
+
+A3 documentation slice is now merged and deployed:
+
+- PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/3`
+- merge commit: `4b06fda`
+- deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/2NQ8EUrBdjTNPHenMtpfn1aYjn3x`
+- required checks on merge commit:
+  - `Analyze (javascript-typescript)`: `pass`
+  - `validate`: `pass`
+
+Targeted production smoke on `https://pixelport-launchpad.vercel.app` passed:
+- `GET /api/runtime/handoff` -> `405`
+- `POST /api/runtime/handoff` without auth -> `401`
+- `POST /api/runtime/handoff` invalid bearer -> `401`
+- `GET /api/debug/env-check` -> `404`
+
+Evidence artifact:
+- `docs/qa/2026-03-17-pivot-p1-a3-merge-smoke.md`
+
+## Pivot Execution Update (2026-03-17 Track A4 Secrets Inventory Kickoff)
+
+Track A4 execution is started with refreshed evidence capture:
+
+- `PAPERCLIP_HANDOFF_SECRET` is visible in Vercel production env key listing
+- handoff contract truth is confirmed as:
+  - required: `PAPERCLIP_HANDOFF_SECRET`
+  - optional: `PAPERCLIP_HANDOFF_TTL_SECONDS` (default `300`)
+  - runtime URL is derived from tenant `droplet_ip` (no runtime URL env required)
+- Railway/LiteLLM variable surface is documented as legacy pre-pivot scope (names-only)
+
+A4 remained open at this kickoff checkpoint pending founder closure decisions on:
+- source-of-truth ownership by surface
+- rotation ownership/cadence
+- unresolved env-owner mappings for runtime/provisioning references not currently visible in Vercel production key listing
+
+Evidence artifact:
+- `docs/qa/2026-03-17-pivot-p1-a4-secrets-inventory-kickoff.md`
+
+## Pivot Execution Update (2026-03-17 Track A4 Secrets Closure)
+
+Founder approvals have now closed A4 with explicit policy decisions:
+
+- source of truth: Vercel-only for active pivot secrets
+- rotation cadence: 90 days for all active pivot secrets
+- AGENTMAIL/GEMINI/MEM0 keys confirmed added in Vercel for OpenClaw-driven use
+- Railway/LiteLLM confirmed legacy decommission path (not active pivot secret authority)
+
+Closure evidence:
+- `docs/qa/2026-03-17-pivot-p1-a4-secrets-closure.md`
+
+Track A closure state after this update:
+- A1: closed
+- A2: closed
+- A3: closed
+- A4: closed
 - A5: open
 
 ---

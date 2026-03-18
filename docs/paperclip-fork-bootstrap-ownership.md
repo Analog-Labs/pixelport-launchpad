@@ -87,12 +87,18 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 
 **Launchpad (Vercel env listing evidence):**
 - `API_KEY_ENCRYPTION_KEY`
+- `AGENTMAIL_API_KEY`
 - `DO_API_TOKEN`
+- `GEMINI_API_KEY`
 - `INNGEST_EVENT_KEY`
 - `INNGEST_SIGNING_KEY`
 - `LITELLM_MASTER_KEY`
 - `LITELLM_URL`
+- `MEM0_API_KEY`
 - `MEMORY_OPENAI_API_KEY`
+- `PAPERCLIP_HANDOFF_SECRET`
+- `PROVISIONING_DROPLET_IMAGE`
+- `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE`
 - `SLACK_APP_TOKEN`
 - `SLACK_CLIENT_ID`
 - `SLACK_CLIENT_SECRET`
@@ -101,10 +107,10 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - `SUPABASE_PROJECT_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-**Handoff contract vars (required by route/contract code):**
-- `PAPERCLIP_RUNTIME_URL`
-- `PAPERCLIP_HANDOFF_SECRET`
-- `PAPERCLIP_HANDOFF_TTL_SECONDS`
+**Handoff contract vars (route/contract code):**
+- required: `PAPERCLIP_HANDOFF_SECRET`
+- optional: `PAPERCLIP_HANDOFF_TTL_SECONDS` (defaults to `300` seconds when unset/invalid)
+- no longer required as env: runtime URL (derived from tenant `droplet_ip` as `http://<ip>:18789`)
 
 **Droplet runtime/provisioning surfaces (from provisioning/runtime codepaths):**
 - `OPENCLAW_IMAGE`
@@ -130,8 +136,16 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - `ANTHROPIC_API_KEY`
 - `GEMINI_API_KEY`
 
-**Important evidence gap:**
-- `PAPERCLIP_*` handoff vars are **not visible** in current Vercel production env listing evidence.
+**A4 founder-approved policy decisions (2026-03-17):**
+- Source of truth: Vercel is the only active pivot secret source of truth.
+- Rotation cadence: 90-day rotation for all active pivot secrets.
+- Runtime key stance: AGENTMAIL/GEMINI/MEM0 keys were added to Vercel and are available for active OpenClaw-driven use.
+- Legacy stance: Railway/LiteLLM is marked decommission path (not active pivot secret authority).
+
+**A4 closure notes:**
+- `PAPERCLIP_HANDOFF_SECRET` is visible in Vercel production env listing evidence.
+- `PAPERCLIP_HANDOFF_TTL_SECONDS` remains optional and is currently handled by default fallback.
+- Some non-pivot/legacy config references (`OPENAI_API_KEY`, `OPENCLAW_IMAGE`, `OPENCLAW_RUNTIME_IMAGE`, `TENANT_PROVISIONING_ALLOWLIST`) are tracked for cleanup separately and are not blockers for Track A4 closure.
 
 ### A5 — Rollback/Incident Boundary Evidence State
 
@@ -146,16 +160,12 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 | A1 Publish ownership contract | ✅ Closed | Contract exists with matrix + runbook ownership intent |
 | A2 Repo/branch protection + CI owners/backups | ✅ Closed | `main` branch protection is enforced and requires both `Analyze (javascript-typescript)` + `validate`; CODEOWNERS + CI ownership baseline is merged on `main` via PR #2 (`9eb17df`) |
 | A3 Deploy ownership confirmation | ✅ Closed | Named primary + backup deploy ownership and promotion/rollback authority are now explicitly documented for active pivot deploy surfaces (GitHub/Vercel/DO); Railway/LiteLLM is marked legacy-only |
-| A4 Secrets + rotation + rollback authority | ⏳ Open | Inventory signal captured, but source-of-truth/rotation ownership and handoff var placement are not founder-closed |
+| A4 Secrets + rotation + rollback authority | ✅ Closed | Founder-approved source-of-truth (`Vercel-only`), rotation cadence (`90d`), active runtime key availability in Vercel, and legacy Railway decommission stance are now explicitly documented |
 | A5 Incident escalation + founder boundaries | ⏳ Open | Boundaries documented, but explicit founder confirmation for closure is pending |
 
-## Founder Decisions Needed (To Close A4-A5)
+## Founder Decisions Needed (To Close A5)
 
-1. Approve secrets source-of-truth and rotation model:
-   - where handoff vars (`PAPERCLIP_*`) are stored
-   - rotation owner and cadence
-   - escalation policy for missing/misaligned secrets
-2. Approve rollback and incident-command authority boundary:
+1. Approve rollback and incident-command authority boundary:
    - who can execute immediate rollback
    - founder notification SLA by severity
    - CTO escalation/review trigger points
