@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P3 — Launchpad Runtime Prune (Track C4 Batch 1)
 
-**Status:** Active (P2 is closed/merged on `main`; implementation PR `#9` is open for CTO review on `codex/p3-c4-prune-batch1-chat-content-approvals`).  
+**Status:** Active (P2 is closed/merged on `main`; P3 batch-1 PR `#9` is merged/deployed on `main` as `e39ca89`; required checks and same-session production smoke are passing).  
 **Goal:** Incrementally prune unused legacy launchpad runtime route groups while preserving active thin-bridge provisioning responsibilities.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/migration/launchpad-runtime-prune-checklist.md`
 
@@ -30,8 +30,8 @@
 #### Track B — Review and Release
 - [x] B1: Create P3 build brief and CTO review prompt.
 - [x] B2: Open CTO review PR for `codex/p3-c4-prune-batch1-chat-content-approvals` (`#9`).
-- [ ] B3: Merge approved P3 slice to `main`.
-- [ ] B4: Run same-session production smoke for retained active surfaces.
+- [x] B3: Merge approved P3 slice to `main`.
+- [x] B4: Run same-session production smoke for retained active surfaces.
 
 ### Blockers
 
@@ -49,6 +49,7 @@
   - build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice.md`
   - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice-cto-prompt.md`
   - QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1.md`
+  - merge smoke evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1-merge-smoke.md`
 - P2 artifacts:
   - build brief: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice.md`
   - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice-cto-prompt.md`
