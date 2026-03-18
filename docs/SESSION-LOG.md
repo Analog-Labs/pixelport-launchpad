@@ -7,6 +7,22 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 107)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Founder confirmed `DO_API_TOKEN` was rotated in Vercel to the new PixelPort droplet space and should be the active provisioning/deletion token baseline going forward (including delete scope expectations).
+  - Updated active planning and ownership docs so all agents operate under the new DigitalOcean token baseline:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/paperclip-fork-bootstrap-ownership.md`
+    - `docs/qa/2026-03-18-p6-do-token-rotation-baseline.md`
+  - Checked PR `#17` merge readiness:
+    - status checks are green (`validate`, `Analyze (javascript-typescript)`, Vercel)
+    - merge is still blocked by required review (`REVIEW_REQUIRED`)
+- **What's next:**
+  - Merge decision on PR `#17` (wait for CTO approval vs founder-authorized admin override).
+  - After merge: run D5 production canary (`signup -> onboarding -> provision -> launch -> auto-login -> agent responds`) and include DO delete-flow evidence where possible.
+- **Blockers:** PR `#17` merge is currently blocked on required review.
+
 - **Date:** 2026-03-18 (session 106)
 - **Who worked:** Founder + Codex
 - **What was done:**

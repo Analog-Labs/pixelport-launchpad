@@ -60,6 +60,9 @@
   - candidate bump to latest upstream tag (`v2026.3.13-1`) is queued only after D5 passes and one stable golden image canary is confirmed.
 - D4 break-glass note:
   - `OPENCLAW_CONTROL_UI_DISABLE_DEVICE_AUTH` defaults to enabled in current provisioning code to unblock launch-critical flow; explicitly set env to `false` to disable once proxy/handoff hardening path is ready.
+- DigitalOcean ops baseline (2026-03-18 founder update):
+  - `DO_API_TOKEN` in Vercel has been rotated to the new PixelPort droplet space and should be treated as the only active provisioning/deletion token going forward.
+  - all future provisioning/canary cleanup flows should use this token path; do not rely on legacy DO token contexts.
 - Immediate execution order: Track 0 first. Resume Track A/B/C only after launch-critical D4/D5 closure.
 
 ---
