@@ -11,9 +11,8 @@ describe("provision tenant memory config", () => {
     vi.resetModules();
     process.env.SUPABASE_PROJECT_URL = "https://supabase.test";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role";
-    process.env.LITELLM_URL = "https://litellm.test";
-    process.env.LITELLM_MASTER_KEY = "litellm-master";
     process.env.DO_API_TOKEN = "do-token";
+    process.env.OPENAI_API_KEY = "openai-key";
     process.env.PROVISIONING_DROPLET_IMAGE =
       "pixelport-paperclip-golden-2026-03-16";
   });
@@ -26,7 +25,6 @@ describe("provision tenant memory config", () => {
     const config = buildOpenClawConfig({
       tenantSlug: "pixelport-qa",
       gatewayToken: "gw-token",
-      litellmUrl: "https://litellm.test",
       agentName: "Luna",
       memoryNativeEnabled: true,
       geminiApiKey: "",
@@ -56,7 +54,6 @@ describe("provision tenant memory config", () => {
     const config = buildOpenClawConfig({
       tenantSlug: "pixelport-qa",
       gatewayToken: "gw-token",
-      litellmUrl: "https://litellm.test",
       agentName: "Luna",
       memoryNativeEnabled: false,
       geminiApiKey: "",
@@ -82,7 +79,6 @@ describe("provision tenant memory config", () => {
     const config = buildOpenClawConfig({
       tenantSlug: "pixelport-qa",
       gatewayToken: "gw-token",
-      litellmUrl: "https://litellm.test",
       agentName: "Luna",
       memoryNativeEnabled: true,
       geminiApiKey: "",
@@ -121,6 +117,37 @@ describe("provision tenant memory config", () => {
         "   ",
       ),
     ).toBe("ghcr.io/openclaw/openclaw:2026.3.11");
+  });
+
+  it("uses direct OpenAI/Gemini model references in generated agent config", async () => {
+    const { buildOpenClawConfig } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const config = buildOpenClawConfig({
+      tenantSlug: "pixelport-qa",
+      gatewayToken: "gw-token",
+      agentName: "Luna",
+      memoryNativeEnabled: true,
+      geminiApiKey: "gemini-key",
+      disableAcpDispatch: true,
+    });
+
+    expect(config).toMatchObject({
+      agents: {
+        defaults: {
+          model: {
+            primary: "openai/gpt-5.4",
+            fallbacks: ["google/gemini-2.5-flash", "openai/gpt-4o-mini"],
+          },
+        },
+        list: [
+          {
+            model: "openai/gpt-5.4",
+          },
+        ],
+      },
+    });
   });
 
   it("resolves runtime image to override when provided", async () => {
@@ -242,8 +269,7 @@ describe("provision tenant memory config", () => {
       gatewayToken: "gw-token",
       openclawBaseImage: "ghcr.io/openclaw/openclaw:2026.3.11",
       openclawRuntimeImage: "ghcr.io/openclaw/openclaw:2026.3.11",
-      litellmUrl: "https://litellm.test",
-      litellmKey: "litellm-key",
+      openaiApiKey: "openai-key",
       memoryOpenAiApiKey: "memory-openai-key",
       memoryNativeEnabled: true,
       geminiApiKey: "",
@@ -258,6 +284,8 @@ describe("provision tenant memory config", () => {
     expect(script).not.toContain("docker build -t");
     expect(script).not.toContain("/opt/openclaw/image");
     expect(script).not.toContain("--no-install-recommends chromium");
+    expect(script).toContain("OPENAI_API_KEY=openai-key");
+    expect(script).not.toContain("OPENAI_BASE_URL=");
     expect(script).toContain("chmod 600 /opt/openclaw/openclaw.json /opt/openclaw/.env");
     expect(script).toContain("normalize_runtime_state_perms()");
     expect(script).toContain(
