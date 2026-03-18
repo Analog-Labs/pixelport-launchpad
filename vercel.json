@@ -13,5 +13,6 @@
     "api/debug/test-provision.ts": {
       "maxDuration": 30
     }
-  }
+  },
+  "ignoreCommand": "bash -lc 'if [ -z \"$VERCEL_GIT_PREVIOUS_SHA\" ]; then echo \"VERCEL_GIT_PREVIOUS_SHA missing; forcing build\"; exit 1; fi; CHANGED_FILES=$(git diff --name-only \"$VERCEL_GIT_PREVIOUS_SHA\" HEAD 2>/dev/null || true); if [ -z \"$CHANGED_FILES\" ]; then echo \"No changed files detected; forcing build\"; exit 1; fi; if echo \"$CHANGED_FILES\" | grep -qv \"^paperclip/\"; then echo \"Non-paperclip changes detected; running build\"; exit 1; fi; echo \"Only paperclip/ changes detected; skipping build\"; exit 0'"
 }

@@ -56,13 +56,12 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-const LITELLM_URL = process.env.LITELLM_URL;
-const LITELLM_MASTER_KEY = process.env.LITELLM_MASTER_KEY;
 const DO_API_TOKEN = process.env.DO_API_TOKEN;
 const AGENTMAIL_API_KEY = process.env.AGENTMAIL_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-if (!LITELLM_URL || !LITELLM_MASTER_KEY || !DO_API_TOKEN) {
-  throw new Error('Missing one or more required env vars: LITELLM_URL, LITELLM_MASTER_KEY, DO_API_TOKEN');
+if (!DO_API_TOKEN || !OPENAI_API_KEY) {
+  throw new Error('Missing one or more required env vars: DO_API_TOKEN, OPENAI_API_KEY');
 }
 
 const OPENCLAW_BASE_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.3.11';
@@ -229,52 +228,6 @@ export const provisionTenant = inngest.createFunction(
       });
     }
 
-    const litellmTeam = await step.run('create-litellm-team', async () => {
-      const tenantSettings = (tenant.settings ?? {}) as Json;
-      const configuredBudget = Number(tenantSettings.trial_budget_usd);
-      const budgetUsd = Number.isFinite(configuredBudget) && configuredBudget > 0 ? configuredBudget : 20;
-
-      const response = await fetch(`${LITELLM_URL}/team/new`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${LITELLM_MASTER_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          team_alias: `pixelport-${tenant.slug}-${randomUUID().slice(0, 8)}`,
-          max_budget: budgetUsd,
-          budget_duration: '30d',
-          models: ['gpt-5.4', 'gpt-4o-mini', 'gemini-2.5-flash'],
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`LiteLLM team creation failed: ${await response.text()}`);
-      }
-
-      return (await response.json()) as { team_id: string };
-    });
-
-    const litellmKey = await step.run('generate-litellm-key', async () => {
-      const response = await fetch(`${LITELLM_URL}/key/generate`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${LITELLM_MASTER_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          team_id: litellmTeam.team_id,
-          key_alias: `pixelport-${tenant.slug}-${randomUUID().slice(0, 8)}`,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`LiteLLM key generation failed: ${await response.text()}`);
-      }
-
-      return (await response.json()) as { key: string; key_name?: string };
-    });
-
     const droplet = await step.run('create-droplet', async () => {
       const gatewayToken = `gw-${randomUUID()}`;
       const requestedSize = trialMode
@@ -299,8 +252,7 @@ export const provisionTenant = inngest.createFunction(
         gatewayToken,
         openclawBaseImage: OPENCLAW_BASE_IMAGE,
         openclawRuntimeImage: OPENCLAW_RUNTIME_IMAGE,
-        litellmUrl: LITELLM_URL,
-        litellmKey: litellmKey.key,
+        openaiApiKey: OPENAI_API_KEY,
         memoryOpenAiApiKey: memoryProvisioningPlan.memoryOpenAiApiKey,
         memoryNativeEnabled: memoryProvisioningPlan.effectiveNativeEnabled,
         geminiApiKey: process.env.GEMINI_API_KEY || '',
@@ -441,7 +393,6 @@ export const provisionTenant = inngest.createFunction(
           droplet_id: droplet.dropletId,
           droplet_ip: dropletIp,
           gateway_token: droplet.gatewayToken,
-          litellm_team_id: litellmTeam.team_id,
           agentmail_inbox: agentmailInbox,
           agent_api_key: droplet.agentApiKey,
         })
@@ -654,8 +605,6 @@ export const provisionTenant = inngest.createFunction(
       tenantId,
       dropletId: droplet.dropletId,
       dropletIp,
-      litellmTeamId: litellmTeam.team_id,
-      litellmKeyAlias: litellmKey.key_name || `pixelport-${tenant.slug}-main`,
       agentmailInbox,
       bootstrapAccepted: bootstrapResult.ok,
       bootstrapStatus: bootstrapResult.status,
@@ -706,8 +655,7 @@ export function buildCloudInit(params: {
   gatewayToken: string;
   openclawBaseImage: string;
   openclawRuntimeImage: string;
-  litellmUrl: string;
-  litellmKey: string;
+  openaiApiKey: string;
   memoryOpenAiApiKey: string;
   memoryNativeEnabled: boolean;
   geminiApiKey: string;
@@ -778,10 +726,9 @@ cp /opt/openclaw/openclaw.with-acp.json /opt/openclaw/openclaw.json
 # 4. Write workspace contract
 ${workspaceWriteCommands}
 
-# 5. Write environment secrets (LiteLLM proxy + AgentMail + PixelPort API)
+# 5. Write environment secrets (OpenAI + AgentMail + PixelPort API)
 cat > /opt/openclaw/.env << 'ENV_FILE'
-OPENAI_API_KEY=${params.litellmKey}
-OPENAI_BASE_URL=${params.litellmUrl}/v1
+OPENAI_API_KEY=${params.openaiApiKey}
 MEMORY_OPENAI_API_KEY=${params.memoryOpenAiApiKey}
 GEMINI_API_KEY=${params.geminiApiKey}
 AGENTMAIL_API_KEY=${params.agentmailApiKey}
@@ -873,7 +820,6 @@ echo "PixelPort provisioning complete for ${params.tenantSlug}"
 export function buildOpenClawConfig(params: {
   tenantSlug: string;
   gatewayToken: string;
-  litellmUrl: string;
   agentName: string;
   memoryNativeEnabled: boolean;
   geminiApiKey: string;
@@ -926,8 +872,8 @@ export function buildOpenClawConfig(params: {
     agents: {
       defaults: {
         model: {
-          primary: 'litellm/gpt-5.4',
-          fallbacks: ['litellm/gemini-2.5-flash', 'litellm/gpt-4o-mini'],
+          primary: 'openai/gpt-5.4',
+          fallbacks: ['google/gemini-2.5-flash', 'openai/gpt-4o-mini'],
         },
         memorySearch: buildOpenClawMemorySearchConfig(params.memoryNativeEnabled),
         subagents: {
@@ -940,7 +886,7 @@ export function buildOpenClawConfig(params: {
           id: 'main',
           name: params.agentName,
           workspace: '/home/node/.openclaw/workspace-main',
-          model: 'litellm/gpt-5.4',
+          model: 'openai/gpt-5.4',
           subagents: {
             allowAgents: ['*'],
           },
@@ -950,49 +896,6 @@ export function buildOpenClawConfig(params: {
           },
         },
       ],
-    },
-    models: {
-      mode: 'merge',
-      providers: {
-        litellm: {
-          baseUrl: `${params.litellmUrl}/v1`,
-          apiKey: '${OPENAI_API_KEY}',
-          api: 'openai-responses',
-          authHeader: true,
-          models: [
-            {
-              id: 'gpt-5.4',
-              name: 'GPT 5.4',
-              api: 'openai-responses',
-              reasoning: false,
-              input: ['text'],
-              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-              contextWindow: 128000,
-              maxTokens: 32000,
-            },
-            {
-              id: 'gpt-4o-mini',
-              name: 'GPT 4o Mini',
-              api: 'openai-responses',
-              reasoning: false,
-              input: ['text'],
-              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-              contextWindow: 128000,
-              maxTokens: 16384,
-            },
-            {
-              id: 'gemini-2.5-flash',
-              name: 'Gemini 2.5 Flash',
-              api: 'openai-responses',
-              reasoning: false,
-              input: ['text'],
-              cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-              contextWindow: 1048576,
-              maxTokens: 8192,
-            },
-          ],
-        },
-      },
     },
   };
 }

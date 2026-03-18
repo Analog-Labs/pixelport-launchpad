@@ -14,8 +14,8 @@
 #   {{OPENCLAW_BASE_IMAGE}}     — pinned OpenClaw base image (e.g., ghcr.io/openclaw/openclaw:2026.3.11)
 #   {{OPENCLAW_RUNTIME_IMAGE}}  — runtime image (defaults to OPENCLAW_BASE_IMAGE unless an override is set)
 #   {{GATEWAY_TOKEN}}           — random UUID for gateway auth
-#   {{LITELLM_KEY}}             — LiteLLM virtual key for this tenant
-#   {{LITELLM_URL}}             — LiteLLM proxy base URL
+#   {{OPENAI_API_KEY}}          — OpenAI API key used directly by OpenClaw
+#   {{GEMINI_API_KEY}}          — Gemini key (fallback model + web search provider)
 #   {{AGENTMAIL_API_KEY}}       — AgentMail API key
 
 runcmd:
@@ -48,7 +48,7 @@ runcmd:
     # 4. Write the workspace contract:
     #    - root prompt files: SOUL.md, TOOLS.md, AGENTS.md, HEARTBEAT.md, BOOTSTRAP.md
     #    - pixelport/ namespace for durable runtime artifacts and snapshots
-    # 5. Write .env (OPENAI_API_KEY, OPENAI_BASE_URL, GEMINI_API_KEY, AGENTMAIL_API_KEY, PIXELPORT_API_KEY, SLACK_APP_TOKEN)
+    # 5. Write .env (OPENAI_API_KEY, MEMORY_OPENAI_API_KEY, GEMINI_API_KEY, AGENTMAIL_API_KEY, PIXELPORT_API_KEY, SLACK_APP_TOKEN)
 
     # 6. Set ownership (OpenClaw container runs as node:1000)
     chown -R 1000:1000 /opt/openclaw
@@ -60,7 +60,7 @@ runcmd:
 
     # 8. Run the OpenClaw gateway container
     # --network host: required because OpenClaw binds to 127.0.0.1 in bridge mode
-    # --env-file: secrets (LiteLLM key, AgentMail key, Slack app token)
+    # --env-file: secrets (OpenAI key, AgentMail key, Slack app token)
     # openclaw.mjs gateway: explicit entrypoint with port and bind flags
     docker rm -f openclaw-gateway >/dev/null 2>&1 || true
     docker run -d \

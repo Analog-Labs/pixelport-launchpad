@@ -1,0 +1,22 @@
+# PixelPort Paperclip Customizations
+
+This directory is the source of truth for PixelPort-owned customizations layered on top of upstream Paperclip releases.
+
+## What lives here
+
+- `plugins/`: PixelPort runtime plugins that are applied into the Paperclip server codebase during image builds.
+- `theme/`: Placeholder for PixelPort global branding assets and theme overrides.
+- `patches/`: Placeholder for curated core patches against upstream Paperclip.
+- `build/`: Build runbooks for how to apply these overlays during golden image construction.
+
+## Build and deployment boundary
+
+- This directory is used only for DigitalOcean golden image construction.
+- These files do **not** deploy to Vercel runtime routes.
+- Launchpad production behavior is still controlled by repo code under `src/`, `api/`, and `infra/`.
+
+## Golden image relation
+
+When rebuilding the PixelPort golden image, start from a pinned upstream Paperclip release and apply this directory as an overlay (plugin/theme/patch layer), then validate and snapshot.
+
+See `paperclip/build/golden-image-build.md` for the expected flow.
