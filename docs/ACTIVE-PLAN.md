@@ -4,134 +4,65 @@
 
 ---
 
-## Current Phase: Phase P3 — Launchpad Runtime Prune (Track C4 Batch 3)
+## Current Phase: Phase P5 — Monorepo Paperclip + LiteLLM Removal
 
-**Status:** Active (P2 is closed/merged on `main`; P3 batches 1 and 2 are merged/deployed on `main`; batch-3 implementation is prepared on `codex/p3-c4-prune-batch3-chat-settings-legacy` pending CTO review).  
-**Goal:** Incrementally prune unused legacy launchpad runtime route groups while preserving active thin-bridge provisioning responsibilities.  
-**Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/migration/launchpad-runtime-prune-checklist.md`
+**Status:** Active (PR A opened: `#14`; PR B in progress).  
+**Goal:** Consolidate Paperclip customizations into this repo and remove LiteLLM from active provisioning/runtime architecture.
+**Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, P5 founder decisions (2026-03-18)
 
 ### Locked Decisions (Carry Forward)
 
-- [x] Launchpad remains marketing + billing + thin provisioning bridge.
-- [x] Pruning is incremental; no big-bang deletion.
-- [x] Remove only route groups with confirmed no active frontend/inngest dependencies.
-- [x] Remove vestigial dashboard pages in the same batch as the dependent API deletions.
-- [x] Keep all onboarding/provisioning keep-now surfaces intact.
-- [x] Workspace bootstrap guidance is workspace-first and must not depend on removed legacy runtime APIs.
+- [x] `paperclip/` lives inside `pixelport-launchpad` (no separate customization repo)
+- [x] LiteLLM is removed from active provisioning/runtime paths
+- [x] Status contract gets a clean break: remove `has_litellm`
+- [x] Thin bridge contract version bumps to `pivot-p0-v2`
+- [x] Existing tenants are test-only; no migration track required
+- [x] Platform-managed LLM keys remain the active policy (BYOK deferred)
+- [x] LiteLLM infra is decommissioned now (delete repo artifacts)
+- [x] Vercel `ignoreCommand` is allowed with strict safety guard (skip only when all changes are under `paperclip/`)
 
-### P3 Work Checklist
+### P5 Work Checklist
 
-#### Track A — Batch 1 Implementation (Chat/Content/Approvals)
-- [x] A1: Verify no active frontend runtime calls to `/api/chat`, `/api/content`, `/api/approvals`.
-- [x] A2: Verify no route/test/inngest dependencies on those route groups.
-- [x] A3: Delete `chat`, `content`, and `approvals` route files and emptied directories.
-- [x] A4: Run local validation (`npx tsc --noEmit`, CI-equivalent tests).
-- [x] A5: Record QA evidence for this batch.
+#### Track A — Monorepo Structure + Provisioning Cutover (PR A)
+- [x] A1: Create `paperclip/` customization structure (`README`, `plugins`, `theme`, `patches`, `build`)
+- [x] A2: Copy `pixelport-handoff.ts` and reference test from local Paperclip customization source
+- [x] A3: Add safe `vercel.json` `ignoreCommand` guard for `paperclip/**`-only changes
+- [x] A4: Remove LiteLLM team/key generation from provisioning function
+- [x] A5: Pass direct `OPENAI_API_KEY` into droplet env and remove `OPENAI_BASE_URL`
+- [x] A6: Switch generated OpenClaw model refs from `litellm/*` to `openai/*` + `google/*`
+- [x] A7: Sync provisioning templates and tests for direct-provider mode
+- [x] A8: Run local validation (`npx tsc --noEmit`, `npm test`)
+- [x] A9: Open CTO review PR (`#14`)
 
-#### Track B — Review and Release
-- [x] B1: Create P3 build brief and CTO review prompt.
-- [x] B2: Open CTO review PR for `codex/p3-c4-prune-batch1-chat-content-approvals` (`#9`).
-- [x] B3: Merge approved P3 slice to `main`.
-- [x] B4: Run same-session production smoke for retained active surfaces.
+#### Track B — Scan + Contract + Decommission Cleanup (PR B)
+- [ ] B1: Migrate `/api/tenants/scan` to direct provider calls (OpenAI primary, Gemini fallback)
+- [ ] B2: Remove `has_litellm` from `/api/tenants/status` payload
+- [ ] B3: Bump thin bridge contract version to `pivot-p0-v2` in backend/frontend contract markers
+- [ ] B4: Update affected tests (`tenants-status`, contract marker, scan fallback coverage)
+- [ ] B5: Update `/api/debug/test-provision` expected env checks/step list for direct mode
+- [ ] B6: Remove `infra/litellm/*` from repo (decommission path complete)
+- [ ] B7: Update golden image manifest for monorepo overlay + no LiteLLM dependency
+- [ ] B8: Full doc sync (`SESSION-LOG`, `pixelport-project-status`, ownership/deploy docs)
+- [ ] B9: Run local validation (`npx tsc --noEmit`, `npm test`)
+- [ ] B10: Open CTO review PR
 
-#### Track C — Batch 2 Implementation (Dashboard/API Legacy Removal)
-- [x] C1: Remove dashboard runtime dependencies on legacy task/vault/competitor/command APIs.
-- [x] C2: Delete vestigial dashboard pages/routes (`Content`, `Calendar`, `Vault`, `Competitors`).
-- [x] C3: Delete legacy route groups (`commands`, `tasks`, `vault`, `agent`, `agents`, `competitors`).
-- [x] C4: Update bootstrap/workspace contract guidance to workspace-first instructions (no `/api/agent/*` guidance).
-- [x] C5: Remove dead route tests/libraries tied to deleted groups.
-- [x] C6: Run local validation (`npx tsc --noEmit`, CI-equivalent tests).
-- [x] C7: Record QA evidence for batch 2.
-
-#### Track D — Review and Release (Batch 2)
-- [x] D1: Create batch-2 build brief and CTO review prompt.
-- [x] D2: Open CTO review PR for `codex/p3-c4-prune-batch2-dashboard-runtime-legacy` (`#11`).
-- [x] D3: Merge approved batch-2 slice to `main` (`cfc9daf` via PR `#11`).
-- [x] D4: Run same-session production smoke for retained active surfaces.
-
-#### Track E — Batch 3 Implementation (Chat/Settings Legacy Removal)
-- [x] E1: Remove dashboard chat surfaces (`Chat.tsx`, `ChatWidget.tsx`, `ChatContext.tsx`) and provider wiring.
-- [x] E2: Remove dashboard `Performance` and `Settings` pages/routes/nav references.
-- [x] E3: Delete `api/settings/*` and `api/debug/slack-status.ts`.
-- [x] E4: Fix `src/test/tenants-status-route.test.ts` to current status payload contract.
-- [x] E5: Run local validation (`npx tsc --noEmit`, `npm test`, `npm run build`).
-- [x] E6: Record QA evidence for batch 3.
-
-#### Track F — Review and Release (Batch 3)
-- [x] F1: Create batch-3 build brief and CTO review prompt.
-- [x] F2: Open CTO review PR for `codex/p3-c4-prune-batch3-chat-settings-legacy` (`#12`).
-- [ ] F3: Merge approved batch-3 slice to `main`.
-- [ ] F4: Run same-session production smoke for retained active surfaces.
-
-### Blockers
-
-| Blocker | Who's Waiting | Who Can Unblock |
-|---------|---------------|-----------------|
-| Current DO token cannot delete droplets (`HTTP 403`), so debug cleanup removes tenant rows but leaves dry-run droplets running | Repeat canary cost/quota hygiene and unattended cleanup reliability | Founder + Technical Lead |
-| Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
+#### Track C — Merge + Production Closure
+- [ ] C1: Merge PR A after CTO approval
+- [ ] C2: Merge PR B after CTO approval
+- [ ] C3: Run same-session production smoke on retained active surfaces
+- [ ] C4: Founder manually remove `LITELLM_URL` + `LITELLM_MASTER_KEY` from Vercel
+- [ ] C5: Shut down Railway LiteLLM service
 
 ### Notes
 
-- If any older checklist conflicts with the pivot plan, pivot plan wins.
-- P3 artifacts:
-  - migration checklist: `docs/migration/launchpad-runtime-prune-checklist.md`
-  - build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice.md`
-  - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice-cto-prompt.md`
-  - QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1.md`
-  - merge smoke evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1-merge-smoke.md`
-  - batch-2 build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
-  - batch-2 CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy-cto-prompt.md`
-  - batch-2 QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
-  - batch-3 build brief: `docs/build-briefs/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy.md`
-  - batch-3 CTO prompt: `docs/build-briefs/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy-cto-prompt.md`
-  - batch-3 QA evidence: `docs/qa/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy.md`
-- P2 artifacts:
-  - build brief: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice.md`
-  - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice-cto-prompt.md`
-  - QA evidence: `docs/qa/2026-03-17-pivot-p2-launch-workspace-redirect.md`
-  - merge smoke evidence: `docs/qa/2026-03-17-pivot-p2-launch-workspace-redirect-merge-smoke.md`
-- P0 implementation and release artifacts remain valid and shipped:
-  - `docs/qa/2026-03-16-pivot-p0-release-smoke.md`
-- P1 artifacts:
-  - ownership contract: `docs/paperclip-fork-bootstrap-ownership.md`
-  - build brief: `docs/build-briefs/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice.md`
-  - CTO prompt: `docs/build-briefs/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice-cto-prompt.md`
-  - QA evidence: `docs/qa/2026-03-16-pivot-p1-paperclip-bootstrap-handoff-slice.md`
-  - release smoke evidence: `docs/qa/2026-03-17-pivot-p1-handoff-release-smoke.md`
-  - ownership-audit brief: `docs/build-briefs/2026-03-17-pivot-p1-ownership-audit-slice.md`
-  - ownership-audit CTO prompt: `docs/build-briefs/2026-03-17-pivot-p1-ownership-audit-slice-cto-prompt.md`
-  - ownership-audit QA evidence: `docs/qa/2026-03-17-pivot-p1-ownership-audit.md`
-  - authenticated smoke brief: `docs/build-briefs/2026-03-17-pivot-p1-handoff-auth-smoke-slice.md`
-  - authenticated smoke CTO prompt: `docs/build-briefs/2026-03-17-pivot-p1-handoff-auth-smoke-slice-cto-prompt.md`
-  - authenticated smoke QA evidence: `docs/qa/2026-03-17-pivot-p1-handoff-authenticated-smoke.md`
-  - runtime target + golden enforcement brief: `docs/build-briefs/2026-03-17-pivot-p1-runtime-target-golden-enforcement-slice.md`
-  - runtime target + golden enforcement CTO prompt: `docs/build-briefs/2026-03-17-pivot-p1-runtime-target-golden-enforcement-slice-cto-prompt.md`
-  - runtime target + golden enforcement QA evidence: `docs/qa/2026-03-17-pivot-p1-runtime-target-golden-enforcement.md`
-  - golden selector fresh-tenant canary QA evidence: `docs/qa/2026-03-17-pivot-p1-golden-selector-fresh-tenant-canary.md`
-  - golden image policy gate brief: `docs/build-briefs/2026-03-17-pivot-p1-golden-image-policy-gate-slice.md`
-  - golden image policy gate CTO prompt: `docs/build-briefs/2026-03-17-pivot-p1-golden-image-policy-gate-slice-cto-prompt.md`
-  - golden image policy gate QA evidence: `docs/qa/2026-03-17-pivot-p1-golden-image-policy-gate.md`
-  - managed golden promotion + managed-only canary evidence: `docs/qa/2026-03-17-pivot-p1-managed-golden-promotion-and-managed-only-canary.md`
-  - managed golden rebuild closure evidence: `docs/qa/2026-03-17-pivot-p1-managed-golden-rebuild-closure.md`
-  - post-session QA follow-up log: `docs/SESSION-LOG.md` (sessions 82-87)
-  - step 5 follow-up merge smoke evidence: `docs/qa/2026-03-17-p1-step5-merge-release-smoke.md`
-  - step 5 authenticated onboarding-launch handoff smoke evidence: `docs/qa/2026-03-17-p1-step5-authenticated-onboarding-launch-smoke.md`
-  - A2 governance guardrails slice evidence: `docs/qa/2026-03-17-pivot-p1-a2-governance-guardrails-slice.md`
-  - A2 governance merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a2-governance-merge-smoke.md`
-  - A3 deploy ownership closure evidence: `docs/qa/2026-03-17-pivot-p1-a3-deploy-ownership-closure.md`
-  - A3 merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a3-merge-smoke.md`
-  - A4 secrets inventory kickoff evidence: `docs/qa/2026-03-17-pivot-p1-a4-secrets-inventory-kickoff.md`
-  - A4 secrets closure evidence: `docs/qa/2026-03-17-pivot-p1-a4-secrets-closure.md`
-  - A4 merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a4-merge-smoke.md`
-  - A5 boundary proposal evidence: `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-proposal.md`
-  - A5 boundary closure evidence: `docs/qa/2026-03-17-pivot-p1-a5-incident-boundary-closure.md`
-  - A5 merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a5-merge-smoke.md`
+- Immediate next phase after P5 closure: full TryClam teardown (account-level), then integrations-first track (`Google + Slack`) with global PixelPort branding layer.
+- `tenants.litellm_team_id` remains in schema temporarily (cleanup deferred to later DB migration pass).
 
 ---
 
 ## Previous Phases (Historical)
 
-- Phase P0 — Paperclip-Primary Pivot Foundation ✅
-- Phase 0 — Foundation ✅
-- Phase 1 — Chief of Staff Alive ✅
-- Phase 2 — Dynamic Chief + Real Dashboard Data ✅
+- Phase P3 — Launchpad Runtime Prune ✅ (batches 1/2/3 merged)
+- Phase P2 — Launch Workspace Redirect ✅
+- Phase P1 — Paperclip Handoff / Ownership / Secrets / Boundaries ✅
+- Phase P0 — Pivot Foundation ✅

@@ -1,9 +1,9 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-03-18
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
 **Formerly:** Growth Swarm (now archived historical context)
-**Primary Runtime Direction:** PixelPort-owned Paperclip fork + per-tenant DO droplets
+**Primary Runtime Direction:** PixelPort-owned Paperclip customization overlay (`paperclip/`) + per-tenant DO droplets
 **Primary Interfaces:** PixelPort web app + Slack (tenant-configured)
 
 ---
@@ -35,13 +35,30 @@ Detailed founder and CTO handoff steps live in `docs/build-workflow.md`.
 
 The founder approved a Paperclip-primary pivot and this is now the active direction:
 
-- Product runtime source of truth is a PixelPort-owned Paperclip fork.
+- Product runtime source of truth is a PixelPort-owned Paperclip customization overlay in this monorepo (`paperclip/`) applied on top of pinned upstream Paperclip releases.
 - `pixelport-launchpad` remains active for marketing, billing, and thin provisioning bridge responsibilities.
 - Hard cutover applies for the pivot release.
 - Growth Swarm is archived/deactivated from active scope.
 - Binding execution contract is `docs/pixelport-pivot-plan-2026-03-16.md`.
 
 This note overrides conflicting older assumptions in this status file while preserving prior sections as historical record.
+
+## Pivot Execution Update (2026-03-18 P5 Monorepo + LiteLLM Removal)
+
+- P5 direction is active:
+  - `paperclip/` customization layer is now tracked in this repo (no separate customization repo).
+  - LiteLLM is removed from active provisioning/runtime architecture.
+- PR A opened: `https://github.com/Analog-Labs/pixelport-launchpad/pull/14`
+  - monorepo `paperclip/` structure added with copied handoff plugin + reference test.
+  - provisioning refactored to direct `OPENAI_API_KEY` path (no LiteLLM team/key generation, no `OPENAI_BASE_URL` emission).
+  - OpenClaw model refs switched to direct providers (`openai/*`, `google/*`).
+  - `vercel.json` now includes a guarded `ignoreCommand` that skips only when all changed files are under `paperclip/`.
+- PR B scope (in progress):
+  - migrate `/api/tenants/scan` to direct providers (OpenAI primary, Gemini fallback)
+  - remove `has_litellm` from `/api/tenants/status`
+  - bump bridge contract marker to `pivot-p0-v2`
+  - remove `infra/litellm/*` from repo
+  - sync docs + golden image manifest for monorepo overlay and no-LiteLLM dependency
 
 ## Pivot Execution Update (2026-03-16)
 

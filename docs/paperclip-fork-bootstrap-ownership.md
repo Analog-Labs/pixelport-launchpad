@@ -1,4 +1,4 @@
-# Paperclip Fork Bootstrap Ownership Contract (Phase P1)
+# Paperclip Bootstrap Ownership Contract (Phase P1/P5)
 
 **Date:** 2026-03-17  
 **Scope:** Post-P0 ownership lock for the Paperclip-primary runtime bootstrap  
@@ -12,7 +12,7 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 
 | Surface | Primary owner | Reviewer / backup | Founder approval required to close |
 |---------|---------------|-------------------|------------------------------------|
-| Repo admin and branch policy (`Analog-Labs/pixelport-launchpad`, Paperclip fork governance) | Technical Lead (Codex) | CTO reviewer + named human backup reviewers (`haider-rs`, `penumbra23`) | Yes |
+| Repo admin and branch policy (`Analog-Labs/pixelport-launchpad`, `paperclip/` customization overlay governance) | Technical Lead (Codex) | CTO reviewer + named human backup reviewers (`haider-rs`, `penumbra23`) | Yes |
 | CI/workflow integrity and required-check baseline | Technical Lead (Codex) | CTO reviewer | Yes for required-gate changes on `main` |
 | Deploy targets and promotion ownership (Vercel launchpad, runtime surfaces) | Technical Lead (Codex) | Founder visibility + CTO reviewer | Yes |
 | Launchpad -> Paperclip handoff contract ownership | Technical Lead (Codex) | CTO reviewer | Yes if user-facing/auth-flow impact |
@@ -46,7 +46,7 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
   - workflow: `CodeQL` (`dynamic/github-code-scanning/codeql`)
   - latest `main` check-run context observed: `Analyze (javascript-typescript)`
 
-**Paperclip reference repo (`paperclipai/paperclip`):**
+**Paperclip upstream reference (`paperclipai/paperclip`):**
 - default branch is `master`
 - branch reports `protected: true`
 - active ruleset observed on `master` includes:
@@ -74,8 +74,8 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
   - team: `My Team` (`ff5818a0-6b80-442d-81cb-c851fb8d17ea`)
 
 **Legacy infra signal (out of active pivot deploy model):**
-- Railway/LiteLLM service is still running (`pixelport-litellm`) but is pre-pivot legacy infra and not part of active A3 deploy ownership scope.
-- It is tracked as legacy-to-decommission and should not be treated as the runtime ownership authority for Paperclip-primary provisioning.
+- Railway/LiteLLM is decommissioned for active runtime scope as of P5.
+- Active provisioning/runtime model is direct-provider OpenAI + Gemini from Vercel-managed keys.
 
 **Named deploy ownership model (A3 closure):**
 - primary deploy owner (all active pivot launch surfaces): `sanchalr` / `sanchal@analog.one`
@@ -92,8 +92,6 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - `GEMINI_API_KEY`
 - `INNGEST_EVENT_KEY`
 - `INNGEST_SIGNING_KEY`
-- `LITELLM_MASTER_KEY`
-- `LITELLM_URL`
 - `MEM0_API_KEY`
 - `MEMORY_OPENAI_API_KEY`
 - `PAPERCLIP_HANDOFF_SECRET`
@@ -123,18 +121,12 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - `PIXELPORT_DROPLET_REGION`
 - `DO_GOLDEN_IMAGE_ID`
 - `OPENAI_API_KEY`
-- `OPENAI_BASE_URL`
 - `PIXELPORT_API_KEY`
 - `AGENTMAIL_API_KEY`
 - `GEMINI_API_KEY`
 
-**Legacy LiteLLM service surface (Railway, decommission path only):**
-- `LITELLM_DATABASE_URL`
-- `LITELLM_MASTER_KEY`
-- `LITELLM_UI_TOKEN`
-- `OPENAI_API_KEY`
-- `ANTHROPIC_API_KEY`
-- `GEMINI_API_KEY`
+**Legacy LiteLLM service surface:**
+- Decommissioned from active runtime architecture in Phase P5.
 
 **A4 founder-approved policy decisions (2026-03-17):**
 - Source of truth: Vercel is the only active pivot secret source of truth.
