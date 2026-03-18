@@ -4,70 +4,54 @@
 
 ---
 
-## Current Phase: Phase P5 — Monorepo Paperclip + LiteLLM Removal
+## Current Phase: Phase P6 — Integrations-First Post-Pivot Build
 
-**Status:** Active (PR A `#14` + PR B `#15` merged; hotfix PR `#16` merged and production deploy restored).  
-**Goal:** Consolidate Paperclip customizations into this repo and remove LiteLLM from active provisioning/runtime architecture.
-**Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, P5 founder decisions (2026-03-18)
+**Status:** Active (P5 closed on 2026-03-18).  
+**Goal:** Move from pivot cleanup into account/tooling cleanup plus integrations-first build work (Google + Slack), with global PixelPort branding staged in parallel.
+**Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/pixelport-master-plan-v2.md`
 
-### Locked Decisions (Carry Forward)
+### Confirmed Inputs (Closed from P5)
 
-- [x] `paperclip/` lives inside `pixelport-launchpad` (no separate customization repo)
-- [x] LiteLLM is removed from active provisioning/runtime paths
-- [x] Status contract gets a clean break: remove `has_litellm`
-- [x] Thin bridge contract version bumps to `pivot-p0-v2`
-- [x] Existing tenants are test-only; no migration track required
-- [x] Platform-managed LLM keys remain the active policy (BYOK deferred)
-- [x] LiteLLM infra is decommissioned now (delete repo artifacts)
-- [x] Vercel `ignoreCommand` is allowed with strict safety guard (skip only when all changes are under `paperclip/`)
+- [x] PR `#14` merged (`9fe9ac7`) — monorepo `paperclip/` structure + provisioning LiteLLM removal
+- [x] PR `#15` merged (`ae082eb`) — scan/status contract cleanup + LiteLLM repo decommission
+- [x] PR `#16` merged (`4f1803c`) — Vercel `ignoreCommand` hotfix + production deploy recovery
+- [x] Post-merge production smoke passed on retained/deleted route surfaces
+- [x] Founder removed `LITELLM_URL` and `LITELLM_MASTER_KEY` from Vercel (2026-03-18 confirmation)
+- [x] Founder shut down Railway LiteLLM service (2026-03-18 confirmation)
 
-### P5 Work Checklist
+### P6 Work Checklist
 
-#### Track A — Monorepo Structure + Provisioning Cutover (PR A)
-- [x] A1: Create `paperclip/` customization structure (`README`, `plugins`, `theme`, `patches`, `build`)
-- [x] A2: Copy `pixelport-handoff.ts` and reference test from local Paperclip customization source
-- [x] A3: Add safe `vercel.json` `ignoreCommand` guard for `paperclip/**`-only changes
-- [x] A4: Remove LiteLLM team/key generation from provisioning function
-- [x] A5: Pass direct `OPENAI_API_KEY` into droplet env and remove `OPENAI_BASE_URL`
-- [x] A6: Switch generated OpenClaw model refs from `litellm/*` to `openai/*` + `google/*`
-- [x] A7: Sync provisioning templates and tests for direct-provider mode
-- [x] A8: Run local validation (`npx tsc --noEmit`, `npm test`)
-- [x] A9: Open CTO review PR (`#14`)
+#### Track A — TryClam Teardown
+- [x] A1: Inventory any remaining TryClam dependencies (repo/docs/runtime/process)
+- [x] A2: Create a concrete teardown runbook with explicit owner actions and verification checks
+- [ ] A3: Execute repo/doc cleanup for stale TryClam references and open CTO review PR
 
-#### Track B — Scan + Contract + Decommission Cleanup (PR B)
-- [x] B1: Migrate `/api/tenants/scan` to direct provider calls (OpenAI primary, Gemini fallback)
-- [x] B2: Remove `has_litellm` from `/api/tenants/status` payload
-- [x] B3: Bump thin bridge contract version to `pivot-p0-v2` in backend/frontend contract markers
-- [x] B4: Update affected tests (`tenants-status`, contract marker, scan fallback coverage)
-- [x] B5: Update `/api/debug/test-provision` expected env checks/step list for direct mode
-- [x] B6: Remove `infra/litellm/*` from repo (decommission path complete)
-- [x] B7: Update golden image manifest for monorepo overlay + no LiteLLM dependency
-- [x] B8: Full doc sync (`SESSION-LOG`, `pixelport-project-status`, ownership/deploy docs)
-- [x] B9: Run local validation (`npx tsc --noEmit`, `npm test`)
-- [x] B10: Open CTO review PR (`#15`)
+#### Track B — Integrations-First (Google + Slack)
+- [ ] B1: Map current integration/auth surfaces in launchpad and `paperclip/` overlay
+- [ ] B2: Define first implementation slice for Google + Slack onboarding/runtime path improvements
+- [ ] B3: Execute first approved integration slice on `codex/*` branch with CTO review
 
-#### Track C — Merge + Production Closure
-- [x] C1: Merge PR A after CTO approval
-- [x] C2: Merge PR B after CTO approval
-- [x] C3: Run same-session production smoke on retained active surfaces
-- [ ] C4: Founder manually remove `LITELLM_URL` + `LITELLM_MASTER_KEY` from Vercel
-- [ ] C5: Shut down Railway LiteLLM service
+#### Track C — Global PixelPort Branding Baseline
+- [ ] C1: Inventory launchpad + `paperclip/` branding touchpoints
+- [ ] C2: Draft baseline branding token/theme proposal for founder approval
+- [ ] C3: Implement approved baseline in first branding PR
 
 ### Notes
 
-- Merge order completed as requested: `#14` then `#15`.
-- Vercel deploy blocker was resolved by hotfix PR `#16` (merge commit `4f1803c`) by moving ignore logic to `tools/vercel-ignore-paperclip-only.sh`.
-- Required checks are green and Vercel deploy is `success` on `4f1803c`.
-- Smoke evidence:
-  - deploy-blocked attempt: `docs/qa/2026-03-18-p5-merge-order-smoke.md`
-  - post-fix successful smoke: `docs/qa/2026-03-18-p5-vercel-ignorecommand-hotfix-merge-smoke.md`
-- Immediate next phase after P5 closure: full TryClam teardown (account-level), then integrations-first track (`Google + Slack`) with global PixelPort branding layer.
-- `tenants.litellm_team_id` remains in schema temporarily (cleanup deferred to later DB migration pass).
+- Major product, architecture, and UX decisions still require founder approval before implementation.
+- P5 closure evidence:
+  - `docs/qa/2026-03-18-p5-merge-order-smoke.md`
+  - `docs/qa/2026-03-18-p5-vercel-ignorecommand-hotfix-merge-smoke.md`
+- P6 Track A inventory evidence:
+  - `docs/qa/2026-03-18-p6-track-a1-tryclam-inventory.md`
+- P6 Track A runbook: `docs/ops/tryclam-teardown-runbook.md`
+- Immediate execution order: Track A first, then Track B, with Track C prepared in parallel as non-blocking planning.
 
 ---
 
 ## Previous Phases (Historical)
 
+- Phase P5 — Monorepo Paperclip + LiteLLM Removal ✅
 - Phase P3 — Launchpad Runtime Prune ✅ (batches 1/2/3 merged)
 - Phase P2 — Launch Workspace Redirect ✅
 - Phase P1 — Paperclip Handoff / Ownership / Secrets / Boundaries ✅
