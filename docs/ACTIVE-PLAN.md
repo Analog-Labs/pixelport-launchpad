@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P2 — Paperclip Handoff Consumer and Workspace Launch Redirect
 
-**Status:** Active (PR `#6` is merged on `main` as `cba0625`; implementation PR `#7` is open for CTO review on `codex/p2-paperclip-launch-redirect`; required checks `validate` + `Analyze (javascript-typescript)` are green).  
+**Status:** Active (PR `#6` is merged on `main` as `cba0625`; P2 implementation PR `#7` is merged/deployed on `main` as `a2d179d`; required checks and same-session production smoke are passing).  
 **Goal:** Consume the existing `/api/runtime/handoff` contract during onboarding Launch and redirect users directly to their tenant Paperclip workspace URL.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -31,8 +31,8 @@
 #### Track B — Review and Release
 - [x] B1: Create P2 build brief and CTO review prompt.
 - [x] B2: Open CTO review PR for `codex/p2-paperclip-launch-redirect` (`#7`).
-- [ ] B3: Merge approved P2 slice to `main`.
-- [ ] B4: Run same-session production smoke for onboarding launch + handoff surfaces.
+- [x] B3: Merge approved P2 slice to `main`.
+- [x] B4: Run same-session production smoke for onboarding launch + handoff surfaces.
 
 ### Blockers
 
@@ -48,6 +48,7 @@
   - build brief: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice.md`
   - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice-cto-prompt.md`
   - QA evidence: `docs/qa/2026-03-17-pivot-p2-launch-workspace-redirect.md`
+  - merge smoke evidence: `docs/qa/2026-03-17-pivot-p2-launch-workspace-redirect-merge-smoke.md`
 - P0 implementation and release artifacts remain valid and shipped:
   - `docs/qa/2026-03-16-pivot-p0-release-smoke.md`
 - P1 artifacts:

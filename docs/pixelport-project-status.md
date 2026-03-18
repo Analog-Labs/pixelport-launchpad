@@ -415,6 +415,26 @@ Artifacts:
 - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice-cto-prompt.md`
 - QA evidence: `docs/qa/2026-03-17-pivot-p2-launch-workspace-redirect.md`
 
+## Pivot Execution Update (2026-03-17 P2 Launch Redirect Merge + Production Smoke)
+
+P2 launch-redirect slice is now merged and deployed:
+
+- PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/7`
+- merge commit: `a2d179d`
+- deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/BXb3BQFGyZw5J8w1GoVr4ygcNW3S`
+- required checks on merge commit:
+  - `Analyze (javascript-typescript)`: `pass`
+  - `validate`: `pass`
+
+Targeted production smoke on `https://pixelport-launchpad.vercel.app` passed:
+- `GET /api/runtime/handoff` -> `405`
+- `POST /api/runtime/handoff` without auth -> `401`
+- `POST /api/runtime/handoff` invalid bearer -> `401`
+- `GET /api/debug/env-check` -> `404`
+
+Evidence artifact:
+- `docs/qa/2026-03-17-pivot-p2-launch-workspace-redirect-merge-smoke.md`
+
 ---
 
 ## 1. Strategic Context
