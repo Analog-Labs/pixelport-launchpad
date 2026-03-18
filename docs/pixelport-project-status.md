@@ -250,7 +250,7 @@ Named deploy ownership model:
 - promotion authority: primary by default; backups when founder-delegated
 - rollback authority: primary immediate; backups when founder-delegated; founder notification required immediately after rollback
 
-Track A closure state after this update:
+Track A closure state after this update (historical snapshot at this checkpoint):
 - A1: closed
 - A2: closed
 - A3: closed
@@ -288,13 +288,32 @@ Track A4 execution is started with refreshed evidence capture:
   - runtime URL is derived from tenant `droplet_ip` (no runtime URL env required)
 - Railway/LiteLLM variable surface is documented as legacy pre-pivot scope (names-only)
 
-A4 remains open pending founder closure decisions on:
+A4 remained open at this kickoff checkpoint pending founder closure decisions on:
 - source-of-truth ownership by surface
 - rotation ownership/cadence
 - unresolved env-owner mappings for runtime/provisioning references not currently visible in Vercel production key listing
 
 Evidence artifact:
 - `docs/qa/2026-03-17-pivot-p1-a4-secrets-inventory-kickoff.md`
+
+## Pivot Execution Update (2026-03-17 Track A4 Secrets Closure)
+
+Founder approvals have now closed A4 with explicit policy decisions:
+
+- source of truth: Vercel-only for active pivot secrets
+- rotation cadence: 90 days for all active pivot secrets
+- AGENTMAIL/GEMINI/MEM0 keys confirmed added in Vercel for OpenClaw-driven use
+- Railway/LiteLLM confirmed legacy decommission path (not active pivot secret authority)
+
+Closure evidence:
+- `docs/qa/2026-03-17-pivot-p1-a4-secrets-closure.md`
+
+Track A closure state after this update:
+- A1: closed
+- A2: closed
+- A3: closed
+- A4: closed
+- A5: open
 
 ---
 

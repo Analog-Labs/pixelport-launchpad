@@ -87,11 +87,14 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 
 **Launchpad (Vercel env listing evidence):**
 - `API_KEY_ENCRYPTION_KEY`
+- `AGENTMAIL_API_KEY`
 - `DO_API_TOKEN`
+- `GEMINI_API_KEY`
 - `INNGEST_EVENT_KEY`
 - `INNGEST_SIGNING_KEY`
 - `LITELLM_MASTER_KEY`
 - `LITELLM_URL`
+- `MEM0_API_KEY`
 - `MEMORY_OPENAI_API_KEY`
 - `PAPERCLIP_HANDOFF_SECRET`
 - `PROVISIONING_DROPLET_IMAGE`
@@ -133,10 +136,16 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - `ANTHROPIC_API_KEY`
 - `GEMINI_API_KEY`
 
-**Important evidence gaps:**
-- `PAPERCLIP_HANDOFF_SECRET` is now visible in Vercel production env listing evidence.
-- `PAPERCLIP_HANDOFF_TTL_SECONDS` is not visible in Vercel production env listing evidence (currently optional via default fallback).
-- Runtime/provisioning-related vars referenced in code are not visible in current Vercel production env listing evidence and need explicit owner truth (`AGENTMAIL_API_KEY`, `GEMINI_API_KEY`, `MEM0_API_KEY`, `OPENAI_API_KEY`, `OPENCLAW_IMAGE`, `OPENCLAW_RUNTIME_IMAGE`, `TENANT_PROVISIONING_ALLOWLIST`).
+**A4 founder-approved policy decisions (2026-03-17):**
+- Source of truth: Vercel is the only active pivot secret source of truth.
+- Rotation cadence: 90-day rotation for all active pivot secrets.
+- Runtime key stance: AGENTMAIL/GEMINI/MEM0 keys were added to Vercel and are available for active OpenClaw-driven use.
+- Legacy stance: Railway/LiteLLM is marked decommission path (not active pivot secret authority).
+
+**A4 closure notes:**
+- `PAPERCLIP_HANDOFF_SECRET` is visible in Vercel production env listing evidence.
+- `PAPERCLIP_HANDOFF_TTL_SECONDS` remains optional and is currently handled by default fallback.
+- Some non-pivot/legacy config references (`OPENAI_API_KEY`, `OPENCLAW_IMAGE`, `OPENCLAW_RUNTIME_IMAGE`, `TENANT_PROVISIONING_ALLOWLIST`) are tracked for cleanup separately and are not blockers for Track A4 closure.
 
 ### A5 — Rollback/Incident Boundary Evidence State
 
@@ -151,17 +160,12 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 | A1 Publish ownership contract | ✅ Closed | Contract exists with matrix + runbook ownership intent |
 | A2 Repo/branch protection + CI owners/backups | ✅ Closed | `main` branch protection is enforced and requires both `Analyze (javascript-typescript)` + `validate`; CODEOWNERS + CI ownership baseline is merged on `main` via PR #2 (`9eb17df`) |
 | A3 Deploy ownership confirmation | ✅ Closed | Named primary + backup deploy ownership and promotion/rollback authority are now explicitly documented for active pivot deploy surfaces (GitHub/Vercel/DO); Railway/LiteLLM is marked legacy-only |
-| A4 Secrets + rotation + rollback authority | ⏳ Open | Inventory signal captured and handoff-secret visibility revalidated, but source-of-truth/rotation ownership and unresolved env-owner mapping are not founder-closed |
+| A4 Secrets + rotation + rollback authority | ✅ Closed | Founder-approved source-of-truth (`Vercel-only`), rotation cadence (`90d`), active runtime key availability in Vercel, and legacy Railway decommission stance are now explicitly documented |
 | A5 Incident escalation + founder boundaries | ⏳ Open | Boundaries documented, but explicit founder confirmation for closure is pending |
 
-## Founder Decisions Needed (To Close A4-A5)
+## Founder Decisions Needed (To Close A5)
 
-1. Approve secrets source-of-truth and rotation model:
-   - canonical source of truth by surface (active pivot Vercel + DO vs legacy Railway decommission path)
-   - where handoff vars (`PAPERCLIP_HANDOFF_SECRET`, optional `PAPERCLIP_HANDOFF_TTL_SECONDS`) are stored
-   - rotation owner and cadence
-   - escalation policy for missing/misaligned secrets and unresolved env-owner mappings
-2. Approve rollback and incident-command authority boundary:
+1. Approve rollback and incident-command authority boundary:
    - who can execute immediate rollback
    - founder notification SLA by severity
    - CTO escalation/review trigger points

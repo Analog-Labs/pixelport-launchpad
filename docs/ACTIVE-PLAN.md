@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, A2 merge `9eb17df`, and A3 merge `4b06fda` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A2 + A3 are merged and production-smoked; Track A4-A5 remain open).  
+**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, A2 merge `9eb17df`, and A3 merge `4b06fda` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A2 + A3 are merged and production-smoked; Track A4 is now founder-closed; Track A5 remains open).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -26,7 +26,7 @@
 - [x] A1: Publish Paperclip fork bootstrap ownership contract.
 - [x] A2: Confirm repo/branch protection + CI owners and reviewer backups.
 - [x] A3: Confirm deploy ownership for staging/production runtime targets.
-- [ ] A4: Confirm secret inventory + rotation ownership and rollback authority.
+- [x] A4: Confirm secret inventory + rotation ownership and rollback authority.
 - [ ] A5: Confirm incident escalation path and founder decision boundaries.
 
 Track A audit evidence recorded (without closure fabrication):
@@ -35,7 +35,7 @@ Track A audit evidence recorded (without closure fabrication):
 - [x] A2-evidence: live `main` branch protection baseline is now applied (required review/check gates enabled).
 - [x] A2-evidence: `.github/CODEOWNERS` + `.github/workflows/ci.yml` baseline prepared on `codex/p1-a2-governance-guardrails` for review/merge.
 - [x] A3-evidence: active pivot Vercel/DO ownership signals documented; Railway/LiteLLM retained as legacy-decommission traceability only.
-- [x] A4-evidence: secrets inventory key names captured by surface; handoff-secret visibility refreshed and unresolved env-owner mappings captured.
+- [x] A4-evidence: founder-approved Vercel-only source of truth + 90-day rotation + active runtime key coverage in Vercel + legacy Railway decommission stance recorded.
 - [x] A5-evidence: founder decision gates listed explicitly for closure.
 
 #### Track B — First Runtime Handoff Slice
@@ -55,7 +55,6 @@ Track A audit evidence recorded (without closure fabrication):
 
 | Blocker | Who's Waiting | Who Can Unblock |
 |---------|---------------|-----------------|
-| Handoff/runtime secret source-of-truth and rotation authority are not founder-closed | A4 closure and safe runtime handoff | Founder + Technical Lead |
 | Current DO token cannot delete droplets (`HTTP 403`), so debug cleanup removes tenant rows but leaves dry-run droplets running | Repeat canary cost/quota hygiene and unattended cleanup reliability | Founder + Technical Lead |
 | Rollback authority and incident escalation chain are documented but not explicitly founder-confirmed for closure | A5 closure and incident readiness | Founder + Technical Lead |
 | Allowlist owner/process for testing tenant creation | Controlled v1 provisioning operations | Founder + Technical Lead |
@@ -94,6 +93,7 @@ Track A audit evidence recorded (without closure fabrication):
   - A3 deploy ownership closure evidence: `docs/qa/2026-03-17-pivot-p1-a3-deploy-ownership-closure.md`
   - A3 merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a3-merge-smoke.md`
   - A4 secrets inventory kickoff evidence: `docs/qa/2026-03-17-pivot-p1-a4-secrets-inventory-kickoff.md`
+  - A4 secrets closure evidence: `docs/qa/2026-03-17-pivot-p1-a4-secrets-closure.md`
 
 ---
 

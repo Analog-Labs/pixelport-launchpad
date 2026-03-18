@@ -7,6 +7,26 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 90)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Founder approved A4 closure decisions:
+    - Vercel-only source of truth for active pivot secrets
+    - 90-day rotation cadence for all active pivot secrets
+    - AGENTMAIL/GEMINI/MEM0 keys added in Vercel for active OpenClaw use
+    - Railway/LiteLLM marked decommission path
+  - Revalidated live Vercel production env key inventory (names-only) and confirmed new keys are present.
+  - Closed Track A4 in plan/contract docs and recorded closure evidence:
+    - `docs/qa/2026-03-17-pivot-p1-a4-secrets-closure.md`
+  - Updated A4 ownership truth and planning/state docs:
+    - `docs/paperclip-fork-bootstrap-ownership.md`
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/pixelport-project-status.md`
+- **What's next:**
+  - Move to Track A5 closure (incident escalation + rollback authority boundaries).
+  - Package A5 closure slice for CTO review and merge.
+- **Blockers:** A4 blocker is cleared. Remaining Track A blocker is A5 founder-confirmation closure.
+
 - **Date:** 2026-03-17 (session 89)
 - **Who worked:** Codex
 - **What was done:**
