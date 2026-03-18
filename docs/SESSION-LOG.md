@@ -7,6 +7,39 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 97)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Merged approved PR `#9` to `main`:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/9`
+    - merge commit: `e39ca89`
+    - note: merge executed with admin override after founder-confirmed CTO approval because GitHub API still reported `REVIEW_REQUIRED`
+  - Confirmed merge-commit checks:
+    - `validate` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23225413787`)
+    - `Analyze (javascript-typescript)` -> `pass` (`https://github.com/Analog-Labs/pixelport-launchpad/actions/runs/23225413610`)
+  - Confirmed deploy completion for merge commit:
+    - Vercel status: `success`
+    - deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/4kzuzeheRqqni7xVtWj2dq8UxHuR`
+  - Ran targeted post-merge production smoke on `https://pixelport-launchpad.vercel.app`:
+    - retained active surfaces:
+      - `GET /api/runtime/handoff` -> `405 {"error":"Method not allowed"}`
+      - `POST /api/runtime/handoff` without auth -> `401 {"error":"Missing or invalid Authorization header"}`
+      - `GET /api/competitors` without auth -> `401 {"error":"Missing or invalid Authorization header"}`
+      - `GET /api/tenants/status` without auth -> `401 {"error":"Missing or invalid Authorization header"}`
+    - deleted-route confirmation:
+      - `GET /api/chat` -> `404` (`NOT_FOUND`)
+      - `GET /api/content` -> `404` (`NOT_FOUND`)
+      - `GET /api/approvals` -> `404` (`NOT_FOUND`)
+  - Added P3 batch-1 merge-smoke evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1-merge-smoke.md`
+  - Updated live planning/status docs:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/pixelport-project-status.md`
+- **What's next:**
+  - Start prune batch 2 planning/execution (`commands/tasks/vault/agent/agents`) with dependency-first deletion sequencing.
+  - Resolve or reroute dashboard dependency on `api/competitors/*` before scheduling competitors deletion.
+- **Blockers:** `api/competitors/*` still blocked by active frontend dependency (`src/pages/dashboard/Competitors.tsx`).
+
 - **Date:** 2026-03-17 (session 96)
 - **Who worked:** Founder + Codex
 - **What was done:**

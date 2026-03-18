@@ -470,6 +470,31 @@ Artifacts:
 - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch1-slice-cto-prompt.md`
 - QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1.md`
 
+## Pivot Execution Update (2026-03-17 P3 Runtime Prune Batch 1 Merge + Production Smoke)
+
+P3 prune batch 1 is now merged and deployed:
+
+- PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/9`
+- merge commit: `e39ca89`
+- deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/4kzuzeheRqqni7xVtWj2dq8UxHuR`
+- required checks on merge commit:
+  - `Analyze (javascript-typescript)`: `pass`
+  - `validate`: `pass`
+
+Targeted production smoke on `https://pixelport-launchpad.vercel.app` passed:
+- retained active surfaces:
+  - `GET /api/runtime/handoff` -> `405`
+  - `POST /api/runtime/handoff` without auth -> `401`
+  - `GET /api/competitors` without auth -> `401`
+  - `GET /api/tenants/status` without auth -> `401`
+- deleted-route confirmations:
+  - `GET /api/chat` -> `404`
+  - `GET /api/content` -> `404`
+  - `GET /api/approvals` -> `404`
+
+Evidence artifact:
+- `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch1-merge-smoke.md`
+
 ---
 
 ## 1. Strategic Context
