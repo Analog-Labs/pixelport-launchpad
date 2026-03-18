@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P1 — Paperclip Fork Bootstrap Ownership and Handoff
 
-**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, and A2 merge `9eb17df` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A2 guardrails are merged and production-smoked; Track A3 deploy ownership is now closed; Track A4-A5 remain open).  
+**Status:** Active (`688c4e3`, `9faee29`, `f8a5b1a`, A2 merge `9eb17df`, and A3 merge `4b06fda` are merged/deployed; managed selector has been rebuilt and promoted to `PROVISIONING_DROPLET_IMAGE=221035422`; managed-only gate is enabled with `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; strict managed-only fresh canary is now passing; Step 5 release smoke + authenticated onboarding-launch smoke are closed; Track A2 + A3 are merged and production-smoked; Track A4-A5 remain open).  
 **Goal:** Lock bootstrap ownership for the PixelPort-owned Paperclip fork and ship the first launchpad-to-Paperclip runtime handoff contract.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -35,7 +35,7 @@ Track A audit evidence recorded (without closure fabrication):
 - [x] A2-evidence: live `main` branch protection baseline is now applied (required review/check gates enabled).
 - [x] A2-evidence: `.github/CODEOWNERS` + `.github/workflows/ci.yml` baseline prepared on `codex/p1-a2-governance-guardrails` for review/merge.
 - [x] A3-evidence: active pivot Vercel/DO ownership signals documented; Railway/LiteLLM retained as legacy-decommission traceability only.
-- [x] A4-evidence: secrets inventory key names captured by surface; `PAPERCLIP_*` visibility gap noted.
+- [x] A4-evidence: secrets inventory key names captured by surface; handoff-secret visibility refreshed and unresolved env-owner mappings captured.
 - [x] A5-evidence: founder decision gates listed explicitly for closure.
 
 #### Track B — First Runtime Handoff Slice
@@ -92,6 +92,8 @@ Track A audit evidence recorded (without closure fabrication):
   - A2 governance guardrails slice evidence: `docs/qa/2026-03-17-pivot-p1-a2-governance-guardrails-slice.md`
   - A2 governance merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a2-governance-merge-smoke.md`
   - A3 deploy ownership closure evidence: `docs/qa/2026-03-17-pivot-p1-a3-deploy-ownership-closure.md`
+  - A3 merge smoke evidence: `docs/qa/2026-03-17-pivot-p1-a3-merge-smoke.md`
+  - A4 secrets inventory kickoff evidence: `docs/qa/2026-03-17-pivot-p1-a4-secrets-inventory-kickoff.md`
 
 ---
 

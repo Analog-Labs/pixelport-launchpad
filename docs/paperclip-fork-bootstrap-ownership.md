@@ -93,6 +93,9 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - `LITELLM_MASTER_KEY`
 - `LITELLM_URL`
 - `MEMORY_OPENAI_API_KEY`
+- `PAPERCLIP_HANDOFF_SECRET`
+- `PROVISIONING_DROPLET_IMAGE`
+- `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE`
 - `SLACK_APP_TOKEN`
 - `SLACK_CLIENT_ID`
 - `SLACK_CLIENT_SECRET`
@@ -101,10 +104,10 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - `SUPABASE_PROJECT_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-**Handoff contract vars (required by route/contract code):**
-- `PAPERCLIP_RUNTIME_URL`
-- `PAPERCLIP_HANDOFF_SECRET`
-- `PAPERCLIP_HANDOFF_TTL_SECONDS`
+**Handoff contract vars (route/contract code):**
+- required: `PAPERCLIP_HANDOFF_SECRET`
+- optional: `PAPERCLIP_HANDOFF_TTL_SECONDS` (defaults to `300` seconds when unset/invalid)
+- no longer required as env: runtime URL (derived from tenant `droplet_ip` as `http://<ip>:18789`)
 
 **Droplet runtime/provisioning surfaces (from provisioning/runtime codepaths):**
 - `OPENCLAW_IMAGE`
@@ -130,8 +133,10 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - `ANTHROPIC_API_KEY`
 - `GEMINI_API_KEY`
 
-**Important evidence gap:**
-- `PAPERCLIP_*` handoff vars are **not visible** in current Vercel production env listing evidence.
+**Important evidence gaps:**
+- `PAPERCLIP_HANDOFF_SECRET` is now visible in Vercel production env listing evidence.
+- `PAPERCLIP_HANDOFF_TTL_SECONDS` is not visible in Vercel production env listing evidence (currently optional via default fallback).
+- Runtime/provisioning-related vars referenced in code are not visible in current Vercel production env listing evidence and need explicit owner truth (`AGENTMAIL_API_KEY`, `GEMINI_API_KEY`, `MEM0_API_KEY`, `OPENAI_API_KEY`, `OPENCLAW_IMAGE`, `OPENCLAW_RUNTIME_IMAGE`, `TENANT_PROVISIONING_ALLOWLIST`).
 
 ### A5 — Rollback/Incident Boundary Evidence State
 
@@ -146,15 +151,16 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 | A1 Publish ownership contract | ✅ Closed | Contract exists with matrix + runbook ownership intent |
 | A2 Repo/branch protection + CI owners/backups | ✅ Closed | `main` branch protection is enforced and requires both `Analyze (javascript-typescript)` + `validate`; CODEOWNERS + CI ownership baseline is merged on `main` via PR #2 (`9eb17df`) |
 | A3 Deploy ownership confirmation | ✅ Closed | Named primary + backup deploy ownership and promotion/rollback authority are now explicitly documented for active pivot deploy surfaces (GitHub/Vercel/DO); Railway/LiteLLM is marked legacy-only |
-| A4 Secrets + rotation + rollback authority | ⏳ Open | Inventory signal captured, but source-of-truth/rotation ownership and handoff var placement are not founder-closed |
+| A4 Secrets + rotation + rollback authority | ⏳ Open | Inventory signal captured and handoff-secret visibility revalidated, but source-of-truth/rotation ownership and unresolved env-owner mapping are not founder-closed |
 | A5 Incident escalation + founder boundaries | ⏳ Open | Boundaries documented, but explicit founder confirmation for closure is pending |
 
 ## Founder Decisions Needed (To Close A4-A5)
 
 1. Approve secrets source-of-truth and rotation model:
-   - where handoff vars (`PAPERCLIP_*`) are stored
+   - canonical source of truth by surface (active pivot Vercel + DO vs legacy Railway decommission path)
+   - where handoff vars (`PAPERCLIP_HANDOFF_SECRET`, optional `PAPERCLIP_HANDOFF_TTL_SECONDS`) are stored
    - rotation owner and cadence
-   - escalation policy for missing/misaligned secrets
+   - escalation policy for missing/misaligned secrets and unresolved env-owner mappings
 2. Approve rollback and incident-command authority boundary:
    - who can execute immediate rollback
    - founder notification SLA by severity

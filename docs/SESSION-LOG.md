@@ -7,6 +7,36 @@
 
 ## Last Session
 
+- **Date:** 2026-03-17 (session 89)
+- **Who worked:** Codex
+- **What was done:**
+  - Merged approved PR `#3` to `main`:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/3`
+    - merge commit: `4b06fda`
+    - note: merge executed with admin override after founder-confirmed CTO approval because GitHub still showed unresolved review-request state
+  - Confirmed deploy completion for merge commit:
+    - Vercel status: `success`
+    - deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/2NQ8EUrBdjTNPHenMtpfn1aYjn3x`
+  - Ran targeted post-merge production smoke on `https://pixelport-launchpad.vercel.app`:
+    - `GET /api/runtime/handoff` -> `405`
+    - `POST /api/runtime/handoff` without auth -> `401`
+    - `POST /api/runtime/handoff` invalid bearer -> `401`
+    - `GET /api/debug/env-check` -> `404`
+  - Added merge-smoke evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p1-a3-merge-smoke.md`
+  - Started Track A4 closure slice on branch `codex/p1-a4-secrets-ownership-closure`:
+    - refreshed live Vercel env key inventory evidence
+    - confirmed handoff env contract truth (`PAPERCLIP_HANDOFF_SECRET` required, `PAPERCLIP_HANDOFF_TTL_SECONDS` optional default)
+    - captured legacy Railway/LiteLLM variable surface as names-only legacy evidence
+    - corrected ownership contract stale statement that claimed `PAPERCLIP_*` handoff vars were not visible in Vercel
+  - Added A4 kickoff evidence artifact:
+    - `docs/qa/2026-03-17-pivot-p1-a4-secrets-inventory-kickoff.md`
+- **What's next:**
+  - Get founder approval on A4 closure decisions (source-of-truth ownership map, rotation owner/cadence, unresolved env-owner mappings, legacy Railway decommission handling).
+  - After founder approval, close A4 in plan/contract docs and open CTO review PR.
+  - Continue A5 closure with explicit incident/rollback authority boundaries.
+- **Blockers:** A3 is closed and production-smoked. A4/A5 remain founder-confirmation dependent.
+
 - **Date:** 2026-03-17 (session 88)
 - **Who worked:** Codex
 - **What was done:**

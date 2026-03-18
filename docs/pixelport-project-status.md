@@ -257,6 +257,45 @@ Track A closure state after this update:
 - A4: open
 - A5: open
 
+## Pivot Execution Update (2026-03-17 Track A3 Merge + Production Smoke)
+
+A3 documentation slice is now merged and deployed:
+
+- PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/3`
+- merge commit: `4b06fda`
+- deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/2NQ8EUrBdjTNPHenMtpfn1aYjn3x`
+- required checks on merge commit:
+  - `Analyze (javascript-typescript)`: `pass`
+  - `validate`: `pass`
+
+Targeted production smoke on `https://pixelport-launchpad.vercel.app` passed:
+- `GET /api/runtime/handoff` -> `405`
+- `POST /api/runtime/handoff` without auth -> `401`
+- `POST /api/runtime/handoff` invalid bearer -> `401`
+- `GET /api/debug/env-check` -> `404`
+
+Evidence artifact:
+- `docs/qa/2026-03-17-pivot-p1-a3-merge-smoke.md`
+
+## Pivot Execution Update (2026-03-17 Track A4 Secrets Inventory Kickoff)
+
+Track A4 execution is started with refreshed evidence capture:
+
+- `PAPERCLIP_HANDOFF_SECRET` is visible in Vercel production env key listing
+- handoff contract truth is confirmed as:
+  - required: `PAPERCLIP_HANDOFF_SECRET`
+  - optional: `PAPERCLIP_HANDOFF_TTL_SECONDS` (default `300`)
+  - runtime URL is derived from tenant `droplet_ip` (no runtime URL env required)
+- Railway/LiteLLM variable surface is documented as legacy pre-pivot scope (names-only)
+
+A4 remains open pending founder closure decisions on:
+- source-of-truth ownership by surface
+- rotation ownership/cadence
+- unresolved env-owner mappings for runtime/provisioning references not currently visible in Vercel production key listing
+
+Evidence artifact:
+- `docs/qa/2026-03-17-pivot-p1-a4-secrets-inventory-kickoff.md`
+
 ---
 
 ## 1. Strategic Context
