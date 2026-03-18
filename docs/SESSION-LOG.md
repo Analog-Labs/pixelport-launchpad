@@ -7,6 +7,31 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 106)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Founder approved D4 option 1 break-glass path.
+  - Implemented and committed `74a2f37` on `codex/p6-e2e-handoff-golden-image-scan-hardening`:
+    - provisioning now enables `gateway.controlUi.dangerouslyDisableDeviceAuth=true` by default (temporary launch-critical unblock)
+    - added env override `OPENCLAW_CONTROL_UI_DISABLE_DEVICE_AUTH` to disable the break-glass behavior later without code changes
+    - added/updated provisioning tests for default-on + override-off behavior and cloud-init emission
+  - Validation:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test` (`pass`, 19 files / 88 tests)
+  - Ran live canary proof on `157.230.10.108`:
+    - applied option-1 control-ui flag under token auth mode
+    - validated control-ui WS connect over HTTPS with token and no device identity returns `hello-ok`
+    - confirms pairing blocker is cleared for this flow
+  - Updated plan/evidence docs:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/qa/2026-03-18-p6-runtime-ingress-https-resolution.md`
+- **What's next:**
+  - Push session 106 commit set and proceed to D5:
+    - merge PR `#17`
+    - monitor deploy
+    - run full production canary (`signup -> onboarding -> provision -> launch -> auto-login -> agent responds`)
+- **Blockers:** D4 blocker is closed under founder-approved option 1. D5 is pending merge/deploy execution.
+
 - **Date:** 2026-03-18 (session 105)
 - **Who worked:** Codex
 - **What was done:**

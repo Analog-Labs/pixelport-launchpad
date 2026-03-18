@@ -2,7 +2,7 @@
 
 - **Date:** 2026-03-18
 - **Branch:** `codex/p6-e2e-handoff-golden-image-scan-hardening`
-- **Commit:** `0c60680`
+- **Commits:** `0c60680`, `74a2f37`
 - **PR:** `#17`
 
 ## Objective
@@ -23,7 +23,7 @@ Advance D4 by making runtime launch URLs resolve to per-tenant HTTPS targets fir
 ## Validation
 
 - `npx tsc --noEmit` -> pass
-- `npm test` -> pass (`19 files`, `86 tests`)
+- `npm test` -> pass (`19 files`, `88 tests`)
 
 ## Live Canary Research (Not Persisted)
 
@@ -37,6 +37,21 @@ Rollback confirmed:
 - Caddyfile restored to plain reverse proxy
 - `openclaw-gateway` container healthy after restart
 
-## Remaining D4 Decision Gate
+## Option 1 Execution (Founder Approved)
 
-HTTPS runtime targeting is now in place, but first-time Control UI pairing on public hostnames still requires an explicit auth-mode decision for production rollout.
+- Implemented temporary break-glass default in provisioning:
+  - `gateway.controlUi.dangerouslyDisableDeviceAuth=true` (token auth remains enabled)
+  - env switch added: `OPENCLAW_CONTROL_UI_DISABLE_DEVICE_AUTH` (set `false` to disable break-glass later)
+- Added tests for:
+  - break-glass default on
+  - explicit override off
+  - cloud-init emitted config includes the flag
+
+## Live Canary Proof (Option 1)
+
+Canary host: `157.230.10.108`
+
+- Applied `gateway.controlUi.dangerouslyDisableDeviceAuth=true` under token auth mode.
+- Verified WS connect result for Control UI client over HTTPS with token and no device identity:
+  - `{"type":"res","id":"1","ok":true,"payload":{"type":"hello-ok",...}}`
+- Result: pairing blocker was cleared for the tested control-ui connect flow.
