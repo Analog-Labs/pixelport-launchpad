@@ -53,12 +53,13 @@ This note overrides conflicting older assumptions in this status file while pres
   - provisioning refactored to direct `OPENAI_API_KEY` path (no LiteLLM team/key generation, no `OPENAI_BASE_URL` emission).
   - OpenClaw model refs switched to direct providers (`openai/*`, `google/*`).
   - `vercel.json` now includes a guarded `ignoreCommand` that skips only when all changed files are under `paperclip/`.
-- PR B scope (in progress):
+- PR B opened: `https://github.com/Analog-Labs/pixelport-launchpad/pull/15`
   - migrate `/api/tenants/scan` to direct providers (OpenAI primary, Gemini fallback)
   - remove `has_litellm` from `/api/tenants/status`
   - bump bridge contract marker to `pivot-p0-v2`
   - remove `infra/litellm/*` from repo
   - sync docs + golden image manifest for monorepo overlay and no-LiteLLM dependency
+  - local validation passed (`npx tsc --noEmit`, `npm test`)
 
 ## Pivot Execution Update (2026-03-16)
 

@@ -7,6 +7,43 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 100)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Started approved P5 architecture change with two execution branches:
+    - PR A branch: `codex/p5-monorepo-litellm-removal`
+    - PR B branch: `codex/p5-scan-contract-docsync`
+  - Opened CTO review PR A (`#14`):
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/14`
+    - added monorepo `paperclip/` customization structure:
+      - `paperclip/README.md`
+      - `paperclip/plugins/pixelport-handoff.ts`
+      - `paperclip/plugins/pixelport-handoff.test.ts`
+      - `paperclip/theme/.gitkeep`
+      - `paperclip/patches/.gitkeep`
+      - `paperclip/build/golden-image-build.md`
+    - added guarded `vercel.json` `ignoreCommand` to skip only when all changed files are under `paperclip/`
+    - removed LiteLLM team/key provisioning path from `api/inngest/functions/provision-tenant.ts`
+    - switched generated OpenClaw model refs to direct providers (`openai/*`, `google/*`)
+    - removed `OPENAI_BASE_URL` emission from cloud-init and synced provisioning templates
+    - validation: `npx tsc --noEmit` (`pass`), `npm test` (`pass`)
+  - Opened CTO review PR B (`#15`):
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/15`
+    - migrated `POST /api/tenants/scan` to direct providers (`OPENAI_API_KEY` primary, `GEMINI_API_KEY` fallback)
+    - removed `has_litellm` from `GET /api/tenants/status`
+    - bumped thin-bridge contract markers to `pivot-p0-v2` (`api/lib/thin-bridge-contract.ts`, `src/lib/runtime-bridge-contract.ts`)
+    - added scan-route fallback coverage: `src/test/tenants-scan-route.test.ts`
+    - updated `/api/debug/test-provision` required env checks and expected step list for direct mode
+    - removed repo LiteLLM infra artifacts (`infra/litellm/*`)
+    - updated golden-image manifest for monorepo overlay + no-LiteLLM dependency
+    - synced active docs for P5 (`ACTIVE-PLAN`, project status, ownership contract)
+    - validation: `npx tsc --noEmit` (`pass`), `npm test` (`pass`, 19 files / 73 tests)
+- **What's next:**
+  - Complete CTO review for PR `#14` and PR `#15`.
+  - After approval, merge in order (`#14` then `#15`), monitor deploys, and run same-session production smoke.
+  - Founder performs post-merge Vercel env cleanup (`LITELLM_URL`, `LITELLM_MASTER_KEY`) and confirms Railway LiteLLM shutdown.
+- **Blockers:** No code blocker in branch work. Merge/deploy closure is pending CTO approval and founder-run env/platform decommission steps.
+
 - **Date:** 2026-03-18 (session 99)
 - **Who worked:** Founder + Codex
 - **What was done:**

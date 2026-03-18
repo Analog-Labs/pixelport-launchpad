@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P5 — Monorepo Paperclip + LiteLLM Removal
 
-**Status:** Active (PR A opened: `#14`; PR B in progress).  
+**Status:** Active (PR A opened: `#14`; PR B opened: `#15`).  
 **Goal:** Consolidate Paperclip customizations into this repo and remove LiteLLM from active provisioning/runtime architecture.
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, P5 founder decisions (2026-03-18)
 
@@ -35,16 +35,16 @@
 - [x] A9: Open CTO review PR (`#14`)
 
 #### Track B — Scan + Contract + Decommission Cleanup (PR B)
-- [ ] B1: Migrate `/api/tenants/scan` to direct provider calls (OpenAI primary, Gemini fallback)
-- [ ] B2: Remove `has_litellm` from `/api/tenants/status` payload
-- [ ] B3: Bump thin bridge contract version to `pivot-p0-v2` in backend/frontend contract markers
-- [ ] B4: Update affected tests (`tenants-status`, contract marker, scan fallback coverage)
-- [ ] B5: Update `/api/debug/test-provision` expected env checks/step list for direct mode
-- [ ] B6: Remove `infra/litellm/*` from repo (decommission path complete)
-- [ ] B7: Update golden image manifest for monorepo overlay + no LiteLLM dependency
-- [ ] B8: Full doc sync (`SESSION-LOG`, `pixelport-project-status`, ownership/deploy docs)
-- [ ] B9: Run local validation (`npx tsc --noEmit`, `npm test`)
-- [ ] B10: Open CTO review PR
+- [x] B1: Migrate `/api/tenants/scan` to direct provider calls (OpenAI primary, Gemini fallback)
+- [x] B2: Remove `has_litellm` from `/api/tenants/status` payload
+- [x] B3: Bump thin bridge contract version to `pivot-p0-v2` in backend/frontend contract markers
+- [x] B4: Update affected tests (`tenants-status`, contract marker, scan fallback coverage)
+- [x] B5: Update `/api/debug/test-provision` expected env checks/step list for direct mode
+- [x] B6: Remove `infra/litellm/*` from repo (decommission path complete)
+- [x] B7: Update golden image manifest for monorepo overlay + no LiteLLM dependency
+- [x] B8: Full doc sync (`SESSION-LOG`, `pixelport-project-status`, ownership/deploy docs)
+- [x] B9: Run local validation (`npx tsc --noEmit`, `npm test`)
+- [x] B10: Open CTO review PR (`#15`)
 
 #### Track C — Merge + Production Closure
 - [ ] C1: Merge PR A after CTO approval
