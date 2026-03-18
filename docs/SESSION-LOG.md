@@ -7,6 +7,15 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 104)
+- **Who worked:** Codex
+- **What was done:**
+  - Added the golden-image/runtime backup runbook at `docs/ops/golden-image-backup-runbook.md`
+  - Linked the runbook from the P6 notes in `docs/ACTIVE-PLAN.md`
+- **What's next:**
+  - Continue P6 execution with the approved track sequence.
+- **Blockers:** None.
+
 - **Date:** 2026-03-18 (session 103)
 - **Who worked:** Founder + Codex
 - **What was done:**

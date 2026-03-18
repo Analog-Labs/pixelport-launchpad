@@ -45,6 +45,7 @@
 - P6 Track A inventory evidence:
   - `docs/qa/2026-03-18-p6-track-a1-tryclam-inventory.md`
 - P6 Track A runbook: `docs/ops/tryclam-teardown-runbook.md`
+- P6 golden-image backup runbook: `docs/ops/golden-image-backup-runbook.md`
 - Immediate execution order: Track A first, then Track B, with Track C prepared in parallel as non-blocking planning.
 
 ---
