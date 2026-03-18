@@ -22,7 +22,8 @@ baseline:
 
 components:
   paperclip:
-    source: pixelport-owned-paperclip-fork
+    source: pixelport-launchpad-monorepo-overlay
+    customization_overlay_path: paperclip/
     version_pin: REQUIRED_AT_IMAGE_BUILD
   openclaw:
     image: ghcr.io/openclaw/openclaw:2026.3.11
@@ -47,4 +48,5 @@ notes:
   - Runtime provisioning requires an explicit selector env (no implicit fallback path).
   - Compatibility selector (`ubuntu-24-04-x64`) may be used temporarily via PROVISIONING_DROPLET_IMAGE.
   - Optional env PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true blocks compatibility selector use.
+  - LiteLLM is no longer part of active provisioning or runtime dependencies.
   - Exact Paperclip and Postgres minor pins are set at image build time and must be recorded before production promotion.
