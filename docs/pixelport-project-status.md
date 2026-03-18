@@ -531,6 +531,64 @@ Artifacts:
 - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy-cto-prompt.md`
 - QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
 
+## Pivot Execution Update (2026-03-18 P3 Runtime Prune Batch 2 Merge + Production Smoke)
+
+P3 prune batch 2 is now merged and deployed:
+
+- PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/11`
+- merge commit: `cfc9daf`
+- deploy URL: `https://vercel.com/sanchalrs-projects/pixelport-launchpad/8b8EXC2TWkveNLFPSuFv4SW5nkZ1`
+- required checks on merge commit:
+  - `Analyze (javascript-typescript)`: `pass`
+  - `validate`: `pass`
+
+Targeted production smoke on `https://pixelport-launchpad.vercel.app` passed:
+- retained active surfaces:
+  - `GET /api/runtime/handoff` -> `405`
+  - `POST /api/runtime/handoff` without auth -> `401`
+  - `GET /api/tenants/status` without auth -> `401`
+  - `GET /api/settings` without auth -> `401`
+- deleted-route confirmations:
+  - `GET /api/commands` -> `404`
+  - `GET /api/tasks` -> `404`
+  - `GET /api/vault` -> `404`
+  - `GET /api/agent/memory` -> `404`
+  - `GET /api/competitors` -> `404`
+
+## Pivot Execution Update (2026-03-18 P3 Runtime Prune Batch 3 — Implementation Prepared)
+
+Next incremental cutover-prune slice is implemented on branch:
+
+- branch: `codex/p3-c4-prune-batch3-chat-settings-legacy`
+- migration contract: `docs/migration/launchpad-runtime-prune-checklist.md`
+
+Implemented batch-3 deletions:
+- dashboard vestigial surfaces:
+  - `src/pages/dashboard/Chat.tsx`
+  - `src/components/dashboard/ChatWidget.tsx`
+  - `src/contexts/ChatContext.tsx`
+  - `src/pages/dashboard/Performance.tsx`
+  - `src/pages/dashboard/Settings.tsx`
+  - plus route/nav/provider cleanup in `src/App.tsx`, `src/pages/Dashboard.tsx`, and `src/components/dashboard/AppSidebar.tsx`
+- API surfaces:
+  - `api/settings/*`
+  - `api/debug/slack-status.ts`
+
+Contract-test alignment:
+- `src/test/tenants-status-route.test.ts` now asserts current payload contract:
+  - `contract_version`
+  - `task_step_unlocked`
+
+Validation recorded:
+- `npx tsc --noEmit` -> `pass`
+- `npm test` -> `pass` (18 files / 71 tests; includes `tenants-status-route.test.ts`)
+- `npm run build` -> `pass`
+
+Artifacts:
+- build brief: `docs/build-briefs/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy.md`
+- CTO prompt: `docs/build-briefs/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy-cto-prompt.md`
+- QA evidence: `docs/qa/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy.md`
+
 ---
 
 ## 1. Strategic Context

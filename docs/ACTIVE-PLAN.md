@@ -4,9 +4,9 @@
 
 ---
 
-## Current Phase: Phase P3 — Launchpad Runtime Prune (Track C4 Batch 2)
+## Current Phase: Phase P3 — Launchpad Runtime Prune (Track C4 Batch 3)
 
-**Status:** Active (P2 is closed/merged on `main`; P3 batch-1 is merged/deployed on `main`; P3 batch-2 implementation is prepared on `codex/p3-c4-prune-batch2-dashboard-runtime-legacy` pending CTO review).  
+**Status:** Active (P2 is closed/merged on `main`; P3 batches 1 and 2 are merged/deployed on `main`; batch-3 implementation is prepared on `codex/p3-c4-prune-batch3-chat-settings-legacy` pending CTO review).  
 **Goal:** Incrementally prune unused legacy launchpad runtime route groups while preserving active thin-bridge provisioning responsibilities.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/migration/launchpad-runtime-prune-checklist.md`
 
@@ -46,8 +46,22 @@
 #### Track D — Review and Release (Batch 2)
 - [x] D1: Create batch-2 build brief and CTO review prompt.
 - [x] D2: Open CTO review PR for `codex/p3-c4-prune-batch2-dashboard-runtime-legacy` (`#11`).
-- [ ] D3: Merge approved batch-2 slice to `main`.
-- [ ] D4: Run same-session production smoke for retained active surfaces.
+- [x] D3: Merge approved batch-2 slice to `main` (`cfc9daf` via PR `#11`).
+- [x] D4: Run same-session production smoke for retained active surfaces.
+
+#### Track E — Batch 3 Implementation (Chat/Settings Legacy Removal)
+- [x] E1: Remove dashboard chat surfaces (`Chat.tsx`, `ChatWidget.tsx`, `ChatContext.tsx`) and provider wiring.
+- [x] E2: Remove dashboard `Performance` and `Settings` pages/routes/nav references.
+- [x] E3: Delete `api/settings/*` and `api/debug/slack-status.ts`.
+- [x] E4: Fix `src/test/tenants-status-route.test.ts` to current status payload contract.
+- [x] E5: Run local validation (`npx tsc --noEmit`, `npm test`, `npm run build`).
+- [x] E6: Record QA evidence for batch 3.
+
+#### Track F — Review and Release (Batch 3)
+- [x] F1: Create batch-3 build brief and CTO review prompt.
+- [ ] F2: Open CTO review PR for `codex/p3-c4-prune-batch3-chat-settings-legacy`.
+- [ ] F3: Merge approved batch-3 slice to `main`.
+- [ ] F4: Run same-session production smoke for retained active surfaces.
 
 ### Blockers
 
@@ -68,6 +82,9 @@
   - batch-2 build brief: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
   - batch-2 CTO prompt: `docs/build-briefs/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy-cto-prompt.md`
   - batch-2 QA evidence: `docs/qa/2026-03-17-pivot-p3-runtime-prune-batch2-dashboard-runtime-legacy.md`
+  - batch-3 build brief: `docs/build-briefs/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy.md`
+  - batch-3 CTO prompt: `docs/build-briefs/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy-cto-prompt.md`
+  - batch-3 QA evidence: `docs/qa/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy.md`
 - P2 artifacts:
   - build brief: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice.md`
   - CTO prompt: `docs/build-briefs/2026-03-17-pivot-p2-launch-workspace-redirect-slice-cto-prompt.md`
