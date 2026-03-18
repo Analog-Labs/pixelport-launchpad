@@ -6,7 +6,7 @@
 
 ## Current Phase: Phase P2 — Paperclip Handoff Consumer and Workspace Launch Redirect
 
-**Status:** Active (PR `#6` is merged on `main` as `cba0625`; implementation branch `codex/p2-paperclip-launch-redirect` is prepared for CTO review).  
+**Status:** Active (PR `#6` is merged on `main` as `cba0625`; implementation PR `#7` is open for CTO review on `codex/p2-paperclip-launch-redirect`).  
 **Goal:** Consume the existing `/api/runtime/handoff` contract during onboarding Launch and redirect users directly to their tenant Paperclip workspace URL.  
 **Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/paperclip-fork-bootstrap-ownership.md`
 
@@ -30,7 +30,7 @@
 
 #### Track B — Review and Release
 - [x] B1: Create P2 build brief and CTO review prompt.
-- [ ] B2: Open CTO review PR for `codex/p2-paperclip-launch-redirect`.
+- [x] B2: Open CTO review PR for `codex/p2-paperclip-launch-redirect` (`#7`).
 - [ ] B3: Merge approved P2 slice to `main`.
 - [ ] B4: Run same-session production smoke for onboarding launch + handoff surfaces.
 

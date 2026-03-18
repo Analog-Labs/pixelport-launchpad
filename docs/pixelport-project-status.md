@@ -391,6 +391,8 @@ Post-Track-A sync PR is merged and the next pivot slice is in implementation rev
 - PR `#6` merged:
   - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/6`
   - merge commit: `cba0625`
+- CTO review PR opened for P2 slice:
+  - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/7`
 - P2 launch consumer implementation branch:
   - `codex/p2-paperclip-launch-redirect`
 
