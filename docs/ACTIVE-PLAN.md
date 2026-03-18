@@ -59,7 +59,7 @@
 
 #### Track F — Review and Release (Batch 3)
 - [x] F1: Create batch-3 build brief and CTO review prompt.
-- [ ] F2: Open CTO review PR for `codex/p3-c4-prune-batch3-chat-settings-legacy`.
+- [x] F2: Open CTO review PR for `codex/p3-c4-prune-batch3-chat-settings-legacy` (`#12`).
 - [ ] F3: Merge approved batch-3 slice to `main`.
 - [ ] F4: Run same-session production smoke for retained active surfaces.
 

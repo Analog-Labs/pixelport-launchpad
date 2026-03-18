@@ -47,12 +47,14 @@
     - `npm run build` (`pass`)
   - Added batch-3 QA evidence:
     - `docs/qa/2026-03-18-pivot-p3-runtime-prune-batch3-chat-settings-legacy.md`
+  - Opened CTO review PR for this P3 batch:
+    - PR: `https://github.com/Analog-Labs/pixelport-launchpad/pull/12`
   - Updated live planning/status docs:
     - `docs/ACTIVE-PLAN.md`
     - `docs/migration/launchpad-runtime-prune-checklist.md`
     - `docs/pixelport-project-status.md`
 - **What's next:**
-  - Open CTO review PR for `codex/p3-c4-prune-batch3-chat-settings-legacy`.
+  - Complete CTO review for PR `#12`.
   - After CTO approval, merge to `main`, monitor deploy, and run same-session production smoke.
 - **Blockers:** No new code blocker in this slice. Residual ops blockers remain: DO droplet delete scope (`HTTP 403`) and allowlist control for provisioning tests.
 
