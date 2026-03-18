@@ -7,6 +7,30 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 105)
+- **Who worked:** Codex
+- **What was done:**
+  - Continued P6 D4 implementation on branch `codex/p6-e2e-handoff-golden-image-scan-hardening`.
+  - Added and pushed commit `0c60680`:
+    - per-tenant HTTPS runtime URL resolver precedence in handoff contract (`onboarding_data` runtime URL -> tenant base domain -> droplet IP fallback)
+    - provisioning runtime ingress plan/resolution + persisted runtime metadata in `onboarding_data`
+    - cloud-init Caddy HTTPS ingress setup for runtime hosts
+    - test coverage for resolver/runtime ingress behavior
+  - Updated PR `#17` with the new commit:
+    - `https://github.com/Analog-Labs/pixelport-launchpad/pull/17`
+  - Validation for this slice:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test` (`pass`, 19 files / 86 tests)
+  - Ran live canary auth-mode research on `157.230.10.108` to evaluate pairing unblock behavior:
+    - verified `trusted-proxy` + Caddy header path can establish successful Control UI WS `hello-ok`
+    - immediately rolled the canary back to prior config (`gateway.auth.mode=token`, default Caddy reverse proxy)
+  - Added QA evidence:
+    - `docs/qa/2026-03-18-p6-runtime-ingress-https-resolution.md`
+- **What's next:**
+  - Founder approval on the D4 auth-mode path to clear first-time remote pairing for public runtime domains.
+  - After D4 decision is implemented, finish D5 (`#17` merge/deploy + full signup->launch->agent-response canary proof).
+- **Blockers:** D5 remains blocked until D4 auth-mode decision is finalized for public HTTPS runtime hosts.
+
 - **Date:** 2026-03-18 (session 104)
 - **Who worked:** Codex
 - **What was done:**

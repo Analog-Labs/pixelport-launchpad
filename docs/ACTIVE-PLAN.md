@@ -25,7 +25,7 @@
 - [x] D1: Apply CTO medium fixes (scan fetch timeouts, `docs/` Vercel skip path, missing scan tests)
 - [x] D2: Implement runtime launch URL contract for gateway-token auto-login (`workspace_launch_url`) in handoff + frontend launch paths
 - [x] D3: Add local fail-safe golden image backup runbook and capture first local archive + checksum + manifest
-- [ ] D4: Resolve Control UI secure-context/device-identity blocker on raw droplet HTTP runtime URLs
+- [ ] D4: Resolve Control UI secure-context/device-identity blocker on raw droplet HTTP runtime URLs (HTTPS runtime-targeting slice landed in `0c60680`; auth-mode decision gate remains)
 - [ ] D5: Merge PR `#17`, deploy to production, and run full canary flow proof (`signup -> onboarding -> provision -> launch -> auto-login -> agent responds`)
 
 #### Track A — TryClam Teardown
@@ -48,6 +48,7 @@
 - Major product, architecture, and UX decisions still require founder approval before implementation.
 - Launch-critical QA evidence:
   - `docs/qa/2026-03-18-p6-handoff-runtime-canary.md`
+  - `docs/qa/2026-03-18-p6-runtime-ingress-https-resolution.md`
 - P5 closure evidence:
   - `docs/qa/2026-03-18-p5-merge-order-smoke.md`
   - `docs/qa/2026-03-18-p5-vercel-ignorecommand-hotfix-merge-smoke.md`
