@@ -7,6 +7,34 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 109)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Started Phase P6 reset execution on branch `codex/p6-r1-paperclip-default-workspace` and focused on R1 (workspace drift correction).
+  - Vendored pinned upstream Paperclip default CEO markdown templates at commit `4ff32f15d934b0b75309c82461d7854bf1f765fb` under:
+    - `paperclip/templates/upstream-default-ceo/`
+  - Added deterministic source module for those templates:
+    - `api/lib/paperclip-default-ceo-templates.ts`
+  - Refactored workspace scaffold generation to use Paperclip defaults with minimal PixelPort overlay:
+    - `api/lib/workspace-contract.ts`
+    - `CEO` terminology relabeled to `Chief of Staff` in tenant-facing markdown templates
+    - onboarding field injection scoped to additive `SOUL.md` block only (company, website, mission, goals, chosen agent name)
+    - no onboarding injection into `AGENTS.md`, `HEARTBEAT.md`, or `TOOLS.md`
+  - Updated tests for new provisioning template behavior:
+    - `src/test/workspace-contract.test.ts`
+    - `src/test/provision-tenant-memory.test.ts`
+  - Validation:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test` (`pass`, 19 files / 88 tests)
+  - Added R1 QA evidence doc:
+    - `docs/qa/2026-03-18-p6-r1-paperclip-default-workspace.md`
+  - Updated active planning doc to the new locked reset sequence (`R1 -> R2 -> R3 -> R4 -> R5`):
+    - `docs/ACTIVE-PLAN.md`
+- **What's next:**
+  - Open CTO-review PR for R1 and await approval.
+  - After merge, execute R2 OpenClaw upgrade canary path on branch `codex/p6-r2-openclaw-2026-3-13`.
+- **Blockers:** No code blocker in R1 branch. Awaiting CTO review/approval for merge.
+
 - **Date:** 2026-03-18 (session 108)
 - **Who worked:** Founder + Codex
 - **What was done:**
