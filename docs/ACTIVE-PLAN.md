@@ -38,11 +38,11 @@
 
 ## R3 — Paperclip Upgrade (Compatibility-only)
 
-- [ ] Branch: `codex/p6-r3-paperclip-v2026-318-0`
-- [ ] Pin Paperclip to `v2026.318.0` and record tag + commit in manifest/evidence
-- [ ] Rebuild image with overlay (handoff plugin + template layer), no feature expansion
-- [ ] Run 2 fresh-tenant canaries (handoff + auto-login compatibility)
-- [ ] Promote only after canaries pass
+- [x] Branch: `codex/p6-r3-paperclip-v2026-318-0`
+- [x] Pin Paperclip to `v2026.318.0` and record tag + commit in manifest/evidence
+- [x] Rebuild image with overlay compatibility baseline (managed snapshot `221189855`)
+- [x] Run 2 fresh-tenant canaries (gateway-token auto-login compatibility)
+- [x] Promote only after canaries pass (`PROVISIONING_DROPLET_IMAGE=221189855`, managed-only gate remains `true`)
 - [ ] CTO review PR + merge
 
 ## R4 — Combined Regression Proof
@@ -77,6 +77,7 @@
 - R1 QA evidence: `docs/qa/2026-03-18-p6-r1-paperclip-default-workspace.md`
 - R2 pin/release evidence: `docs/qa/2026-03-19-p6-r2-openclaw-2026-3-13-pin-and-release-evidence.md`
 - R2 rollout closure evidence: `docs/qa/2026-03-19-p6-r2-managed-image-rollout-closure.md`
+- R3 rollout evidence: `docs/qa/2026-03-19-p6-r3-paperclip-v2026-318-0-rollout-evidence.md`
 - Launch-critical canary baseline: `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
 - Golden-image backup runbook: `docs/ops/golden-image-backup-runbook.md`
 

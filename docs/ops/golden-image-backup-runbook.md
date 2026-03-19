@@ -103,6 +103,15 @@ After loading, retag if needed before promotion or testing.
 - `checksums/2026-03-19-p6-r2-openclaw-2026.3.13-1.provision-tenant.sha256`
 - `evidence/2026-03-19-p6-r2-openclaw-2026.3.13-1-*.json`
 
+## Known Good Backup Artifacts (2026-03-19, P6 R3)
+
+- `manifests/2026-03-19-p6-r3-paperclip-v2026.318.0.manifest.txt`
+- `cloud-init-snapshots/2026-03-19-p6-r3-paperclip-v2026.318.0-provision-tenant.ts`
+- `checksums/2026-03-19-p6-r3-paperclip-v2026.318.0.manifest.sha256`
+- `checksums/2026-03-19-p6-r3-paperclip-v2026.318.0.provision-tenant.sha256`
+- `evidence/2026-03-19-p6-r3-paperclip-v2026.318.0-*.json`
+- `evidence/2026-03-19-p6-r3-paperclip-v2026.318.0-*.log`
+
 ## Retention Guidance
 
 - Keep the last 3 stable images.

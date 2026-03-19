@@ -1,6 +1,6 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-03-18
+**Last Updated:** 2026-03-19
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
 **Formerly:** Growth Swarm (now archived historical context)
 **Primary Runtime Direction:** PixelPort-owned Paperclip customization overlay (`paperclip/`) + per-tenant DO droplets
@@ -60,6 +60,22 @@ This note overrides conflicting older assumptions in this status file while pres
   - remove `infra/litellm/*` from repo
   - sync docs + golden image manifest for monorepo overlay and no-LiteLLM dependency
   - local validation passed (`npx tsc --noEmit`, `npm test`)
+
+## P6 Reset Update (2026-03-19 R3 Compatibility Rollout)
+
+- R3 execution completed on branch `codex/p6-r3-paperclip-v2026-318-0` under founder-approved gateway-token launch standard.
+- Paperclip runtime pin metadata recorded:
+  - tag: `v2026.318.0`
+  - commit: `78c714c29ac9aa1a8ca85aebe48f7f1ee7e57e4d`
+- Managed image rollout:
+  - pre-promotion canary ran on image `221188460`
+  - snapshot action `3097765317` produced image `221189855` (`pixelport-paperclip-golden-2026-03-19-paperclip-v2026-318-0-r3`)
+  - production selector promoted to `PROVISIONING_DROPLET_IMAGE=221189855`
+  - managed-only gate remained enforced: `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
+- Strict post-promotion canary validated image-truth on `221189855` and auto-login launch path to `/chat?session=main`.
+- Compatibility note (documented): runtime `/pixelport/handoff` currently serves OpenClaw app shell; launch standard for this path remains `workspace_launch_url` with gateway token.
+- Evidence:
+  - `docs/qa/2026-03-19-p6-r3-paperclip-v2026-318-0-rollout-evidence.md`
 
 ## Pivot Execution Update (2026-03-16)
 
