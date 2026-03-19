@@ -43,18 +43,18 @@
 - [x] Rebuild image with overlay compatibility baseline (managed snapshot `221189855`)
 - [x] Run 2 fresh-tenant canaries (gateway-token auto-login compatibility)
 - [x] Promote only after canaries pass (`PROVISIONING_DROPLET_IMAGE=221189855`, managed-only gate remains `true`)
-- [ ] CTO review PR + merge
+- [x] CTO review approved + merged (PR `#21`, merge commit `472dfbd`)
 
 ## R4 — Combined Regression Proof
 
-- [ ] Branch: `codex/p6-r4-combined-regression-proof`
-- [ ] Run full proof:
+- [x] Branch: `codex/p6-r4-combined-regression-proof`
+- [x] Run full proof:
   - `signup -> onboarding -> provision -> launch -> auto-login -> agent responds`
-- [ ] Confirm policy-compliant workspace behavior for new tenants:
+- [x] Confirm policy-compliant workspace behavior for new tenants:
   - Paperclip default template behavior retained
   - Chief of Staff terminology on tenant-facing surfaces
   - SOUL additive onboarding block present/correct
-- [ ] Capture rollback-readiness evidence
+- [x] Capture rollback-readiness evidence
 - [ ] CTO review PR + merge
 
 ## R5 — Branding Baseline Pass
@@ -78,6 +78,7 @@
 - R2 pin/release evidence: `docs/qa/2026-03-19-p6-r2-openclaw-2026-3-13-pin-and-release-evidence.md`
 - R2 rollout closure evidence: `docs/qa/2026-03-19-p6-r2-managed-image-rollout-closure.md`
 - R3 rollout evidence: `docs/qa/2026-03-19-p6-r3-paperclip-v2026-318-0-rollout-evidence.md`
+- R4 combined proof evidence: `docs/qa/2026-03-19-p6-r4-combined-regression-proof.md`
 - Launch-critical canary baseline: `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
 - Golden-image backup runbook: `docs/ops/golden-image-backup-runbook.md`
 

@@ -7,6 +7,43 @@
 
 ## Last Session
 
+- **Date:** 2026-03-19 (session 113)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Founder approved continuation after CTO approval.
+  - Merged R3 PR `#21` to `main` (admin merge) and confirmed deploy checks reached green:
+    - merge commit: `472dfbdbb9778ef1039c3a01868a39c78b64fe9a`
+    - PR URL: `https://github.com/Analog-Labs/pixelport-launchpad/pull/21`
+  - Started R4 branch `codex/p6-r4-combined-regression-proof`.
+  - Ran post-merge production guardrail smoke:
+    - `GET /api/runtime/handoff` -> `405`
+    - unauthenticated `POST /api/runtime/handoff`, `GET /api/tenants/status`, `POST /api/tenants/scan`, and `GET /api/debug/test-provision` -> `401`
+    - authenticated `GET /api/debug/test-provision?mode=status&secret=<DO_API_TOKEN>` -> `200`
+  - Completed live launch-critical R4 proof on a fresh tenant:
+    - tenant `r4-canary-labs` (`01de9e5c-adcd-4a6d-93c1-595e2a67d843`)
+    - droplet `559351329` (`159.65.234.175`)
+    - launch reached runtime URL `https://r4-canary-labs.159-65-234-175.sslip.io/chat?session=main`
+    - runtime loaded OpenClaw UI and assistant replied exactly `P6_R4_AGENT_OK`
+  - Captured policy-compliance evidence for R4 from deterministic source + tests:
+    - Paperclip default template source remains active
+    - CEO -> Chief of Staff tenant-facing relabel remains active
+    - onboarding injection remains SOUL-only additive
+    - no onboarding injection into AGENTS/HEARTBEAT/TOOLS
+  - Captured backend truth snapshot for the R4 tenant:
+    - `agents=1`, `vault_sections=5`, `agent_tasks=0`, `competitors=0`, `sessions_log=0`, `workspace_events=0`
+    - `onboarding_data.bootstrap.status=failed` with `last_error="Unauthorized"` (non-launch bootstrap caveat)
+  - Performed full cleanup for R4 artifacts:
+    - DO droplet delete `204` and verified `404` on follow-up lookup
+    - deleted tenant-linked rows in FK-safe order
+    - deleted tenant auth user and verified `User not found`
+  - Added R4 QA evidence doc:
+    - `docs/qa/2026-03-19-p6-r4-combined-regression-proof.md`
+- **What's next:**
+  - Run branch validation (`npx tsc --noEmit`, `npm test`) for the R4 docs/plan updates.
+  - Open CTO-review PR for R4 closure.
+  - After CTO approval/merge, proceed to R5 branding baseline pass.
+- **Blockers:** No launch-critical blocker for R4. Known caveat: bootstrap artifact pipeline remained pending in this canary (`onboarding_data.bootstrap.status=failed: Unauthorized`) while launch/auto-login/chat path passed.
+
 - **Date:** 2026-03-19 (session 112)
 - **Who worked:** Founder + Codex
 - **What was done:**
