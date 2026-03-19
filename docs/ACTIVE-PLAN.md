@@ -17,7 +17,7 @@
 - [x] `workspace-contract.ts` switched to Paperclip defaults + SOUL-only additive onboarding block
 - [x] Chief of Staff tenant-facing terminology applied in workspace markdown overlay
 - [x] Tests updated and passing
-- [ ] CTO review + merge of PR `#18`
+- [x] CTO review approved and merged (PR `#18`, merge commit `53af0e2`)
 
 ## R2 — OpenClaw Upgrade (Canary-first)
 
@@ -34,7 +34,7 @@
 - [ ] Capture local backup artifacts and QA evidence
 - [ ] Promote managed image selector
 - [ ] Re-enable strict gate in production: `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
-- [ ] CTO review PR + merge
+- [ ] CTO review PR + merge (PR `#19` open)
 
 ## R3 — Paperclip Upgrade (Compatibility-only)
 

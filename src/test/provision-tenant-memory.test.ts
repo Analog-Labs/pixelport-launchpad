@@ -396,6 +396,13 @@ describe("provision tenant memory config", () => {
     expect(script).toContain("OPENAI_API_KEY=openai-key");
     expect(script).toContain("PAPERCLIP_HANDOFF_SECRET=handoff-secret");
     expect(script).not.toContain("OPENAI_BASE_URL=");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/AGENTS.md");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/HEARTBEAT.md");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/SOUL.md");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/TOOLS.md");
+    expect(script).not.toContain("cat > /opt/openclaw/workspace-main/BOOTSTRAP.md");
+    expect(script).not.toContain("cat > /opt/openclaw/workspace-main/MEMORY.md");
+    expect(script).not.toContain("cat > /opt/openclaw/workspace-main/memory/business-context.md");
     expect(script).toContain("chmod 600 /opt/openclaw/openclaw.json /opt/openclaw/.env");
     expect(script).toContain('"dangerouslyDisableDeviceAuth": true');
     expect(script).toContain("normalize_runtime_state_perms()");

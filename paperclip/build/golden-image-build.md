@@ -7,20 +7,22 @@ This runbook defines how PixelPort `paperclip/` customizations are applied when 
 - Pinned upstream Paperclip release tag/commit
 - Pinned OpenClaw image tag
 - This repo's `paperclip/` directory overlay
+- Pinned upstream default CEO templates copied under `paperclip/templates/upstream-default-ceo/` (`PINNED-UPSTREAM.json`)
 
 ## Build sequence
 
 1. Checkout pinned upstream Paperclip source into the image build workspace.
 2. Copy `paperclip/plugins/*` into the Paperclip server auth/plugin layer.
-3. Apply any curated `paperclip/patches/*` core modifications (when present).
-4. Apply `paperclip/theme/*` global branding assets/overrides (when present).
-5. Build runtime image artifacts with explicit version pins.
-6. Boot a canary droplet from the candidate image and validate:
+3. Ensure workspace prompt template baseline is sourced from `paperclip/templates/upstream-default-ceo/` and that `PINNED-UPSTREAM.json` matches the intended upstream commit.
+4. Apply any curated `paperclip/patches/*` core modifications (when present).
+5. Apply `paperclip/theme/*` global branding assets/overrides (when present).
+6. Build runtime image artifacts with explicit version pins.
+7. Boot a canary droplet from the candidate image and validate:
    - Paperclip server health
    - OpenClaw gateway health
    - PixelPort handoff plugin path (`/pixelport/handoff`)
    - Onboarding launch redirect to workspace
-7. Snapshot only after canary passes and record image ID in provisioning manifests.
+8. Snapshot only after canary passes and record image ID in provisioning manifests.
 
 ## Notes
 
