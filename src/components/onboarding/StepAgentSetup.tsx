@@ -42,7 +42,7 @@ const StepAgentSetup = ({ data, onChange, onNext, onBack }: Props) => {
         </div>
         <div>
           <h2 className="text-xl font-bold text-foreground">Meet your Chief of Staff</h2>
-          <p className="text-sm text-muted-foreground">Personalize your AI agent</p>
+          <p className="text-sm text-muted-foreground">Personalize your Chief of Staff</p>
         </div>
       </div>
 
@@ -109,7 +109,7 @@ const StepAgentSetup = ({ data, onChange, onNext, onBack }: Props) => {
             );
           })}
         </div>
-        <p className="text-xs text-muted-foreground">You can upload a custom avatar later in Settings</p>
+        <p className="text-xs text-muted-foreground">You can change this avatar later from your workspace.</p>
       </div>
 
       {/* Preview */}

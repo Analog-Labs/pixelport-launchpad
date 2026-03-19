@@ -113,7 +113,7 @@ export default function Home() {
         <CardHeader>
           <CardTitle>Open Your Workspace</CardTitle>
           <CardDescription>
-            Launchpad dashboard activity surfaces are retired under the Paperclip-primary pivot.
+            Launchpad dashboard activity surfaces are retired. Continue in your workspace.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -137,7 +137,7 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  Open Paperclip Workspace
+                  Open Workspace
                   <ExternalLink className="ml-2 h-4 w-4" />
                 </>
               )}
