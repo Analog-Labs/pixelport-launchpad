@@ -55,7 +55,7 @@ const Login = () => {
             <span className="text-xl font-bold text-foreground tracking-tight">PixelPort</span>
           </Link>
           <h1 className="text-2xl font-bold text-foreground mt-4">Welcome back</h1>
-          <p className="text-muted-foreground text-sm">Sign in to your dashboard</p>
+          <p className="text-muted-foreground text-sm">Sign in to continue to your workspace</p>
         </div>
 
         <Button variant="outline" className="w-full mb-4 gap-2" onClick={handleGoogle}>

@@ -30,7 +30,7 @@ const StepConnectTools = ({
         </div>
         <div>
           <h2 className="text-xl font-bold text-foreground">Launch your workspace</h2>
-          <p className="text-sm text-muted-foreground">Finalize your setup and continue to your Paperclip workspace</p>
+          <p className="text-sm text-muted-foreground">Finalize your setup and continue to your workspace</p>
         </div>
       </div>
 
@@ -51,8 +51,8 @@ const StepConnectTools = ({
         <p className="text-sm font-semibold text-foreground">After launch:</p>
         <ul className="space-y-2 text-sm text-muted-foreground">
           <li>1. We persist your starter task and agent setup to onboarding data.</li>
-          <li>2. You are redirected to your tenant&apos;s Paperclip workspace.</li>
-          <li>3. Dashboard tools remain available in PixelPort when needed.</li>
+          <li>2. You are redirected to your tenant workspace.</li>
+          <li>3. You can return to PixelPort anytime and reopen your workspace.</li>
         </ul>
       </div>
 

@@ -429,7 +429,7 @@ const Onboarding = () => {
       }
 
       if (!handoffRes.ok) {
-        throw new Error(handoffResult.error || "Failed to open your Paperclip workspace.");
+        throw new Error(handoffResult.error || "Failed to open your workspace.");
       }
 
       const workspaceUrl = resolveWorkspaceUrl(handoffResult.workspace_launch_url)
@@ -438,7 +438,7 @@ const Onboarding = () => {
           handoffResult.handoff_token,
         );
       if (!workspaceUrl) {
-        throw new Error("Paperclip workspace launch URL is unavailable for this tenant.");
+        throw new Error("Workspace launch URL is unavailable for this tenant.");
       }
 
       const payload = {

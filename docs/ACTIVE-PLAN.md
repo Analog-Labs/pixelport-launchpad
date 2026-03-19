@@ -55,13 +55,13 @@
   - Chief of Staff terminology on tenant-facing surfaces
   - SOUL additive onboarding block present/correct
 - [x] Capture rollback-readiness evidence
-- [ ] CTO review PR + merge
+- [x] CTO review approved + merged (PR `#22`, merge commit `d1511ce`)
 
 ## R5 — Branding Baseline Pass
 
-- [ ] Branch: `codex/p6-r5-branding-baseline`
-- [ ] Baseline identity pass only (copy harmonization + key tenant-visible polish)
-- [ ] Fix known copy drift (including obsolete Settings mention)
+- [x] Branch: `codex/p6-r5-branding-baseline`
+- [x] Baseline identity pass only (copy harmonization + key tenant-visible polish)
+- [x] Fix known copy drift (including obsolete Settings mention)
 - [ ] CTO review PR + merge
 
 ## Release Gates (Per Phase)
@@ -79,6 +79,8 @@
 - R2 rollout closure evidence: `docs/qa/2026-03-19-p6-r2-managed-image-rollout-closure.md`
 - R3 rollout evidence: `docs/qa/2026-03-19-p6-r3-paperclip-v2026-318-0-rollout-evidence.md`
 - R4 combined proof evidence: `docs/qa/2026-03-19-p6-r4-combined-regression-proof.md`
+- R4 merge smoke: `docs/qa/2026-03-19-p6-r4-merge-smoke.md`
+- R5 branding baseline evidence: `docs/qa/2026-03-19-p6-r5-branding-baseline.md`
 - Launch-critical canary baseline: `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
 - Golden-image backup runbook: `docs/ops/golden-image-backup-runbook.md`
 
