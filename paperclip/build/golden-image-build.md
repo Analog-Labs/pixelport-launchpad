@@ -20,8 +20,8 @@ This runbook defines how PixelPort `paperclip/` customizations are applied when 
 7. Boot a canary droplet from the candidate image and validate:
    - Paperclip server health
    - OpenClaw gateway health
-   - PixelPort handoff plugin path (`/pixelport/handoff`)
-   - Onboarding launch redirect to workspace
+   - Onboarding launch redirect path via `workspace_launch_url` (`#token=...`) into `/chat?session=main`
+   - `GET /pixelport/handoff` is currently treated as compatibility-only/non-active (serves OpenClaw Control shell on current runtime)
 8. Snapshot only after canary passes and record image ID in provisioning manifests.
 
 ## Notes

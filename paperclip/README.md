@@ -21,3 +21,8 @@ This directory is the source of truth for PixelPort-owned customizations layered
 When rebuilding the PixelPort golden image, start from a pinned upstream Paperclip release and apply this directory as an overlay (plugin/theme/patch layer), then validate and snapshot.
 
 See `paperclip/build/golden-image-build.md` for the expected flow.
+
+## Current runtime pin
+
+- Paperclip release tag: `v2026.318.0`
+- Paperclip commit: `78c714c29ac9aa1a8ca85aebe48f7f1ee7e57e4d`

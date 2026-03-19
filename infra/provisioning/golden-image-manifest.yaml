@@ -6,9 +6,9 @@ baseline:
   droplet:
     default_size: s-4vcpu-8gb
     default_region: nyc1
-    default_image: "221188460"
-    default_image_name: pixelport-paperclip-golden-2026-03-19-openclaw-2026-3-13-1-r2
-    default_image_promoted_at: "2026-03-19T02:52:10Z"
+    default_image: "221189855"
+    default_image_name: pixelport-paperclip-golden-2026-03-19-paperclip-v2026-318-0-r3
+    default_image_promoted_at: "2026-03-19T03:42:20Z"
     compatibility_fallback_image: ubuntu-24-04-x64
     image_selector:
       primary_env: PROVISIONING_DROPLET_IMAGE
@@ -26,7 +26,10 @@ components:
   paperclip:
     source: pixelport-launchpad-monorepo-overlay
     customization_overlay_path: paperclip/
-    version_pin: REQUIRED_AT_IMAGE_BUILD
+    version_pin: v2026.318.0
+    upstream_release_tag: v2026.318.0
+    upstream_commit: 78c714c29ac9aa1a8ca85aebe48f7f1ee7e57e4d
+    policy: pinned-tag-and-commit
   openclaw:
     image: ghcr.io/openclaw/openclaw:2026.3.13-1
     image_digest: sha256:a5a4c83b773aca85a8ba99cf155f09afa33946c0aa5cc6a9ccb6162738b5da02
@@ -53,6 +56,7 @@ notes:
   - Runtime provisioning requires an explicit selector env (no implicit fallback path).
   - Compatibility selector (`ubuntu-24-04-x64`) may be used temporarily via PROVISIONING_DROPLET_IMAGE.
   - Optional env PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true blocks compatibility selector use.
-  - Production currently enforces managed-image-only provisioning with selector `221188460`.
+  - Production currently enforces managed-image-only provisioning with selector `221189855`.
+  - R3 launch validation standard is `workspace_launch_url` (gateway-token auto-login); `/pixelport/handoff` is currently a non-active route on runtime images.
   - LiteLLM is no longer part of active provisioning or runtime dependencies.
-  - Exact Paperclip and Postgres minor pins are set at image build time and must be recorded before production promotion.
+  - Postgres minor pins are set at image build time and must be recorded before production promotion.

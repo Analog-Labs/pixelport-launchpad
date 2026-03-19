@@ -7,6 +7,33 @@
 
 ## Last Session
 
+- **Date:** 2026-03-19 (session 112)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Founder approved R3 direction to continue with the gateway-token launch path (`workspace_launch_url`) as the compatibility standard.
+  - Started branch `codex/p6-r3-paperclip-v2026-318-0` from `main` after R2 closure merge (`#20`).
+  - Executed R3 canary-first rollout:
+    - canary 1 tenant `pixelport-dry-run-mmwx4yez` (`1f4f4302-fb2a-4157-adef-db8e1f13aa7c`) reached `active` on droplet `559343510` (`104.248.60.33`) using image `221188460`
+    - health passed (`/health` live) and Playwright confirmed auto-login launch URL lands on `/chat?session=main` with title `OpenClaw Control`
+    - created snapshot action `3097765317` -> managed image `221189855` (`pixelport-paperclip-golden-2026-03-19-paperclip-v2026-318-0-r3`)
+    - promoted production selector to `PROVISIONING_DROPLET_IMAGE=221189855` and kept `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`; redeployed production alias
+    - canary 2 tenant `pixelport-dry-run-mmwxefq8` (`e4564033-d5fd-4d14-8f7b-d708024fdc89`) reached `active` on droplet `559344696` (`104.248.228.181`) with image-truth `221189855`
+    - canary 2 auto-login proof matched canary 1 (`/chat?session=main`, title `OpenClaw Control`)
+  - Compatibility note captured with direct runtime check:
+    - `/pixelport/handoff` currently serves the OpenClaw app shell on runtime images (non-active auth endpoint in this path)
+  - Cleanup proof:
+    - both canary tenants removed via debug cleanup
+    - both droplet IDs (`559343510`, `559344696`) verified as `404` after delete propagation
+  - Captured local fail-safe artifact set under:
+    - `/Users/sanchal/pixelport-artifacts/golden-image-backups/`
+    - manifest/checksums/snapshot prefix: `2026-03-19-p6-r3-paperclip-v2026.318.0`
+  - Added R3 QA evidence doc:
+    - `docs/qa/2026-03-19-p6-r3-paperclip-v2026-318-0-rollout-evidence.md`
+- **What's next:**
+  - Open CTO-review PR for R3 doc/manifest/provisioning updates and evidence links.
+  - After CTO approval/merge, start R4 combined regression proof on the upgraded baseline (`221189855`).
+- **Blockers:** No active blocker for R3 compatibility rollout. `/pixelport/handoff` plugin route remains non-active on current runtime images and is documented as out-of-scope for this R3 path.
+
 - **Date:** 2026-03-19 (session 111)
 - **Who worked:** Founder + Codex
 - **What was done:**
