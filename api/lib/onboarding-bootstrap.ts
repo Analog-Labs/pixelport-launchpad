@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 
-const GATEWAY_HOOKS_PATH = '/hooks/agent';
+const GATEWAY_HOOKS_AGENT_PATH = '/hooks/agent';
+const GATEWAY_HOOKS_MAPPED_PATH = '/hooks/onboarding-bootstrap';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -9,6 +10,17 @@ export type AgentHookDispatchResult = {
   status: number;
   body: string;
 };
+
+function buildHookDispatchUrl(gatewayUrl: string, hookPath: string, hookToken: string): string {
+  const normalizedGatewayUrl = gatewayUrl.trim();
+  const normalizedGatewayBase = normalizedGatewayUrl.endsWith('/')
+    ? normalizedGatewayUrl
+    : `${normalizedGatewayUrl}/`;
+  const normalizedHookPath = hookPath.replace(/^\/+/, '');
+  const url = new URL(normalizedHookPath, normalizedGatewayBase);
+  url.searchParams.set('token', hookToken);
+  return url.toString();
+}
 
 export function deriveHooksToken(gatewayToken: string): string {
   const digest = createHash('sha256')
@@ -112,17 +124,24 @@ export async function dispatchAgentHookMessage(params: {
   name: string;
   message: string;
   agentId?: string;
+  hookPath?: string;
+  hookToken?: string;
 }): Promise<AgentHookDispatchResult> {
   const timeoutSignal =
     typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
       ? AbortSignal.timeout(15_000)
       : undefined;
+  const hookPath = params.hookPath ?? GATEWAY_HOOKS_AGENT_PATH;
+  const hookToken = params.hookToken?.trim() || deriveHooksToken(params.gatewayToken);
+  const hookUrl = buildHookDispatchUrl(params.gatewayUrl, hookPath, hookToken);
 
   try {
-    const response = await fetch(`${params.gatewayUrl}${GATEWAY_HOOKS_PATH}`, {
+    const response = await fetch(hookUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${deriveHooksToken(params.gatewayToken)}`,
+        // Query token follows OpenClaw hooks contract; headers remain for compatibility across older runtimes.
+        Authorization: `Bearer ${hookToken}`,
+        'x-openclaw-token': hookToken,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -165,8 +184,66 @@ export async function triggerOnboardingBootstrap(params: {
   message: string;
   agentId?: string;
 }): Promise<AgentHookDispatchResult> {
-  return dispatchAgentHookMessage({
+  const derivedHooksToken = deriveHooksToken(params.gatewayToken);
+  const primaryResult = await dispatchAgentHookMessage({
     ...params,
     name: 'Post-Onboarding Bootstrap',
+    hookPath: GATEWAY_HOOKS_AGENT_PATH,
+    hookToken: derivedHooksToken,
   });
+
+  if (primaryResult.ok) {
+    return primaryResult;
+  }
+
+  let latestResult = primaryResult;
+
+  // Compatibility fallback for older droplets that still use gateway token at the hook ingress layer.
+  if (latestResult.status === 401) {
+    const gatewayTokenResult = await dispatchAgentHookMessage({
+      ...params,
+      name: 'Post-Onboarding Bootstrap',
+      hookPath: GATEWAY_HOOKS_AGENT_PATH,
+      hookToken: params.gatewayToken,
+    });
+
+    if (gatewayTokenResult.ok) {
+      return gatewayTokenResult;
+    }
+
+    latestResult = gatewayTokenResult;
+  }
+
+  // Compatibility fallback for runtimes that only route onboarding via a mapped hook path.
+  if (latestResult.status === 401 || latestResult.status === 404 || latestResult.status === 405) {
+    const mappedPathResult = await dispatchAgentHookMessage({
+      ...params,
+      name: 'Post-Onboarding Bootstrap',
+      hookPath: GATEWAY_HOOKS_MAPPED_PATH,
+      hookToken: derivedHooksToken,
+    });
+
+    if (mappedPathResult.ok) {
+      return mappedPathResult;
+    }
+
+    latestResult = mappedPathResult;
+
+    if (latestResult.status === 401) {
+      const mappedPathGatewayTokenResult = await dispatchAgentHookMessage({
+        ...params,
+        name: 'Post-Onboarding Bootstrap',
+        hookPath: GATEWAY_HOOKS_MAPPED_PATH,
+        hookToken: params.gatewayToken,
+      });
+
+      if (mappedPathGatewayTokenResult.ok) {
+        return mappedPathGatewayTokenResult;
+      }
+
+      latestResult = mappedPathGatewayTokenResult;
+    }
+  }
+
+  return latestResult;
 }

@@ -20,8 +20,10 @@ This runbook defines how PixelPort `paperclip/` customizations are applied when 
 7. Boot a canary droplet from the candidate image and validate:
    - Paperclip server health
    - OpenClaw gateway health
-   - Onboarding launch redirect path via `workspace_launch_url` (`#token=...`) into `/chat?session=main`
-   - `GET /pixelport/handoff` is currently treated as compatibility-only/non-active (serves OpenClaw Control shell on current runtime)
+   - Onboarding launch redirect path via `workspace_launch_url` into `/chat?session=main`
+   - Runtime handoff route behavior:
+     - if `/pixelport/handoff` returns handoff-aware JSON auth errors (`400`/`401`/`503`), Launch should use `paperclip-handoff` mode.
+     - otherwise Launch should fall back to `gateway-token` mode.
 8. Snapshot only after canary passes and record image ID in provisioning manifests.
 
 ## Notes

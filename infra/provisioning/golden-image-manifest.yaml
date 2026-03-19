@@ -57,6 +57,6 @@ notes:
   - Compatibility selector (`ubuntu-24-04-x64`) may be used temporarily via PROVISIONING_DROPLET_IMAGE.
   - Optional env PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true blocks compatibility selector use.
   - Production currently enforces managed-image-only provisioning with selector `221189855`.
-  - R3 launch validation standard is `workspace_launch_url` (gateway-token auto-login); `/pixelport/handoff` is currently a non-active route on runtime images.
+  - Launch mode is selected dynamically per tenant runtime: use `paperclip-handoff` only when `/pixelport/handoff` probe confirms handoff-aware auth responses; otherwise use `gateway-token`.
   - LiteLLM is no longer part of active provisioning or runtime dependencies.
   - Postgres minor pins are set at image build time and must be recorded before production promotion.

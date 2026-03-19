@@ -7,6 +7,37 @@
 
 ## Last Session
 
+- **Date:** 2026-03-19 (session 117)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Founder approved post-P6 execution order: `upgrade first -> point 2 (bootstrap Unauthorized) -> point 3 (/pixelport/handoff) -> integrations`.
+  - Upgrade-first verification completed against upstream release APIs:
+    - OpenClaw latest stable: `v2026.3.13-1` (`2026-03-14T18:04:28Z`) — already pinned in provisioning/manifest.
+    - Paperclip latest stable: `v2026.318.0` (`2026-03-18T14:13:52Z`) — already pinned in manifest.
+  - Point 2 fix implemented:
+    - updated `api/lib/onboarding-bootstrap.ts` to dispatch hooks with `?token=` query auth (OpenClaw hook contract), while preserving compatibility headers.
+    - added controlled compatibility fallback matrix across `/hooks/agent` and `/hooks/onboarding-bootstrap` for `401/404/405` responses.
+    - expanded test coverage in `src/test/onboarding-bootstrap.test.ts`.
+  - Point 3 fix implemented:
+    - added runtime `/pixelport/handoff` activity probe in `api/lib/paperclip-handoff-contract.ts` (HTTPS-only probe path).
+    - updated `api/runtime/handoff.ts` to auto-select launch mode per tenant runtime:
+      - `paperclip-handoff` when probe confirms handoff-aware route behavior.
+      - `gateway-token` fallback otherwise.
+    - updated onboarding/home launch flows to rely on backend-provided `workspace_launch_url`.
+    - aligned docs:
+      - `paperclip/build/golden-image-build.md`
+      - `infra/provisioning/golden-image-manifest.yaml`
+  - Validation:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test` (`pass`, 19 files / 98 tests)
+    - targeted route/contract/bootstrap tests all pass.
+  - Updated active plan to mark P7-S1 complete and queue P7-S2 integrations as next.
+- **What's next:**
+  - Open CTO-review PR for P7-S1 upgrade/carryover fixes.
+  - After CTO approval/merge, run production smoke on launch/handoff/bootstrap endpoints.
+  - Start P7-S2 integrations track.
+- **Blockers:** No active blocker in this slice.
+
 - **Date:** 2026-03-19 (session 116)
 - **Who worked:** Founder + Codex
 - **What was done:**

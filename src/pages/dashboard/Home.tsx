@@ -34,20 +34,6 @@ function resolveWorkspaceUrl(rawUrl: unknown): string | null {
   }
 }
 
-function resolveWorkspaceHandoffUrl(rawRuntimeUrl: unknown, rawHandoffToken: unknown): string | null {
-  const runtimeUrl = resolveWorkspaceUrl(rawRuntimeUrl);
-  const handoffToken = readString(rawHandoffToken).trim();
-
-  if (!runtimeUrl || !handoffToken) {
-    return null;
-  }
-
-  const handoffUrl = new URL("/pixelport/handoff", runtimeUrl);
-  handoffUrl.searchParams.set("handoff_token", handoffToken);
-  handoffUrl.searchParams.set("next", "/");
-  return handoffUrl.toString();
-}
-
 export default function Home() {
   const { session, tenant, refreshTenant } = useAuth();
   const [launching, setLaunching] = useState(false);
@@ -85,11 +71,7 @@ export default function Home() {
         throw new Error(payload.error || "Failed to prepare workspace launch.");
       }
 
-      const workspaceUrl = resolveWorkspaceUrl(payload.workspace_launch_url)
-        ?? resolveWorkspaceHandoffUrl(
-          payload.paperclip_runtime_url,
-          payload.handoff_token,
-        );
+      const workspaceUrl = resolveWorkspaceUrl(payload.workspace_launch_url);
       if (!workspaceUrl) {
         throw new Error("Workspace launch URL is unavailable. Please retry from onboarding.");
       }

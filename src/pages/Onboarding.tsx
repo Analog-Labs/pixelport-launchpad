@@ -67,20 +67,6 @@ function resolveWorkspaceUrl(rawUrl: unknown): string | null {
   }
 }
 
-function resolveWorkspaceHandoffUrl(rawRuntimeUrl: unknown, rawHandoffToken: unknown): string | null {
-  const runtimeUrl = resolveWorkspaceUrl(rawRuntimeUrl);
-  const handoffToken = readString(rawHandoffToken).trim();
-
-  if (!runtimeUrl || !handoffToken) {
-    return null;
-  }
-
-  const handoffUrl = new URL("/pixelport/handoff", runtimeUrl);
-  handoffUrl.searchParams.set("handoff_token", handoffToken);
-  handoffUrl.searchParams.set("next", "/");
-  return handoffUrl.toString();
-}
-
 function toGoalsArray(missionGoals: string): string[] {
   const trimmed = missionGoals.trim();
   if (!trimmed) {
@@ -432,11 +418,7 @@ const Onboarding = () => {
         throw new Error(handoffResult.error || "Failed to open your workspace.");
       }
 
-      const workspaceUrl = resolveWorkspaceUrl(handoffResult.workspace_launch_url)
-        ?? resolveWorkspaceHandoffUrl(
-          handoffResult.paperclip_runtime_url,
-          handoffResult.handoff_token,
-        );
+      const workspaceUrl = resolveWorkspaceUrl(handoffResult.workspace_launch_url);
       if (!workspaceUrl) {
         throw new Error("Workspace launch URL is unavailable for this tenant.");
       }
