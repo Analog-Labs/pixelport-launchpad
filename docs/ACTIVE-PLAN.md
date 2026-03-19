@@ -10,6 +10,15 @@
 **Fixed order:** `R1 -> R2 -> R3 -> R4 -> R5`  
 **Deferred:** TryClam scrub and integrations track until this reset program is complete.
 
+## Next Program Draft (Approval Pending)
+
+- [ ] Approve next active sequence (`upgrade-first` vs `integrations-first`)
+- [ ] Decide bootstrap `Unauthorized` handling (`known caveat` vs `blocker`)
+- [ ] Decide `/pixelport/handoff` scope (`stay out-of-scope` vs `reactivate/fix`)
+- [ ] Decide TryClam teardown timing (`immediate next slice` vs `defer`)
+- [ ] Approve kickoff plan doc:
+  - `docs/post-p6-next-program-draft-2026-03-19.md`
+
 ## R1 — Workspace Drift + Terminology Correction
 
 - [x] Branch created: `codex/p6-r1-paperclip-default-workspace`
