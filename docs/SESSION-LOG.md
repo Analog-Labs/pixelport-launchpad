@@ -26,6 +26,9 @@
     - chat prompt `Reply with exactly: PIXELPORT_LAUNCH_CANARY_OK` received assistant reply `PIXELPORT_LAUNCH_CANARY_OK`
   - Added D5 evidence doc:
     - `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
+  - Deleted canary droplet using the current production `DO_API_TOKEN` path and verified removal:
+    - delete request returned `204`
+    - follow-up `GET /v2/droplets/559309477` returned `404 not_found`
   - Marked D5 complete in:
     - `docs/ACTIVE-PLAN.md`
 - **What's next:**
