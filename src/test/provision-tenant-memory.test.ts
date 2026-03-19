@@ -154,17 +154,17 @@ describe("provision tenant memory config", () => {
 
     expect(
       resolveOpenClawRuntimeImage(
-        "ghcr.io/openclaw/openclaw:2026.3.11",
+        "ghcr.io/openclaw/openclaw:2026.3.13-1",
         "",
       ),
-    ).toBe("ghcr.io/openclaw/openclaw:2026.3.11");
+    ).toBe("ghcr.io/openclaw/openclaw:2026.3.13-1");
 
     expect(
       resolveOpenClawRuntimeImage(
-        "ghcr.io/openclaw/openclaw:2026.3.11",
+        "ghcr.io/openclaw/openclaw:2026.3.13-1",
         "   ",
       ),
-    ).toBe("ghcr.io/openclaw/openclaw:2026.3.11");
+    ).toBe("ghcr.io/openclaw/openclaw:2026.3.13-1");
   });
 
   it("uses direct OpenAI/Gemini model references in generated agent config", async () => {
@@ -205,7 +205,7 @@ describe("provision tenant memory config", () => {
 
     expect(
       resolveOpenClawRuntimeImage(
-        "ghcr.io/openclaw/openclaw:2026.3.11",
+        "ghcr.io/openclaw/openclaw:2026.3.13-1",
         "pixelport-openclaw:custom-runtime",
       ),
     ).toBe("pixelport-openclaw:custom-runtime");
@@ -373,8 +373,8 @@ describe("provision tenant memory config", () => {
       tenantName: "PixelPort QA",
       gatewayToken: "gw-token",
       runtimeHostTemplate: "pixelport-qa.__PUBLIC_IPV4_DASH__.sslip.io",
-      openclawBaseImage: "ghcr.io/openclaw/openclaw:2026.3.11",
-      openclawRuntimeImage: "ghcr.io/openclaw/openclaw:2026.3.11",
+      openclawBaseImage: "ghcr.io/openclaw/openclaw:2026.3.13-1",
+      openclawRuntimeImage: "ghcr.io/openclaw/openclaw:2026.3.13-1",
       openaiApiKey: "openai-key",
       paperclipHandoffSecret: "handoff-secret",
       memoryOpenAiApiKey: "memory-openai-key",
@@ -387,8 +387,8 @@ describe("provision tenant memory config", () => {
       },
     });
 
-    expect(script).toContain("if docker image inspect ghcr.io/openclaw/openclaw:2026.3.11 >/dev/null 2>&1; then");
-    expect(script).toContain("docker pull ghcr.io/openclaw/openclaw:2026.3.11");
+    expect(script).toContain("if docker image inspect ghcr.io/openclaw/openclaw:2026.3.13-1 >/dev/null 2>&1; then");
+    expect(script).toContain("docker pull ghcr.io/openclaw/openclaw:2026.3.13-1");
     expect(script).toContain("RUNTIME_HOST_TEMPLATE='pixelport-qa.__PUBLIC_IPV4_DASH__.sslip.io'");
     expect(script).not.toContain("docker build -t");
     expect(script).not.toContain("/opt/openclaw/image");

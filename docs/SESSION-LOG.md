@@ -7,6 +7,36 @@
 
 ## Last Session
 
+- **Date:** 2026-03-19 (session 109)
+- **Who worked:** Codex
+- **What was done:**
+  - Started Phase P6 reset execution R2 on branch `codex/p6-r2-openclaw-2026-3-13`.
+  - Read and verified upstream OpenClaw recovery release details before pinning:
+    - release tag: `v2026.3.13-1`
+    - release URL: `https://github.com/openclaw/openclaw/releases/tag/v2026.3.13-1`
+    - upstream commit: `61d171ab0b2fe4abc9afe89c518586274b4b76c2`
+  - Resolved public GHCR manifest metadata for runtime reproducibility:
+    - image tag: `ghcr.io/openclaw/openclaw:2026.3.13-1`
+    - manifest digest: `sha256:a5a4c83b773aca85a8ba99cf155f09afa33946c0aa5cc6a9ccb6162738b5da02`
+  - Updated runtime pin touchpoints:
+    - `api/inngest/functions/provision-tenant.ts` default `OPENCLAW_IMAGE` -> `ghcr.io/openclaw/openclaw:2026.3.13-1`
+    - `src/test/provision-tenant-memory.test.ts` expectations updated to `2026.3.13-1`
+    - `infra/provisioning/golden-image-manifest.yaml` updated with new image pin + digest + upstream tag/commit
+    - `infra/provisioning/cloud-init.yaml` comment example synced to `2026.3.13-1`
+  - Added R2 evidence doc:
+    - `docs/qa/2026-03-19-p6-r2-openclaw-2026-3-13-pin-and-release-evidence.md`
+  - Validation:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test` (`pass`, 19 files / 88 tests)
+- **What's next:**
+  - Execute R2 managed-image canary gate:
+    - build upgraded managed image with this pin
+    - run 2 fresh-tenant canaries
+    - capture evidence + backup artifacts
+    - then promote selector and re-enable `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
+  - Continue to R3 Paperclip compatibility upgrade only after R2 canary/promotion gate passes.
+- **Blockers:** R2 is code-complete for pin updates but rollout-gate tasks (managed image canaries + selector promotion) are still pending.
+
 - **Date:** 2026-03-18 (session 108)
 - **Who worked:** Founder + Codex
 - **What was done:**

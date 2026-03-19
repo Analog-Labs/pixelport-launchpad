@@ -1,6 +1,6 @@
 schema_version: 1
 manifest_name: pixelport-paperclip-golden-image
-last_updated: "2026-03-16"
+last_updated: "2026-03-19"
 
 baseline:
   droplet:
@@ -26,8 +26,11 @@ components:
     customization_overlay_path: paperclip/
     version_pin: REQUIRED_AT_IMAGE_BUILD
   openclaw:
-    image: ghcr.io/openclaw/openclaw:2026.3.11
-    policy: pinned-tag-only
+    image: ghcr.io/openclaw/openclaw:2026.3.13-1
+    image_digest: sha256:a5a4c83b773aca85a8ba99cf155f09afa33946c0aa5cc6a9ccb6162738b5da02
+    upstream_release_tag: v2026.3.13-1
+    upstream_commit: 61d171ab0b2fe4abc9afe89c518586274b4b76c2
+    policy: pinned-tag-and-digest
   postgres:
     major_version: "16"
     policy: pinned-major-with-explicit-minor-on-image-build

@@ -11,7 +11,7 @@
 #    PIXELPORT_DROPLET_IMAGE / DO_GOLDEN_IMAGE_ID, PIXELPORT_DROPLET_SIZE,
 #    PIXELPORT_DROPLET_REGION. If none are set, provisioning uses the
 #    compatibility image `ubuntu-24-04-x64`.)
-#   {{OPENCLAW_BASE_IMAGE}}     — pinned OpenClaw base image (e.g., ghcr.io/openclaw/openclaw:2026.3.11)
+#   {{OPENCLAW_BASE_IMAGE}}     — pinned OpenClaw base image (e.g., ghcr.io/openclaw/openclaw:2026.3.13-1)
 #   {{OPENCLAW_RUNTIME_IMAGE}}  — runtime image (defaults to OPENCLAW_BASE_IMAGE unless an override is set)
 #   {{GATEWAY_TOKEN}}           — random UUID for gateway auth
 #   {{OPENAI_API_KEY}}          — OpenAI API key used directly by OpenClaw

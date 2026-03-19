@@ -4,67 +4,80 @@
 
 ---
 
-## Current Phase: Phase P6 — Launch-Critical Handoff Stabilization + Integrations
+## Current Program: P6 Reset (Locked)
 
-**Status:** Active (P5 closed on 2026-03-18).  
-**Goal:** Restore true end-to-end Launch flow first (signup -> onboarding -> provision -> launch -> authenticated runtime -> agent response), then resume integrations-first build work.
-**Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/pixelport-master-plan-v2.md`
+**Objective:** close drift, upgrade runtime safely, and preserve end-to-end Launch reliability.  
+**Fixed order:** `R1 -> R2 -> R3 -> R4 -> R5`  
+**Deferred:** TryClam scrub and integrations track until this reset program is complete.
 
-### Confirmed Inputs (Closed from P5)
+## R1 — Workspace Drift + Terminology Correction
 
-- [x] PR `#14` merged (`9fe9ac7`) — monorepo `paperclip/` structure + provisioning LiteLLM removal
-- [x] PR `#15` merged (`ae082eb`) — scan/status contract cleanup + LiteLLM repo decommission
-- [x] PR `#16` merged (`4f1803c`) — Vercel `ignoreCommand` hotfix + production deploy recovery
-- [x] Post-merge production smoke passed on retained/deleted route surfaces
-- [x] Founder removed `LITELLM_URL` and `LITELLM_MASTER_KEY` from Vercel (2026-03-18 confirmation)
-- [x] Founder shut down Railway LiteLLM service (2026-03-18 confirmation)
+- [x] Branch created: `codex/p6-r1-paperclip-default-workspace`
+- [x] Pinned upstream Paperclip default CEO templates vendored under `paperclip/`
+- [x] `workspace-contract.ts` switched to Paperclip defaults + SOUL-only additive onboarding block
+- [x] Chief of Staff tenant-facing terminology applied in workspace markdown overlay
+- [x] Tests updated and passing
+- [ ] CTO review + merge of PR `#18`
 
-### P6 Work Checklist
+## R2 — OpenClaw Upgrade (Canary-first)
 
-#### Track 0 — Launch-Critical E2E (Highest Priority)
-- [x] D1: Apply CTO medium fixes (scan fetch timeouts, `docs/` Vercel skip path, missing scan tests)
-- [x] D2: Implement runtime launch URL contract for gateway-token auto-login (`workspace_launch_url`) in handoff + frontend launch paths
-- [x] D3: Add local fail-safe golden image backup runbook and capture first local archive + checksum + manifest
-- [x] D4: Resolve Control UI secure-context/device-identity blocker via founder-approved option 1 break-glass (`gateway.controlUi.dangerouslyDisableDeviceAuth=true`) while retaining token auth (`74a2f37`)
-- [x] D5: Merge PR `#17`, deploy to production, and run full canary flow proof (`signup -> onboarding -> provision -> launch -> auto-login -> agent responds`)
+- [x] Branch created: `codex/p6-r2-openclaw-2026-3-13`
+- [x] Provisioning default pin updated to `ghcr.io/openclaw/openclaw:2026.3.13-1`
+- [x] Infra manifest updated with immutable metadata:
+  - tag: `v2026.3.13-1`
+  - commit: `61d171ab0b2fe4abc9afe89c518586274b4b76c2`
+  - digest: `sha256:a5a4c83b773aca85a8ba99cf155f09afa33946c0aa5cc6a9ccb6162738b5da02`
+- [x] Tests/docs updated for new pin
+- [x] Validation done (`npx tsc --noEmit`, `npm test`)
+- [ ] Build managed golden image candidate with this OpenClaw pin
+- [ ] Run 2 fresh-tenant canaries on candidate image
+- [ ] Capture local backup artifacts and QA evidence
+- [ ] Promote managed image selector
+- [ ] Re-enable strict gate in production: `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
+- [ ] CTO review PR + merge
 
-#### Track A — TryClam Teardown
-- [x] A1: Inventory any remaining TryClam dependencies (repo/docs/runtime/process)
-- [x] A2: Create a concrete teardown runbook with explicit owner actions and verification checks
-- [ ] A3: Execute repo/doc cleanup for stale TryClam references and open CTO review PR
+## R3 — Paperclip Upgrade (Compatibility-only)
 
-#### Track B — Integrations-First (Google + Slack)
-- [ ] B1: Map current integration/auth surfaces in launchpad and `paperclip/` overlay
-- [ ] B2: Define first implementation slice for Google + Slack onboarding/runtime path improvements
-- [ ] B3: Execute first approved integration slice on `codex/*` branch with CTO review
+- [ ] Branch: `codex/p6-r3-paperclip-v2026-318-0`
+- [ ] Pin Paperclip to `v2026.318.0` and record tag + commit in manifest/evidence
+- [ ] Rebuild image with overlay (handoff plugin + template layer), no feature expansion
+- [ ] Run 2 fresh-tenant canaries (handoff + auto-login compatibility)
+- [ ] Promote only after canaries pass
+- [ ] CTO review PR + merge
 
-#### Track C — Global PixelPort Branding Baseline
-- [ ] C1: Inventory launchpad + `paperclip/` branding touchpoints
-- [ ] C2: Draft baseline branding token/theme proposal for founder approval
-- [ ] C3: Implement approved baseline in first branding PR
+## R4 — Combined Regression Proof
 
-### Notes
+- [ ] Branch: `codex/p6-r4-combined-regression-proof`
+- [ ] Run full proof:
+  - `signup -> onboarding -> provision -> launch -> auto-login -> agent responds`
+- [ ] Confirm policy-compliant workspace behavior for new tenants:
+  - Paperclip default template behavior retained
+  - Chief of Staff terminology on tenant-facing surfaces
+  - SOUL additive onboarding block present/correct
+- [ ] Capture rollback-readiness evidence
+- [ ] CTO review PR + merge
 
-- Major product, architecture, and UX decisions still require founder approval before implementation.
-- Launch-critical QA evidence:
-  - `docs/qa/2026-03-18-p6-handoff-runtime-canary.md`
-  - `docs/qa/2026-03-18-p6-runtime-ingress-https-resolution.md`
-  - `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
-- P5 closure evidence:
-  - `docs/qa/2026-03-18-p5-merge-order-smoke.md`
-  - `docs/qa/2026-03-18-p5-vercel-ignorecommand-hotfix-merge-smoke.md`
-- P6 Track A inventory evidence:
-  - `docs/qa/2026-03-18-p6-track-a1-tryclam-inventory.md`
-- P6 Track A runbook: `docs/ops/tryclam-teardown-runbook.md`
-- P6 golden-image backup runbook: `docs/ops/golden-image-backup-runbook.md`
-- OpenClaw upgrade note:
-  - candidate bump to latest upstream tag (`v2026.3.13-1`) is queued only after D5 passes and one stable golden image canary is confirmed.
-- D4 break-glass note:
-  - `OPENCLAW_CONTROL_UI_DISABLE_DEVICE_AUTH` defaults to enabled in current provisioning code to unblock launch-critical flow; explicitly set env to `false` to disable once proxy/handoff hardening path is ready.
-- DigitalOcean ops baseline (2026-03-18 founder update):
-  - `DO_API_TOKEN` in Vercel has been rotated to the new PixelPort droplet space and should be treated as the only active provisioning/deletion token going forward.
-  - all future provisioning/canary cleanup flows should use this token path; do not rely on legacy DO token contexts.
-- Immediate execution order: launch-critical D4/D5 are now closed. Continue with Track A3 cleanup, then Track B (integrations-first) and Track C (branding baseline) per founder/CTO sequencing.
+## R5 — Branding Baseline Pass
+
+- [ ] Branch: `codex/p6-r5-branding-baseline`
+- [ ] Baseline identity pass only (copy harmonization + key tenant-visible polish)
+- [ ] Fix known copy drift (including obsolete Settings mention)
+- [ ] CTO review PR + merge
+
+## Release Gates (Per Phase)
+
+- [ ] `npx tsc --noEmit`
+- [ ] `npm test`
+- [ ] targeted tests for changed contract behavior
+- [ ] production smoke after merge
+- [ ] rollback notes captured
+
+## Evidence Links
+
+- R1 QA evidence: `docs/qa/2026-03-18-p6-r1-paperclip-default-workspace.md`
+- R2 pin/release evidence: `docs/qa/2026-03-19-p6-r2-openclaw-2026-3-13-pin-and-release-evidence.md`
+- Launch-critical canary baseline: `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
+- Golden-image backup runbook: `docs/ops/golden-image-backup-runbook.md`
 
 ---
 
