@@ -4,7 +4,7 @@
 
 ---
 
-## Current Program: P6 Reset (Locked)
+## Current Program: P6 Reset (Completed)
 
 **Objective:** close drift, upgrade runtime safely, and preserve end-to-end Launch reliability.  
 **Fixed order:** `R1 -> R2 -> R3 -> R4 -> R5`  
@@ -62,7 +62,7 @@
 - [x] Branch: `codex/p6-r5-branding-baseline`
 - [x] Baseline identity pass only (copy harmonization + key tenant-visible polish)
 - [x] Fix known copy drift (including obsolete Settings mention)
-- [ ] CTO review PR + merge
+- [x] CTO review approved + merged (PR `#23`, merge commit `f7b61de`)
 
 ## Release Gates (Per Phase)
 
@@ -81,6 +81,7 @@
 - R4 combined proof evidence: `docs/qa/2026-03-19-p6-r4-combined-regression-proof.md`
 - R4 merge smoke: `docs/qa/2026-03-19-p6-r4-merge-smoke.md`
 - R5 branding baseline evidence: `docs/qa/2026-03-19-p6-r5-branding-baseline.md`
+- R5 merge smoke: `docs/qa/2026-03-19-p6-r5-merge-smoke.md`
 - Launch-critical canary baseline: `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
 - Golden-image backup runbook: `docs/ops/golden-image-backup-runbook.md`
 
