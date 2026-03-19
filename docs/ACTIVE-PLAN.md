@@ -26,7 +26,7 @@
 - [x] D2: Implement runtime launch URL contract for gateway-token auto-login (`workspace_launch_url`) in handoff + frontend launch paths
 - [x] D3: Add local fail-safe golden image backup runbook and capture first local archive + checksum + manifest
 - [x] D4: Resolve Control UI secure-context/device-identity blocker via founder-approved option 1 break-glass (`gateway.controlUi.dangerouslyDisableDeviceAuth=true`) while retaining token auth (`74a2f37`)
-- [ ] D5: Merge PR `#17`, deploy to production, and run full canary flow proof (`signup -> onboarding -> provision -> launch -> auto-login -> agent responds`)
+- [x] D5: Merge PR `#17`, deploy to production, and run full canary flow proof (`signup -> onboarding -> provision -> launch -> auto-login -> agent responds`)
 
 #### Track A — TryClam Teardown
 - [x] A1: Inventory any remaining TryClam dependencies (repo/docs/runtime/process)
@@ -49,6 +49,7 @@
 - Launch-critical QA evidence:
   - `docs/qa/2026-03-18-p6-handoff-runtime-canary.md`
   - `docs/qa/2026-03-18-p6-runtime-ingress-https-resolution.md`
+  - `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
 - P5 closure evidence:
   - `docs/qa/2026-03-18-p5-merge-order-smoke.md`
   - `docs/qa/2026-03-18-p5-vercel-ignorecommand-hotfix-merge-smoke.md`
@@ -63,7 +64,7 @@
 - DigitalOcean ops baseline (2026-03-18 founder update):
   - `DO_API_TOKEN` in Vercel has been rotated to the new PixelPort droplet space and should be treated as the only active provisioning/deletion token going forward.
   - all future provisioning/canary cleanup flows should use this token path; do not rely on legacy DO token contexts.
-- Immediate execution order: Track 0 first. Resume Track A/B/C only after launch-critical D4/D5 closure.
+- Immediate execution order: launch-critical D4/D5 are now closed. Continue with Track A3 cleanup, then Track B (integrations-first) and Track C (branding baseline) per founder/CTO sequencing.
 
 ---
 

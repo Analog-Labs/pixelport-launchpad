@@ -7,6 +7,32 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 108)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Confirmed local `main` includes PR `#17` merge commit `eebb5e4`.
+  - Executed D5 production canary and diagnosed provisioning failure path from Inngest logs:
+    - `create-droplet` failed with `HTTP 422` / `unprocessable_entity` / `Image is not available` (legacy image id context).
+  - Applied and validated production provisioning compatibility envs in Vercel:
+    - `PROVISIONING_DROPLET_IMAGE=ubuntu-24-04-x64`
+    - `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=false`
+  - Redeployed production and reran canary successfully:
+    - tenant `6775e14a-116b-4071-a31c-08ca8cf4064b`
+    - slug `pixelport-canary-canary-mmwqge5d`
+    - droplet `559309477` (`137.184.142.40`)
+    - handoff `200`, launch auth `gateway-token`, `workspace_launch_url` returned
+  - Verified auto-login and assistant response via Playwright:
+    - tokenized launch URL lands on `/chat?session=main` (no login form)
+    - chat prompt `Reply with exactly: PIXELPORT_LAUNCH_CANARY_OK` received assistant reply `PIXELPORT_LAUNCH_CANARY_OK`
+  - Added D5 evidence doc:
+    - `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
+  - Marked D5 complete in:
+    - `docs/ACTIVE-PLAN.md`
+- **What's next:**
+  - Founder manually deletes canary droplet `559309477` per security policy.
+  - Proceed to P6 Track A3 cleanup, then Track B integration mapping/execution.
+- **Blockers:** No launch-critical blocker remains for D5; flow is passing in production under the current compatibility image mode.
+
 - **Date:** 2026-03-18 (session 107)
 - **Who worked:** Founder + Codex
 - **What was done:**
