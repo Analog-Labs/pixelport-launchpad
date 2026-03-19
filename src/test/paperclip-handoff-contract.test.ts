@@ -4,11 +4,15 @@ import {
   DEFAULT_PAPERCLIP_HANDOFF_TTL_SECONDS,
   PAPERCLIP_HANDOFF_CONTRACT_VERSION,
   PAPERCLIP_RUNTIME_PORT,
+  buildGatewayControlUiLaunchUrl,
   buildPaperclipHandoffPayload,
   getMissingPaperclipHandoffEnv,
   isPaperclipHandoffReadyStatus,
   resolvePaperclipHandoffConfig,
   resolvePaperclipRuntimeUrlFromDropletIp,
+  resolvePaperclipRuntimeUrlFromOnboardingData,
+  resolvePaperclipRuntimeUrlFromTenantDomain,
+  resolvePaperclipRuntimeUrl,
   resolvePaperclipHandoffTtlSeconds,
   signPaperclipHandoffPayload,
 } from "../../api/lib/paperclip-handoff-contract";
@@ -47,6 +51,71 @@ describe("paperclip handoff contract", () => {
     expect(resolvePaperclipRuntimeUrlFromDropletIp("1.2.3.4")).toBe(`http://1.2.3.4:${PAPERCLIP_RUNTIME_PORT}`);
     expect(resolvePaperclipRuntimeUrlFromDropletIp("2001:db8::1")).toBe(
       `http://[2001:db8::1]:${PAPERCLIP_RUNTIME_PORT}`,
+    );
+  });
+
+  it("derives HTTPS runtime URL from tenant slug + base domain when configured", () => {
+    expect(resolvePaperclipRuntimeUrlFromTenantDomain("tenant-a", undefined)).toBeNull();
+    expect(resolvePaperclipRuntimeUrlFromTenantDomain("", "runtime.pixelport.ai")).toBeNull();
+    expect(resolvePaperclipRuntimeUrlFromTenantDomain("bad_slug", "runtime.pixelport.ai")).toBeNull();
+    expect(resolvePaperclipRuntimeUrlFromTenantDomain("tenant-a", "https://runtime.pixelport.ai/")).toBe(
+      "https://tenant-a.runtime.pixelport.ai/",
+    );
+  });
+
+  it("resolves runtime URL from onboarding data when present", () => {
+    expect(resolvePaperclipRuntimeUrlFromOnboardingData(null)).toBeNull();
+    expect(resolvePaperclipRuntimeUrlFromOnboardingData({ runtime_url: "not-a-url" })).toBeNull();
+    expect(
+      resolvePaperclipRuntimeUrlFromOnboardingData({
+        runtime_url: "http://legacy-runtime.example.net",
+        runtime_https_url: "https://tenant.runtime.pixelport.ai",
+      }),
+    ).toBe("https://tenant.runtime.pixelport.ai/");
+    expect(resolvePaperclipRuntimeUrlFromOnboardingData({ runtime_https_url: "https://tenant.runtime.pixelport.ai" })).toBe(
+      "https://tenant.runtime.pixelport.ai/",
+    );
+    expect(resolvePaperclipRuntimeUrlFromOnboardingData({ runtime_url: "http://157.245.253.88:18789" })).toBe(
+      "http://157.245.253.88:18789/",
+    );
+  });
+
+  it("prefers onboarding runtime URL, then tenant domain, then droplet ip", () => {
+    expect(
+      resolvePaperclipRuntimeUrl({
+        onboardingData: { runtime_url: "https://tenant.runtime.pixelport.ai" },
+        tenantSlug: "tenant",
+        dropletIp: "157.245.253.88",
+        runtimeBaseDomain: "runtime.pixelport.ai",
+      }),
+    ).toBe("https://tenant.runtime.pixelport.ai/");
+
+    expect(
+      resolvePaperclipRuntimeUrl({
+        onboardingData: {},
+        tenantSlug: "tenant",
+        dropletIp: "157.245.253.88",
+        runtimeBaseDomain: "runtime.pixelport.ai",
+      }),
+    ).toBe("https://tenant.runtime.pixelport.ai/");
+
+    expect(
+      resolvePaperclipRuntimeUrl({
+        onboardingData: {},
+        tenantSlug: "tenant",
+        dropletIp: "157.245.253.88",
+      }),
+    ).toBe("http://157.245.253.88:18789");
+  });
+
+  it("builds a control-ui launch URL with hash token when runtime + gateway token exist", () => {
+    expect(buildGatewayControlUiLaunchUrl(null, "gw-token")).toBeNull();
+    expect(buildGatewayControlUiLaunchUrl("http://1.2.3.4:18789", null)).toBeNull();
+    expect(buildGatewayControlUiLaunchUrl("notaurl", "gw-token")).toBeNull();
+    expect(buildGatewayControlUiLaunchUrl("ftp://1.2.3.4:18789", "gw-token")).toBeNull();
+    expect(buildGatewayControlUiLaunchUrl("http://1.2.3.4:18789", "  ")).toBeNull();
+    expect(buildGatewayControlUiLaunchUrl("http://1.2.3.4:18789", "gw-token")).toBe(
+      "http://1.2.3.4:18789/#token=gw-token",
     );
   });
 

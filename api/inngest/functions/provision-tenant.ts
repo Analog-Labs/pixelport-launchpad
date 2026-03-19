@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { isIP } from 'net';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
 import { persistBootstrapState } from '../../lib/bootstrap-state';
@@ -47,6 +48,19 @@ type DropletBaseline = {
   imageSource: 'managed' | 'compatibility' | 'missing';
 };
 
+type RuntimeIngressSource = 'base_domain' | 'sslip' | 'none';
+
+type RuntimeIngressPlan = {
+  hostTemplate: string | null;
+  source: RuntimeIngressSource;
+};
+
+type ResolvedRuntimeIngress = {
+  host: string | null;
+  url: string | null;
+  source: RuntimeIngressSource;
+};
+
 const supabaseUrl = process.env.SUPABASE_PROJECT_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -59,9 +73,10 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 const DO_API_TOKEN = process.env.DO_API_TOKEN;
 const AGENTMAIL_API_KEY = process.env.AGENTMAIL_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const PAPERCLIP_HANDOFF_SECRET = process.env.PAPERCLIP_HANDOFF_SECRET;
 
-if (!DO_API_TOKEN || !OPENAI_API_KEY) {
-  throw new Error('Missing one or more required env vars: DO_API_TOKEN, OPENAI_API_KEY');
+if (!DO_API_TOKEN || !OPENAI_API_KEY || !PAPERCLIP_HANDOFF_SECRET) {
+  throw new Error('Missing one or more required env vars: DO_API_TOKEN, OPENAI_API_KEY, PAPERCLIP_HANDOFF_SECRET');
 }
 
 const OPENCLAW_BASE_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.3.11';
@@ -73,6 +88,9 @@ const RECOMMENDED_GOLDEN_IMAGE_SELECTOR = 'pixelport-paperclip-golden-2026-03-16
 const COMPATIBILITY_DROPLET_IMAGE_SELECTOR = 'ubuntu-24-04-x64';
 const DEFAULT_PROVISIONING_DROPLET_SIZE = 's-4vcpu-8gb';
 const DEFAULT_PROVISIONING_DROPLET_REGION = 'nyc1';
+const RUNTIME_SSLIP_TEMPLATE_TOKEN = '__PUBLIC_IPV4_DASH__';
+const DEFAULT_ENABLE_RUNTIME_SSLIP_FALLBACK = true;
+const DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH = true;
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
@@ -92,6 +110,131 @@ function isCompatibilityDropletImageSelector(imageSelector: string): boolean {
 function isManagedGoldenImageRequired(env: NodeJS.ProcessEnv = process.env): boolean {
   const raw = env.PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE?.trim().toLowerCase();
   return raw === '1' || raw === 'true' || raw === 'yes';
+}
+
+function normalizeRuntimeBaseDomain(rawBaseDomain: string | undefined): string {
+  if (typeof rawBaseDomain !== 'string') {
+    return '';
+  }
+
+  return rawBaseDomain
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/+$/, '')
+    .toLowerCase();
+}
+
+function isValidDnsLabel(rawLabel: string): boolean {
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(rawLabel);
+}
+
+function isValidRuntimeHost(rawHost: string): boolean {
+  const host = rawHost.trim().toLowerCase();
+  if (!host || host.length > 253) {
+    return false;
+  }
+
+  const labels = host.split('.');
+  return labels.length >= 2 && labels.every((label) => isValidDnsLabel(label));
+}
+
+function isRuntimeSslipFallbackEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const rawValue = env.PAPERCLIP_RUNTIME_ENABLE_SSLIP_FALLBACK?.trim().toLowerCase();
+  if (!rawValue) {
+    return DEFAULT_ENABLE_RUNTIME_SSLIP_FALLBACK;
+  }
+
+  return rawValue === '1' || rawValue === 'true' || rawValue === 'yes';
+}
+
+function isControlUiDeviceAuthBreakglassEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const rawValue = env.OPENCLAW_CONTROL_UI_DISABLE_DEVICE_AUTH?.trim().toLowerCase();
+  if (!rawValue) {
+    return DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH;
+  }
+
+  return rawValue === '1' || rawValue === 'true' || rawValue === 'yes';
+}
+
+export function resolveRuntimeIngressPlan(params: {
+  tenantSlug: string;
+  env?: NodeJS.ProcessEnv;
+}): RuntimeIngressPlan {
+  const env = params.env ?? process.env;
+  const normalizedSlug = params.tenantSlug.trim().toLowerCase();
+  if (!isValidDnsLabel(normalizedSlug)) {
+    return {
+      hostTemplate: null,
+      source: 'none',
+    };
+  }
+
+  const runtimeBaseDomain = normalizeRuntimeBaseDomain(env.PAPERCLIP_RUNTIME_BASE_DOMAIN);
+  if (runtimeBaseDomain) {
+    const runtimeHost = `${normalizedSlug}.${runtimeBaseDomain}`;
+    if (isValidRuntimeHost(runtimeHost)) {
+      return {
+        hostTemplate: runtimeHost,
+        source: 'base_domain',
+      };
+    }
+  }
+
+  if (isRuntimeSslipFallbackEnabled(env)) {
+    return {
+      hostTemplate: `${normalizedSlug}.${RUNTIME_SSLIP_TEMPLATE_TOKEN}.sslip.io`,
+      source: 'sslip',
+    };
+  }
+
+  return {
+    hostTemplate: null,
+    source: 'none',
+  };
+}
+
+export function resolveRuntimeIngressFromDroplet(params: {
+  dropletIp: string;
+  runtimeIngressPlan: RuntimeIngressPlan;
+}): ResolvedRuntimeIngress {
+  if (!params.runtimeIngressPlan.hostTemplate || params.runtimeIngressPlan.source === 'none') {
+    return {
+      host: null,
+      url: null,
+      source: 'none',
+    };
+  }
+
+  const normalizedDropletIp = params.dropletIp.trim();
+  const ipVersion = isIP(normalizedDropletIp);
+  let host = params.runtimeIngressPlan.hostTemplate;
+
+  if (params.runtimeIngressPlan.source === 'sslip') {
+    if (ipVersion !== 4) {
+      return {
+        host: null,
+        url: null,
+        source: 'none',
+      };
+    }
+
+    const ipDash = normalizedDropletIp.split('.').join('-');
+    host = host.replace(RUNTIME_SSLIP_TEMPLATE_TOKEN, ipDash);
+  }
+
+  if (!isValidRuntimeHost(host)) {
+    return {
+      host: null,
+      url: null,
+      source: 'none',
+    };
+  }
+
+  return {
+    host,
+    url: `https://${host}`,
+    source: params.runtimeIngressPlan.source,
+  };
 }
 
 export function resolveDropletBaseline(env: NodeJS.ProcessEnv = process.env): DropletBaseline {
@@ -197,6 +340,12 @@ export const provisionTenant = inngest.createFunction(
       return plan;
     });
 
+    const runtimeIngressPlan = await step.run('resolve-runtime-ingress-plan', async () => {
+      return resolveRuntimeIngressPlan({
+        tenantSlug: tenant.slug,
+      });
+    });
+
     if (memoryProvisioningPlan.nativeDowngradedMissingApiKey) {
       onboardingData = await step.run('record-memory-downgrade', async (): Promise<Json> => {
         const memoryRuntimeWarning = {
@@ -250,9 +399,12 @@ export const provisionTenant = inngest.createFunction(
         tenantSlug: tenant.slug,
         tenantName: tenant.name,
         gatewayToken,
+        runtimeHostTemplate: runtimeIngressPlan.hostTemplate,
+        disableControlUiDeviceAuth: isControlUiDeviceAuthBreakglassEnabled(),
         openclawBaseImage: OPENCLAW_BASE_IMAGE,
         openclawRuntimeImage: OPENCLAW_RUNTIME_IMAGE,
         openaiApiKey: OPENAI_API_KEY,
+        paperclipHandoffSecret: PAPERCLIP_HANDOFF_SECRET,
         memoryOpenAiApiKey: memoryProvisioningPlan.memoryOpenAiApiKey,
         memoryNativeEnabled: memoryProvisioningPlan.effectiveNativeEnabled,
         geminiApiKey: process.env.GEMINI_API_KEY || '',
@@ -360,6 +512,13 @@ export const provisionTenant = inngest.createFunction(
       throw new Error('Droplet did not become ready within 5 minutes');
     }
 
+    const runtimeIngress = await step.run('resolve-runtime-ingress', async () => {
+      return resolveRuntimeIngressFromDroplet({
+        dropletIp,
+        runtimeIngressPlan,
+      });
+    });
+
     const agentmailInbox = await step.run('create-agentmail-inbox', async () => {
       if (!AGENTMAIL_API_KEY) {
         return null;
@@ -387,6 +546,15 @@ export const provisionTenant = inngest.createFunction(
     });
 
     await step.run('store-infra-refs', async () => {
+      const nextOnboardingData: Json = {
+        ...onboardingData,
+        runtime_url: runtimeIngress.url,
+        runtime_https_url: runtimeIngress.url,
+        runtime_host: runtimeIngress.host,
+        runtime_url_source: runtimeIngress.source,
+        runtime_url_updated_at: new Date().toISOString(),
+      };
+
       const { error } = await supabase
         .from('tenants')
         .update({
@@ -395,12 +563,15 @@ export const provisionTenant = inngest.createFunction(
           gateway_token: droplet.gatewayToken,
           agentmail_inbox: agentmailInbox,
           agent_api_key: droplet.agentApiKey,
+          onboarding_data: nextOnboardingData,
         })
         .eq('id', tenantId);
 
       if (error) {
         throw new Error(`Failed to update tenant infra refs: ${error.message}`);
       }
+
+      onboardingData = nextOnboardingData;
     });
 
     // Poll for gateway readiness using Inngest durable steps
@@ -653,9 +824,12 @@ export function buildCloudInit(params: {
   tenantSlug: string;
   tenantName: string;
   gatewayToken: string;
+  runtimeHostTemplate?: string | null;
+  disableControlUiDeviceAuth?: boolean;
   openclawBaseImage: string;
   openclawRuntimeImage: string;
   openaiApiKey: string;
+  paperclipHandoffSecret: string;
   memoryOpenAiApiKey: string;
   memoryNativeEnabled: boolean;
   geminiApiKey: string;
@@ -670,12 +844,24 @@ export function buildCloudInit(params: {
     onboardingData: params.onboardingData,
   });
   const openclawConfigWithAcp = JSON.stringify(
-    buildOpenClawConfig({ ...params, agentName, disableAcpDispatch: true }),
+    buildOpenClawConfig({
+      ...params,
+      agentName,
+      disableAcpDispatch: true,
+      disableControlUiDeviceAuth:
+        params.disableControlUiDeviceAuth ?? DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH,
+    }),
     null,
     2
   );
   const openclawConfigWithoutAcp = JSON.stringify(
-    buildOpenClawConfig({ ...params, agentName, disableAcpDispatch: false }),
+    buildOpenClawConfig({
+      ...params,
+      agentName,
+      disableAcpDispatch: false,
+      disableControlUiDeviceAuth:
+        params.disableControlUiDeviceAuth ?? DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH,
+    }),
     null,
     2
   );
@@ -689,6 +875,22 @@ set -euo pipefail
 # Runtime image: ${params.openclawRuntimeImage}
 
 export DEBIAN_FRONTEND=noninteractive
+RUNTIME_HOST_TEMPLATE='${params.runtimeHostTemplate ?? ''}'
+RUNTIME_HOST=''
+
+if [ -n "$RUNTIME_HOST_TEMPLATE" ]; then
+  RUNTIME_HOST="$RUNTIME_HOST_TEMPLATE"
+  if [[ "$RUNTIME_HOST" == *'${RUNTIME_SSLIP_TEMPLATE_TOKEN}'* ]]; then
+    PUBLIC_IPV4="$(curl -fsS http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address || true)"
+    if [ -n "$PUBLIC_IPV4" ]; then
+      PUBLIC_IPV4_DASH="$(printf '%s' "$PUBLIC_IPV4" | tr '.' '-')"
+      RUNTIME_HOST="$(printf '%s' "$RUNTIME_HOST" | sed "s/${RUNTIME_SSLIP_TEMPLATE_TOKEN}/$PUBLIC_IPV4_DASH/g")"
+    else
+      echo "Unable to resolve public IPv4 for SSLIP runtime host template; HTTPS ingress will remain disabled." >&2
+      RUNTIME_HOST=''
+    fi
+  fi
+fi
 
 # 1. Install Docker CE if not already present
 if ! command -v docker &> /dev/null; then
@@ -710,7 +912,11 @@ mkdir -p /opt/openclaw/workspace-main
 mkdir -p /opt/openclaw/canvas
 mkdir -p /opt/openclaw/cron
 mkdir -p /opt/openclaw/agents
-docker pull ${params.openclawRuntimeImage}
+if docker image inspect ${params.openclawRuntimeImage} >/dev/null 2>&1; then
+  echo "Using preloaded runtime image ${params.openclawRuntimeImage}"
+else
+  docker pull ${params.openclawRuntimeImage}
+fi
 
 # 3. Write agent configuration candidates
 cat > /opt/openclaw/openclaw.with-acp.json << 'OPENCLAW_CONFIG'
@@ -729,6 +935,7 @@ ${workspaceWriteCommands}
 # 5. Write environment secrets (OpenAI + AgentMail + PixelPort API)
 cat > /opt/openclaw/.env << 'ENV_FILE'
 OPENAI_API_KEY=${params.openaiApiKey}
+PAPERCLIP_HANDOFF_SECRET=${params.paperclipHandoffSecret}
 MEMORY_OPENAI_API_KEY=${params.memoryOpenAiApiKey}
 GEMINI_API_KEY=${params.geminiApiKey}
 AGENTMAIL_API_KEY=${params.agentmailApiKey}
@@ -793,7 +1000,24 @@ docker run -d \\
   ${params.openclawRuntimeImage} \\
   openclaw.mjs gateway --port 18789 --bind lan --allow-unconfigured
 
-# 9. Normalize runtime state permissions required by memory/device features
+# 9. Configure HTTPS runtime ingress via Caddy when a runtime host is available.
+if [ -n "$RUNTIME_HOST" ]; then
+  if ! command -v caddy >/dev/null 2>&1; then
+    apt-get update -y
+    apt-get install -y caddy
+  fi
+
+  cat > /etc/caddy/Caddyfile <<CADDYFILE
+$RUNTIME_HOST {
+  reverse_proxy 127.0.0.1:18789
+}
+CADDYFILE
+
+  systemctl enable caddy
+  systemctl restart caddy
+fi
+
+# 10. Normalize runtime state permissions required by memory/device features
 normalize_runtime_state_perms() {
   local attempts=0
   until docker exec -u 0 openclaw-gateway sh -lc '
@@ -824,6 +1048,7 @@ export function buildOpenClawConfig(params: {
   memoryNativeEnabled: boolean;
   geminiApiKey: string;
   disableAcpDispatch: boolean;
+  disableControlUiDeviceAuth?: boolean;
 }): Record<string, unknown> {
   const webToolsConfig = params.geminiApiKey
     ? {
@@ -848,6 +1073,9 @@ export function buildOpenClawConfig(params: {
       bind: 'lan',
       controlUi: {
         dangerouslyAllowHostHeaderOriginFallback: true,
+        // Temporary D4 break-glass to unblock Launch->workspace over public HTTPS hosts.
+        dangerouslyDisableDeviceAuth:
+          params.disableControlUiDeviceAuth ?? DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH,
       },
     },
     ...(params.disableAcpDispatch

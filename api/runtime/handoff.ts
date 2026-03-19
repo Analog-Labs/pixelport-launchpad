@@ -1,12 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import {
+  buildGatewayControlUiLaunchUrl,
   buildPaperclipHandoffPayload,
   getMissingPaperclipHandoffEnv,
   isPaperclipHandoffReadyStatus,
   PaperclipHandoffConfigError,
   resolvePaperclipHandoffConfig,
-  resolvePaperclipRuntimeUrlFromDropletIp,
+  resolvePaperclipRuntimeUrl,
   signPaperclipHandoffPayload,
   PAPERCLIP_HANDOFF_CONTRACT_VERSION,
 } from '../lib/paperclip-handoff-contract';
@@ -47,11 +48,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    const runtimeUrl = resolvePaperclipRuntimeUrlFromDropletIp(tenant.droplet_ip);
+    const runtimeUrl = resolvePaperclipRuntimeUrl({
+      onboardingData: tenant.onboarding_data,
+      tenantSlug: tenant.slug,
+      dropletIp: tenant.droplet_ip,
+      runtimeBaseDomain: process.env.PAPERCLIP_RUNTIME_BASE_DOMAIN,
+    });
     if (!runtimeUrl) {
       return res.status(409).json({
         error: 'Paperclip runtime target unavailable for this tenant.',
         code: 'runtime-target-unavailable',
+      });
+    }
+
+    const workspaceLaunchUrl = buildGatewayControlUiLaunchUrl(runtimeUrl, tenant.gateway_token);
+    if (!workspaceLaunchUrl) {
+      return res.status(409).json({
+        error: 'Paperclip runtime auth token unavailable for this tenant.',
+        code: 'runtime-auth-unavailable',
       });
     }
 
@@ -81,10 +95,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     });
     const handoffToken = signPaperclipHandoffPayload(payload, config.handoffSecret);
 
-    // V1-ONLY: paperclip_runtime_url is http://. Acceptable for internal DO networking in V1. Replace with per-tenant https subdomain before GA.
+    // Runtime URL prefers HTTPS (tenant domain / persisted runtime URL) and falls back to droplet IP HTTP for compatibility.
     return res.status(200).json({
       contract_version: PAPERCLIP_HANDOFF_CONTRACT_VERSION,
       paperclip_runtime_url: runtimeUrl,
+      workspace_launch_url: workspaceLaunchUrl,
+      launch_auth_mode: 'gateway-token',
       handoff_token: handoffToken,
       expires_at: new Date(payload.exp * 1000).toISOString(),
       tenant: {

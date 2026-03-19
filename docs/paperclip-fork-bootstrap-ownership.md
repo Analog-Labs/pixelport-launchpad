@@ -133,6 +133,7 @@ Define ownership for bootstrap-critical surfaces and record audit evidence for T
 - Rotation cadence: 90-day rotation for all active pivot secrets.
 - Runtime key stance: AGENTMAIL/GEMINI/MEM0 keys were added to Vercel and are available for active OpenClaw-driven use.
 - Legacy stance: Railway/LiteLLM is marked decommission path (not active pivot secret authority).
+- DigitalOcean token update (2026-03-18): founder rotated `DO_API_TOKEN` in Vercel to the new PixelPort droplet space with delete scope; this is now the active token baseline for provisioning and cleanup actions.
 
 **A4 closure notes:**
 - `PAPERCLIP_HANDOFF_SECRET` is visible in Vercel production env listing evidence.

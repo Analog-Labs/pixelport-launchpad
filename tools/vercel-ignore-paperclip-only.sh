@@ -12,10 +12,10 @@ if [ -z "$changed_files" ]; then
   exit 1
 fi
 
-if echo "$changed_files" | grep -qv "^paperclip/"; then
-  echo "Non-paperclip changes detected; running build"
+if echo "$changed_files" | grep -qvE '^(paperclip/|docs/)'; then
+  echo "Non-paperclip/docs changes detected; running build"
   exit 1
 fi
 
-echo "Only paperclip/ changes detected; skipping build"
+echo "Only paperclip/ or docs/ changes detected; skipping build"
 exit 0

@@ -48,6 +48,12 @@ function htmlFetchResponse(html: string) {
   };
 }
 
+function createAbortError() {
+  return Object.assign(new Error("The operation was aborted"), {
+    name: "AbortError",
+  });
+}
+
 describe("POST /api/tenants/scan", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -55,6 +61,8 @@ describe("POST /api/tenants/scan", () => {
 
     process.env.SUPABASE_PROJECT_URL = "https://supabase.test";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "service-key";
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.GEMINI_API_KEY;
 
     lookupMock.mockResolvedValue([{ address: "93.184.216.34", family: 4 }]);
     getUserMock.mockResolvedValue({
@@ -173,5 +181,90 @@ describe("POST /api/tenants/scan", () => {
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=gemini-test-key",
       expect.any(Object)
     );
+  });
+
+  it("falls back to Gemini when the OpenAI request times out", async () => {
+    process.env.OPENAI_API_KEY = "openai-test-key";
+    process.env.GEMINI_API_KEY = "gemini-test-key";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        htmlFetchResponse("<html><head><title>Acme</title></head><body>Acme helps founders ship.</body></html>")
+      )
+      .mockRejectedValueOnce(createAbortError())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      company_description: "Gemini timeout fallback summary",
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      });
+
+    global.fetch = fetchMock as typeof fetch;
+
+    const { default: handler } = await import("../../api/tenants/scan");
+
+    const req = {
+      method: "POST",
+      headers: { authorization: "Bearer token" },
+      body: { company_url: "https://example.com" },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as { scan_results: { company_description: string } }).scan_results.company_description).toBe(
+      "Gemini timeout fallback summary"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=gemini-test-key",
+      expect.any(Object)
+    );
+  });
+
+  it("returns timeout provider errors when both LLM calls time out", async () => {
+    process.env.OPENAI_API_KEY = "openai-test-key";
+    process.env.GEMINI_API_KEY = "gemini-test-key";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        htmlFetchResponse("<html><head><title>Acme</title></head><body>Acme helps founders ship.</body></html>")
+      )
+      .mockRejectedValueOnce(createAbortError())
+      .mockRejectedValueOnce(createAbortError());
+
+    global.fetch = fetchMock as typeof fetch;
+
+    const { default: handler } = await import("../../api/tenants/scan");
+
+    const req = {
+      method: "POST",
+      headers: { authorization: "Bearer token" },
+      body: { company_url: "https://example.com" },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    const scanResults = (res.body as { scan_results: { error: string; provider_errors: string[] } }).scan_results;
+    expect(scanResults.error).toBe("LLM processing failed");
+    expect(scanResults.provider_errors).toEqual(["openai_timeout_12000ms", "gemini_timeout_12000ms"]);
   });
 });

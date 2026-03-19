@@ -7,6 +7,99 @@
 
 ## Last Session
 
+- **Date:** 2026-03-18 (session 107)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Founder confirmed `DO_API_TOKEN` was rotated in Vercel to the new PixelPort droplet space and should be the active provisioning/deletion token baseline going forward (including delete scope expectations).
+  - Updated active planning and ownership docs so all agents operate under the new DigitalOcean token baseline:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/paperclip-fork-bootstrap-ownership.md`
+    - `docs/qa/2026-03-18-p6-do-token-rotation-baseline.md`
+  - Checked PR `#17` merge readiness:
+    - status checks are green (`validate`, `Analyze (javascript-typescript)`, Vercel)
+    - merge is still blocked by required review (`REVIEW_REQUIRED`)
+- **What's next:**
+  - Merge decision on PR `#17` (wait for CTO approval vs founder-authorized admin override).
+  - After merge: run D5 production canary (`signup -> onboarding -> provision -> launch -> auto-login -> agent responds`) and include DO delete-flow evidence where possible.
+- **Blockers:** PR `#17` merge is currently blocked on required review.
+
+- **Date:** 2026-03-18 (session 106)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Founder approved D4 option 1 break-glass path.
+  - Implemented and committed `74a2f37` on `codex/p6-e2e-handoff-golden-image-scan-hardening`:
+    - provisioning now enables `gateway.controlUi.dangerouslyDisableDeviceAuth=true` by default (temporary launch-critical unblock)
+    - added env override `OPENCLAW_CONTROL_UI_DISABLE_DEVICE_AUTH` to disable the break-glass behavior later without code changes
+    - added/updated provisioning tests for default-on + override-off behavior and cloud-init emission
+  - Validation:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test` (`pass`, 19 files / 88 tests)
+  - Ran live canary proof on `157.230.10.108`:
+    - applied option-1 control-ui flag under token auth mode
+    - validated control-ui WS connect over HTTPS with token and no device identity returns `hello-ok`
+    - confirms pairing blocker is cleared for this flow
+  - Updated plan/evidence docs:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/qa/2026-03-18-p6-runtime-ingress-https-resolution.md`
+- **What's next:**
+  - Push session 106 commit set and proceed to D5:
+    - merge PR `#17`
+    - monitor deploy
+    - run full production canary (`signup -> onboarding -> provision -> launch -> auto-login -> agent responds`)
+- **Blockers:** D4 blocker is closed under founder-approved option 1. D5 is pending merge/deploy execution.
+
+- **Date:** 2026-03-18 (session 105)
+- **Who worked:** Codex
+- **What was done:**
+  - Continued P6 D4 implementation on branch `codex/p6-e2e-handoff-golden-image-scan-hardening`.
+  - Added and pushed commit `0c60680`:
+    - per-tenant HTTPS runtime URL resolver precedence in handoff contract (`onboarding_data` runtime URL -> tenant base domain -> droplet IP fallback)
+    - provisioning runtime ingress plan/resolution + persisted runtime metadata in `onboarding_data`
+    - cloud-init Caddy HTTPS ingress setup for runtime hosts
+    - test coverage for resolver/runtime ingress behavior
+  - Updated PR `#17` with the new commit:
+    - `https://github.com/Analog-Labs/pixelport-launchpad/pull/17`
+  - Validation for this slice:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test` (`pass`, 19 files / 86 tests)
+  - Ran live canary auth-mode research on `157.230.10.108` to evaluate pairing unblock behavior:
+    - verified `trusted-proxy` + Caddy header path can establish successful Control UI WS `hello-ok`
+    - immediately rolled the canary back to prior config (`gateway.auth.mode=token`, default Caddy reverse proxy)
+  - Added QA evidence:
+    - `docs/qa/2026-03-18-p6-runtime-ingress-https-resolution.md`
+- **What's next:**
+  - Founder approval on the D4 auth-mode path to clear first-time remote pairing for public runtime domains.
+  - After D4 decision is implemented, finish D5 (`#17` merge/deploy + full signup->launch->agent-response canary proof).
+- **Blockers:** D5 remains blocked until D4 auth-mode decision is finalized for public HTTPS runtime hosts.
+
+- **Date:** 2026-03-18 (session 104)
+- **Who worked:** Codex
+- **What was done:**
+  - Completed launch-critical P6 implementation on branch `codex/p6-e2e-handoff-golden-image-scan-hardening`:
+    - `15bdc11` — scan route timeout hardening + missing test scenarios + `docs/` skip in Vercel ignore flow
+    - `4fb5556` — runtime handoff launch URL contract (`workspace_launch_url`) + frontend launch wiring + provisioning handoff secret/runtime image preload guard
+    - `febbaee` — golden image local backup runbook + planning doc linkage
+  - Opened CTO-review PR `#17`:
+    - `https://github.com/Analog-Labs/pixelport-launchpad/pull/17`
+  - Ran validation for this branch:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test` (`pass`, 19 files / 78 tests)
+  - Captured local fail-safe runtime backup artifacts (outside droplets):
+    - root: `/Users/sanchal/pixelport-artifacts/golden-image-backups`
+    - archive: `docker-image-archives/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.tar.gz`
+    - checksum: `checksums/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.sha256` (`OK`)
+    - manifest: `manifests/2026-03-18-pixelport-paperclip-2026.3.11-handoff-p1.manifest.txt`
+    - provisioning snapshot: `cloud-init-snapshots/2026-03-18-provision-tenant-source.ts`
+  - Ran runtime canary verification on `157.230.10.108`:
+    - token launch URL reached Control UI workspace route (`/chat?session=main`)
+    - agent hook invocation succeeded and produced assistant response `PIXELPORT_AGENT_OK` in session logs
+    - recorded QA evidence at `docs/qa/2026-03-18-p6-handoff-runtime-canary.md`
+- **What's next:**
+  - Complete PR `#17` review/merge/deploy flow.
+  - Resolve Control UI secure-context/device-identity blocker for remote HTTP droplet URLs (found during canary).
+  - After launch-critical closure, resume Track A/B/C work.
+- **Blockers:** Full “press Launch and use workspace chat” remains blocked on raw `http://<droplet-ip>` runtime URLs due Control UI secure-context/device-identity enforcement.
+
 - **Date:** 2026-03-18 (session 103)
 - **Who worked:** Founder + Codex
 - **What was done:**
