@@ -4,47 +4,80 @@
 
 ---
 
-## Current Phase: Phase P6 Reset — Drift Correction + Runtime Upgrades + Branding Baseline
+## Current Program: P6 Reset (Locked)
 
-**Status:** Active  
-**Goal:** Close workspace-policy drift first, then safely upgrade OpenClaw and Paperclip with canary-first validation, then finish a baseline branding pass without regressing Launch reliability.  
-**Binding specs:** `docs/pixelport-pivot-plan-2026-03-16.md`, `docs/pixelport-master-plan-v2.md`
+**Objective:** close drift, upgrade runtime safely, and preserve end-to-end Launch reliability.  
+**Fixed order:** `R1 -> R2 -> R3 -> R4 -> R5`  
+**Deferred:** TryClam scrub and integrations track until this reset program is complete.
 
-### Locked Execution Order
+## R1 — Workspace Drift + Terminology Correction
 
-- [ ] R1: Workspace drift correction + Paperclip-default template sourcing + Chief of Staff terminology alignment
-- [ ] R2: OpenClaw upgrade to `2026.3.13` line (`v2026.3.13-1`) with managed-image canaries
-- [ ] R3: Paperclip upgrade to `v2026.318.0` (compatibility-only) with managed-image canaries
-- [ ] R4: Combined regression proof (`signup -> onboarding -> provision -> launch -> auto-login -> agent responds`)
-- [ ] R5: Baseline branding pass (identity/copy/theme baseline on critical surfaces)
+- [x] Branch created: `codex/p6-r1-paperclip-default-workspace`
+- [x] Pinned upstream Paperclip default CEO templates vendored under `paperclip/`
+- [x] `workspace-contract.ts` switched to Paperclip defaults + SOUL-only additive onboarding block
+- [x] Chief of Staff tenant-facing terminology applied in workspace markdown overlay
+- [x] Tests updated and passing
+- [x] CTO review approved and merged (PR `#18`, merge commit `53af0e2`)
 
-### Current Slice (R1)
+## R2 — OpenClaw Upgrade (Canary-first)
 
-- [x] R1.1 Pull upstream default CEO templates from `paperclipai/companies/default/ceo` at pinned commit and vendor in repo
-- [x] R1.2 Refactor workspace contract generation to use Paperclip defaults + SOUL-only onboarding additive block
-- [x] R1.3 Ensure onboarding data injection is scoped to SOUL only (no AGENTS/HEARTBEAT/TOOLS injection)
-- [x] R1.4 Add/update provisioning template tests + workspace contract tests
-- [x] R1.5 Validate local gates (`npx tsc --noEmit`, `npm test`)
-- [ ] R1.6 Open CTO-review PR and await approval/merge
+- [x] Branch created: `codex/p6-r2-openclaw-2026-3-13`
+- [x] Provisioning default pin updated to `ghcr.io/openclaw/openclaw:2026.3.13-1`
+- [x] Infra manifest updated with immutable metadata:
+  - tag: `v2026.3.13-1`
+  - commit: `61d171ab0b2fe4abc9afe89c518586274b4b76c2`
+  - digest: `sha256:a5a4c83b773aca85a8ba99cf155f09afa33946c0aa5cc6a9ccb6162738b5da02`
+- [x] Tests/docs updated for new pin
+- [x] Validation done (`npx tsc --noEmit`, `npm test`)
+- [ ] Build managed golden image candidate with this OpenClaw pin
+- [ ] Run 2 fresh-tenant canaries on candidate image
+- [ ] Capture local backup artifacts and QA evidence
+- [ ] Promote managed image selector
+- [ ] Re-enable strict gate in production: `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
+- [ ] CTO review PR + merge (PR `#19` open)
 
-### Release and QA Gates (Per Phase)
+## R3 — Paperclip Upgrade (Compatibility-only)
 
-- [ ] CTO review + approval before merge
-- [ ] Merge to `main`
-- [ ] Post-merge production smoke
-- [ ] Evidence doc + rollback notes updated
+- [ ] Branch: `codex/p6-r3-paperclip-v2026-318-0`
+- [ ] Pin Paperclip to `v2026.318.0` and record tag + commit in manifest/evidence
+- [ ] Rebuild image with overlay (handoff plugin + template layer), no feature expansion
+- [ ] Run 2 fresh-tenant canaries (handoff + auto-login compatibility)
+- [ ] Promote only after canaries pass
+- [ ] CTO review PR + merge
 
-### Deferred by Founder Decision
+## R4 — Combined Regression Proof
 
-- TryClam scrub and cleanup work
-- Integrations track (Google + Slack)
+- [ ] Branch: `codex/p6-r4-combined-regression-proof`
+- [ ] Run full proof:
+  - `signup -> onboarding -> provision -> launch -> auto-login -> agent responds`
+- [ ] Confirm policy-compliant workspace behavior for new tenants:
+  - Paperclip default template behavior retained
+  - Chief of Staff terminology on tenant-facing surfaces
+  - SOUL additive onboarding block present/correct
+- [ ] Capture rollback-readiness evidence
+- [ ] CTO review PR + merge
 
-### Notes
+## R5 — Branding Baseline Pass
 
-- Existing tenant workspace retrofit is out of scope for this reset cycle (new-tenant behavior only).
-- D4 control-ui device-auth break-glass closure is deferred.
-- Version pins must be recorded as tag + immutable commit/image digest.
-- Production managed image guard (`PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`) should be re-enabled immediately after the first stable upgraded managed image is promoted.
+- [ ] Branch: `codex/p6-r5-branding-baseline`
+- [ ] Baseline identity pass only (copy harmonization + key tenant-visible polish)
+- [ ] Fix known copy drift (including obsolete Settings mention)
+- [ ] CTO review PR + merge
+
+## Release Gates (Per Phase)
+
+- [ ] `npx tsc --noEmit`
+- [ ] `npm test`
+- [ ] targeted tests for changed contract behavior
+- [ ] production smoke after merge
+- [ ] rollback notes captured
+
+## Evidence Links
+
+- R1 QA evidence: `docs/qa/2026-03-18-p6-r1-paperclip-default-workspace.md`
+- R2 pin/release evidence: `docs/qa/2026-03-19-p6-r2-openclaw-2026-3-13-pin-and-release-evidence.md`
+- Launch-critical canary baseline: `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
+- Golden-image backup runbook: `docs/ops/golden-image-backup-runbook.md`
 
 ---
 

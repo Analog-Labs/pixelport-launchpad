@@ -79,7 +79,7 @@ if (!DO_API_TOKEN || !OPENAI_API_KEY || !PAPERCLIP_HANDOFF_SECRET) {
   throw new Error('Missing one or more required env vars: DO_API_TOKEN, OPENAI_API_KEY, PAPERCLIP_HANDOFF_SECRET');
 }
 
-const OPENCLAW_BASE_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.3.11';
+const OPENCLAW_BASE_IMAGE = process.env.OPENCLAW_IMAGE || 'ghcr.io/openclaw/openclaw:2026.3.13-1';
 const OPENCLAW_RUNTIME_IMAGE = resolveOpenClawRuntimeImage(
   OPENCLAW_BASE_IMAGE,
   process.env.OPENCLAW_RUNTIME_IMAGE,

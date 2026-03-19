@@ -7,6 +7,21 @@
 
 ## Last Session
 
+- **Date:** 2026-03-19 (session 110)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Founder approved CTO-reviewed merges and execution continuation.
+  - Merged R1 PR `#18` to `main`:
+    - merge commit: `53af0e2bae54b98682d512cca1dd60cdedf22273`
+  - Began R2 merge flow for PR `#19`; initial merge attempt failed due docs conflicts against updated `main`.
+  - Started local conflict-resolution path on `codex/p6-r2-openclaw-2026-3-13` for:
+    - `docs/ACTIVE-PLAN.md`
+    - `docs/SESSION-LOG.md`
+- **What's next:**
+  - Complete conflict resolution on R2 branch, push, and merge PR `#19`.
+  - Execute R2 managed-image rollout gates (candidate build, 2 fresh canaries, evidence capture, selector promotion, managed-only gate re-enable).
+- **Blockers:** None beyond active merge-conflict resolution for PR `#19`.
+
 - **Date:** 2026-03-18 (session 109)
 - **Who worked:** Founder + Codex
 - **What was done:**
@@ -31,7 +46,7 @@
   - Updated active planning doc to the new locked reset sequence (`R1 -> R2 -> R3 -> R4 -> R5`):
     - `docs/ACTIVE-PLAN.md`
 - **What's next:**
-  - Open CTO-review PR for R1 and await approval.
+  - Open CTO-review PR for R1 and await approval/merge.
   - After merge, execute R2 OpenClaw upgrade canary path on branch `codex/p6-r2-openclaw-2026-3-13`.
 - **Blockers:** No code blocker in R1 branch. Awaiting CTO review/approval for merge.
 
