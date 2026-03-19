@@ -1,0 +1,12 @@
+{
+  "source_repo": "paperclipai/companies",
+  "source_path": "default/ceo",
+  "pinned_commit": "4ff32f15d934b0b75309c82461d7854bf1f765fb",
+  "pinned_at": "2026-03-19",
+  "files": [
+    "AGENTS.md",
+    "HEARTBEAT.md",
+    "SOUL.md",
+    "TOOLS.md"
+  ]
+}

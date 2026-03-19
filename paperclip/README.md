@@ -5,6 +5,7 @@ This directory is the source of truth for PixelPort-owned customizations layered
 ## What lives here
 
 - `plugins/`: PixelPort runtime plugins that are applied into the Paperclip server codebase during image builds.
+- `templates/upstream-default-ceo/`: Pinned upstream Paperclip default CEO markdown templates used as the deterministic baseline for tenant workspace prompt files.
 - `theme/`: Placeholder for PixelPort global branding assets and theme overrides.
 - `patches/`: Placeholder for curated core patches against upstream Paperclip.
 - `build/`: Build runbooks for how to apply these overlays during golden image construction.
