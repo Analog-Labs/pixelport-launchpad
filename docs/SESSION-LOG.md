@@ -7,6 +7,39 @@
 
 ## Last Session
 
+- **Date:** 2026-03-19 (session 111)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Founder approved CTO-reviewed execution continuation for P6 reset.
+  - Merged R2 pin/evidence PR `#19` after resolving doc conflicts against merged R1:
+    - merge commit: `45d4406874676032149dd7f2d13d7f48f32dd818`
+  - Completed R2 rollout gate in production:
+    - created compatibility bootstrap canary tenant `pixelport-dry-run-mmwvc1iw` (`7de82d7c-f8fc-4233-a088-b3d3b1f9b329`), droplet `559334599` (`192.34.60.236`), reached `active`, gateway health `ok/live`
+    - created managed snapshot from canary droplet:
+      - action `3097711410` -> `completed`
+      - image `221188460` (`pixelport-paperclip-golden-2026-03-19-openclaw-2026-3-13-1-r2`)
+    - updated production envs:
+      - `PROVISIONING_DROPLET_IMAGE=221188460`
+      - `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
+    - redeployed production:
+      - `https://pixelport-launchpad-qqjlyrm61-sanchalrs-projects.vercel.app`
+      - alias `https://pixelport-launchpad.vercel.app`
+    - ran strict managed-only canary tenant `pixelport-dry-run-mmwvp6kd` (`66e86eb8-41d7-46bd-a1f0-c9dbcb088720`), droplet `559336547` (`161.35.10.166`)
+      - reached `active`, gateway health `ok/live`
+      - droplet image truth matched promoted snapshot id (`221188460`)
+  - Cleanup proof:
+    - `cleanup=true` removed both canary tenants
+    - droplet deletes reported `2/2`
+    - direct DO checks for `559334599` and `559336547` returned `404`
+  - Captured local fail-safe artifacts under:
+    - `/Users/sanchal/pixelport-artifacts/golden-image-backups/`
+  - Added R2 rollout closure evidence:
+    - `docs/qa/2026-03-19-p6-r2-managed-image-rollout-closure.md`
+- **What's next:**
+  - Finalize R2 closure commit with updated manifest/default selector references and planning docs.
+  - Start R3 branch for Paperclip `v2026.318.0` compatibility-only upgrade and canary plan.
+- **Blockers:** No active blocker for R2. Runtime SSH verification is still unavailable with current key mapping, but canary image-truth and gateway health gates passed.
+
 - **Date:** 2026-03-19 (session 110)
 - **Who worked:** Founder + Codex
 - **What was done:**

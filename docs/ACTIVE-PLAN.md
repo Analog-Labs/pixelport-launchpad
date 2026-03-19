@@ -29,12 +29,12 @@
   - digest: `sha256:a5a4c83b773aca85a8ba99cf155f09afa33946c0aa5cc6a9ccb6162738b5da02`
 - [x] Tests/docs updated for new pin
 - [x] Validation done (`npx tsc --noEmit`, `npm test`)
-- [ ] Build managed golden image candidate with this OpenClaw pin
-- [ ] Run 2 fresh-tenant canaries on candidate image
-- [ ] Capture local backup artifacts and QA evidence
-- [ ] Promote managed image selector
-- [ ] Re-enable strict gate in production: `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
-- [ ] CTO review PR + merge (PR `#19` open)
+- [x] Build managed golden image candidate with this OpenClaw pin (`snapshot id 221188460`)
+- [x] Run 2 fresh-tenant canaries on candidate image (compatibility bootstrap + strict managed-only)
+- [x] Capture local backup artifacts and QA evidence
+- [x] Promote managed image selector (`PROVISIONING_DROPLET_IMAGE=221188460`)
+- [x] Re-enable strict gate in production: `PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true`
+- [x] CTO review approved + merged (PR `#19`, merge commit `45d4406`)
 
 ## R3 — Paperclip Upgrade (Compatibility-only)
 
@@ -76,6 +76,7 @@
 
 - R1 QA evidence: `docs/qa/2026-03-18-p6-r1-paperclip-default-workspace.md`
 - R2 pin/release evidence: `docs/qa/2026-03-19-p6-r2-openclaw-2026-3-13-pin-and-release-evidence.md`
+- R2 rollout closure evidence: `docs/qa/2026-03-19-p6-r2-managed-image-rollout-closure.md`
 - Launch-critical canary baseline: `docs/qa/2026-03-18-p6-d5-production-canary-proof.md`
 - Golden-image backup runbook: `docs/ops/golden-image-backup-runbook.md`
 
