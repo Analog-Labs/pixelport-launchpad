@@ -95,6 +95,14 @@ After loading, retag if needed before promotion or testing.
 - `cloud-init-snapshots/2026-03-18-provision-tenant-source.ts`
 - `cloud-init-snapshots/2026-03-18-snapshot-notes.txt`
 
+## Known Good Backup Artifacts (2026-03-19, P6 R2)
+
+- `manifests/2026-03-19-p6-r2-openclaw-2026.3.13-1.manifest.txt`
+- `cloud-init-snapshots/2026-03-19-p6-r2-openclaw-2026.3.13-1-provision-tenant.ts`
+- `checksums/2026-03-19-p6-r2-openclaw-2026.3.13-1.manifest.sha256`
+- `checksums/2026-03-19-p6-r2-openclaw-2026.3.13-1.provision-tenant.sha256`
+- `evidence/2026-03-19-p6-r2-openclaw-2026.3.13-1-*.json`
+
 ## Retention Guidance
 
 - Keep the last 3 stable images.

@@ -6,7 +6,9 @@ baseline:
   droplet:
     default_size: s-4vcpu-8gb
     default_region: nyc1
-    default_image: pixelport-paperclip-golden-2026-03-16
+    default_image: "221188460"
+    default_image_name: pixelport-paperclip-golden-2026-03-19-openclaw-2026-3-13-1-r2
+    default_image_promoted_at: "2026-03-19T02:52:10Z"
     compatibility_fallback_image: ubuntu-24-04-x64
     image_selector:
       primary_env: PROVISIONING_DROPLET_IMAGE
@@ -51,5 +53,6 @@ notes:
   - Runtime provisioning requires an explicit selector env (no implicit fallback path).
   - Compatibility selector (`ubuntu-24-04-x64`) may be used temporarily via PROVISIONING_DROPLET_IMAGE.
   - Optional env PROVISIONING_REQUIRE_MANAGED_GOLDEN_IMAGE=true blocks compatibility selector use.
+  - Production currently enforces managed-image-only provisioning with selector `221188460`.
   - LiteLLM is no longer part of active provisioning or runtime dependencies.
   - Exact Paperclip and Postgres minor pins are set at image build time and must be recorded before production promotion.
