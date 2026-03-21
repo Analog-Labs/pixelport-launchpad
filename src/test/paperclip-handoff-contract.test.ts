@@ -1,12 +1,15 @@
 import { createHmac } from "crypto";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_PAPERCLIP_HANDOFF_TTL_SECONDS,
   PAPERCLIP_HANDOFF_CONTRACT_VERSION,
+  PAPERCLIP_RUNTIME_HANDOFF_PATH,
   PAPERCLIP_RUNTIME_PORT,
+  buildPaperclipRuntimeHandoffUrl,
   buildGatewayControlUiLaunchUrl,
   buildPaperclipHandoffPayload,
   getMissingPaperclipHandoffEnv,
+  isPaperclipRuntimeHandoffRouteActive,
   isPaperclipHandoffReadyStatus,
   resolvePaperclipHandoffConfig,
   resolvePaperclipRuntimeUrlFromDropletIp,
@@ -18,6 +21,10 @@ import {
 } from "../../api/lib/paperclip-handoff-contract";
 
 describe("paperclip handoff contract", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("treats active and ready as handoff-ready statuses", () => {
     expect(isPaperclipHandoffReadyStatus("active")).toBe(true);
     expect(isPaperclipHandoffReadyStatus("READY")).toBe(true);
@@ -117,6 +124,59 @@ describe("paperclip handoff contract", () => {
     expect(buildGatewayControlUiLaunchUrl("http://1.2.3.4:18789", "gw-token")).toBe(
       "http://1.2.3.4:18789/#token=gw-token",
     );
+  });
+
+  it("builds a runtime handoff URL with token and next query params", () => {
+    expect(buildPaperclipRuntimeHandoffUrl(null, "token")).toBeNull();
+    expect(buildPaperclipRuntimeHandoffUrl("http://1.2.3.4:18789", null)).toBeNull();
+    expect(buildPaperclipRuntimeHandoffUrl("ftp://1.2.3.4:18789", "token")).toBeNull();
+
+    const url = buildPaperclipRuntimeHandoffUrl("https://tenant.runtime.pixelport.ai", "handoff-token");
+    expect(url).toBe("https://tenant.runtime.pixelport.ai/pixelport/handoff?handoff_token=handoff-token&next=%2F");
+  });
+
+  it("treats non-https runtime URLs as handoff-route inactive without probing", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const active = await isPaperclipRuntimeHandoffRouteActive("http://157.245.253.88:18789");
+
+    expect(active).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("detects active handoff route from json invalid-token response", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: "Invalid handoff token (invalid-signature)" }), {
+        status: 401,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const active = await isPaperclipRuntimeHandoffRouteActive("https://tenant.runtime.pixelport.ai");
+
+    expect(active).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const probeUrl = String(fetchMock.mock.calls[0]?.[0] || "");
+    expect(probeUrl.startsWith("https://tenant.runtime.pixelport.ai")).toBe(true);
+    expect(probeUrl).toContain(PAPERCLIP_RUNTIME_HANDOFF_PATH);
+    expect(probeUrl).toContain("handoff_token=probe.invalid");
+  });
+
+  it("treats html shell responses as inactive handoff route", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("<html>OpenClaw Control</html>", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const active = await isPaperclipRuntimeHandoffRouteActive("https://tenant.runtime.pixelport.ai");
+
+    expect(active).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("resolves handoff config from secret + ttl env", () => {

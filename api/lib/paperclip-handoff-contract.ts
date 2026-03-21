@@ -4,6 +4,7 @@ import { isIP } from 'net';
 export const PAPERCLIP_HANDOFF_CONTRACT_VERSION = 'p1-v1';
 export const DEFAULT_PAPERCLIP_HANDOFF_TTL_SECONDS = 300;
 export const PAPERCLIP_RUNTIME_PORT = 18789;
+export const PAPERCLIP_RUNTIME_HANDOFF_PATH = '/pixelport/handoff';
 
 const PAPERCLIP_HANDOFF_READY_STATUSES = new Set(['ready', 'active']);
 
@@ -237,6 +238,98 @@ export function buildGatewayControlUiLaunchUrl(
     return launchUrl.toString();
   } catch {
     return null;
+  }
+}
+
+function normalizeHandoffToken(rawHandoffToken: string | null | undefined): string {
+  if (typeof rawHandoffToken !== 'string') {
+    return '';
+  }
+
+  return rawHandoffToken.trim();
+}
+
+export function buildPaperclipRuntimeHandoffUrl(
+  runtimeUrl: string | null,
+  rawHandoffToken: string | null | undefined,
+): string | null {
+  if (!runtimeUrl) {
+    return null;
+  }
+
+  const handoffToken = normalizeHandoffToken(rawHandoffToken);
+  if (!handoffToken) {
+    return null;
+  }
+
+  try {
+    const handoffUrl = new URL(PAPERCLIP_RUNTIME_HANDOFF_PATH, runtimeUrl);
+    if (handoffUrl.protocol !== 'http:' && handoffUrl.protocol !== 'https:') {
+      return null;
+    }
+
+    handoffUrl.search = '';
+    handoffUrl.hash = '';
+    handoffUrl.searchParams.set('handoff_token', handoffToken);
+    handoffUrl.searchParams.set('next', '/');
+    return handoffUrl.toString();
+  } catch {
+    return null;
+  }
+}
+
+export async function isPaperclipRuntimeHandoffRouteActive(
+  runtimeUrl: string | null,
+): Promise<boolean> {
+  if (!runtimeUrl) {
+    return false;
+  }
+
+  let probeUrl: URL;
+  try {
+    probeUrl = new URL(PAPERCLIP_RUNTIME_HANDOFF_PATH, runtimeUrl);
+  } catch {
+    return false;
+  }
+
+  // Probe only HTTPS runtime hosts to avoid adding latency/noise on HTTP compatibility endpoints.
+  if (probeUrl.protocol !== 'https:') {
+    return false;
+  }
+
+  probeUrl.searchParams.set('handoff_token', 'probe.invalid');
+  probeUrl.searchParams.set('next', '/');
+
+  const timeoutSignal =
+    typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+      ? AbortSignal.timeout(2_000)
+      : undefined;
+
+  try {
+    const response = await fetch(probeUrl.toString(), {
+      method: 'GET',
+      redirect: 'manual',
+      signal: timeoutSignal,
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+
+    if (response.status !== 400 && response.status !== 401 && response.status !== 503) {
+      return false;
+    }
+
+    const contentType = response.headers.get('content-type')?.toLowerCase() || '';
+    if (!contentType.includes('application/json')) {
+      return false;
+    }
+
+    const body = (await response.text()).toLowerCase();
+    return body.includes('handoff_token')
+      || body.includes('invalid handoff token')
+      || body.includes('paperclip_handoff_secret');
+  } catch {
+    return false;
   }
 }
 

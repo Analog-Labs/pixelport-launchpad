@@ -1,9 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import {
+  buildPaperclipRuntimeHandoffUrl,
   buildGatewayControlUiLaunchUrl,
   buildPaperclipHandoffPayload,
   getMissingPaperclipHandoffEnv,
+  isPaperclipRuntimeHandoffRouteActive,
   isPaperclipHandoffReadyStatus,
   PaperclipHandoffConfigError,
   resolvePaperclipHandoffConfig,
@@ -61,14 +63,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    const workspaceLaunchUrl = buildGatewayControlUiLaunchUrl(runtimeUrl, tenant.gateway_token);
-    if (!workspaceLaunchUrl) {
-      return res.status(409).json({
-        error: 'Paperclip runtime auth token unavailable for this tenant.',
-        code: 'runtime-auth-unavailable',
-      });
-    }
-
     let config;
     try {
       config = resolvePaperclipHandoffConfig(process.env);
@@ -83,6 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     const source = resolveSource(req.body?.source);
+    const handoffRouteActive = await isPaperclipRuntimeHandoffRouteActive(runtimeUrl);
 
     const payload = buildPaperclipHandoffPayload({
       userId,
@@ -94,13 +89,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       ttlSeconds: config.ttlSeconds,
     });
     const handoffToken = signPaperclipHandoffPayload(payload, config.handoffSecret);
+    const paperclipHandoffUrl = buildPaperclipRuntimeHandoffUrl(runtimeUrl, handoffToken);
+    const workspaceLaunchUrl = handoffRouteActive
+      ? paperclipHandoffUrl
+      : buildGatewayControlUiLaunchUrl(runtimeUrl, tenant.gateway_token);
+
+    if (!workspaceLaunchUrl) {
+      return res.status(409).json({
+        error: 'Paperclip runtime auth token unavailable for this tenant.',
+        code: 'runtime-auth-unavailable',
+      });
+    }
+
+    const launchAuthMode = handoffRouteActive ? 'paperclip-handoff' : 'gateway-token';
 
     // Runtime URL prefers HTTPS (tenant domain / persisted runtime URL) and falls back to droplet IP HTTP for compatibility.
     return res.status(200).json({
       contract_version: PAPERCLIP_HANDOFF_CONTRACT_VERSION,
       paperclip_runtime_url: runtimeUrl,
       workspace_launch_url: workspaceLaunchUrl,
-      launch_auth_mode: 'gateway-token',
+      launch_auth_mode: launchAuthMode,
+      handoff_route_active: handoffRouteActive,
+      paperclip_handoff_url: paperclipHandoffUrl,
       handoff_token: handoffToken,
       expires_at: new Date(payload.exp * 1000).toISOString(),
       tenant: {

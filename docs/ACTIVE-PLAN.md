@@ -4,20 +4,33 @@
 
 ---
 
-## Current Program: P6 Reset (Completed)
+## Current Program: P7 Launch Reliability Hardening (In Progress)
 
-**Objective:** close drift, upgrade runtime safely, and preserve end-to-end Launch reliability.  
-**Fixed order:** `R1 -> R2 -> R3 -> R4 -> R5`  
-**Deferred:** TryClam scrub and integrations track until this reset program is complete.
+**Objective:** execute founder-approved post-P6 order: `upgrade first -> fix point 2 -> fix point 3 -> integrations`.
 
-## Next Program Draft (Approval Pending)
+## P7-S1 — Upgrade + Carryover Fixes
 
-- [ ] Approve next active sequence (`upgrade-first` vs `integrations-first`)
-- [ ] Decide bootstrap `Unauthorized` handling (`known caveat` vs `blocker`)
-- [ ] Decide `/pixelport/handoff` scope (`stay out-of-scope` vs `reactivate/fix`)
-- [ ] Decide TryClam teardown timing (`immediate next slice` vs `defer`)
-- [ ] Approve kickoff plan doc:
-  - `docs/post-p6-next-program-draft-2026-03-19.md`
+- [x] Sequence lock approved by founder (`upgrade-first`, then point 2/3, then integrations)
+- [x] Upgrade-first verification completed:
+  - OpenClaw latest stable confirmed: `v2026.3.13-1` (already pinned)
+  - Paperclip latest stable confirmed: `v2026.318.0` (already pinned)
+- [x] Point 2 fix: bootstrap `Unauthorized` hardening in hooks dispatch path
+  - add query-token hook auth (`?token=`) per OpenClaw hooks contract
+  - keep compatibility headers + controlled fallback attempts for mixed runtime variants
+  - add test coverage for fallback matrix
+- [x] Point 3 fix: `/pixelport/handoff` activation handling
+  - runtime handoff route probe for HTTPS runtimes
+  - launch mode auto-selection: `paperclip-handoff` when active, otherwise `gateway-token`
+  - frontend launch now trusts backend-selected `workspace_launch_url`
+  - docs updated to reflect dynamic handoff mode selection
+- [x] Validation complete:
+  - `npx tsc --noEmit`
+  - `npm test`
+
+## P7-S2 — Integrations Track (Next)
+
+- [ ] Start Google + Slack integrations hardening on top of stabilized launch/runtime baseline
+- [ ] Define first integration slice scope and CTO review gate
 
 ## R1 — Workspace Drift + Terminology Correction
 

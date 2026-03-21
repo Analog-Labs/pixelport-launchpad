@@ -39,11 +39,98 @@ describe("POST /api/runtime/handoff", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
     vi.resetModules();
     process.env = { ...originalEnv };
     delete process.env.PAPERCLIP_HANDOFF_SECRET;
     delete process.env.PAPERCLIP_HANDOFF_TTL_SECONDS;
     delete process.env.PAPERCLIP_RUNTIME_BASE_DOMAIN;
+  });
+
+  it("uses paperclip handoff launch mode when runtime handoff route is active", async () => {
+    process.env.PAPERCLIP_HANDOFF_SECRET = "secret-value";
+    process.env.PAPERCLIP_RUNTIME_BASE_DOMAIN = "runtime.pixelport.ai";
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: "Invalid handoff token (invalid-signature)" }), {
+        status: 401,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { default: handler } = await import("../../api/runtime/handoff");
+    authenticateRequest.mockResolvedValue({
+      userId: "user-1",
+      tenant: {
+        id: "tenant-1",
+        slug: "tenant-slug",
+        name: "Tenant",
+        status: "active",
+        plan: "trial",
+        droplet_ip: "157.245.253.88",
+        gateway_token: null,
+        onboarding_data: {},
+      },
+    });
+
+    const req = { method: "POST", body: { source: "onboarding_launch" } };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    const payload = res.body as Record<string, unknown>;
+    expect(payload.launch_auth_mode).toBe("paperclip-handoff");
+    expect(payload.handoff_route_active).toBe(true);
+    expect(payload.paperclip_runtime_url).toBe("https://tenant-slug.runtime.pixelport.ai/");
+    expect(payload.workspace_launch_url).toBe(payload.paperclip_handoff_url);
+    expect(typeof payload.handoff_token).toBe("string");
+    const launchUrl = new URL(payload.workspace_launch_url as string);
+    expect(launchUrl.pathname).toBe("/pixelport/handoff");
+    expect(launchUrl.searchParams.get("next")).toBe("/");
+    expect(launchUrl.searchParams.get("handoff_token")).toBe(payload.handoff_token);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to gateway-token launch mode when handoff route probe is inactive", async () => {
+    process.env.PAPERCLIP_HANDOFF_SECRET = "secret-value";
+    process.env.PAPERCLIP_RUNTIME_BASE_DOMAIN = "runtime.pixelport.ai";
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("<html>OpenClaw Control</html>", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { default: handler } = await import("../../api/runtime/handoff");
+    authenticateRequest.mockResolvedValue({
+      userId: "user-1",
+      tenant: {
+        id: "tenant-1",
+        slug: "tenant-slug",
+        name: "Tenant",
+        status: "active",
+        plan: "trial",
+        droplet_ip: "157.245.253.88",
+        gateway_token: "gw-123",
+        onboarding_data: {},
+      },
+    });
+
+    const req = { method: "POST", body: {} };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      launch_auth_mode: "gateway-token",
+      handoff_route_active: false,
+      workspace_launch_url: "https://tenant-slug.runtime.pixelport.ai/#token=gw-123",
+      paperclip_runtime_url: "https://tenant-slug.runtime.pixelport.ai/",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns 405 for non-POST methods", async () => {

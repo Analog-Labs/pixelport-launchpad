@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildOnboardingBootstrapMessage,
+  deriveHooksToken,
   dispatchAgentHookMessage,
+  triggerOnboardingBootstrap,
 } from "../../api/lib/onboarding-bootstrap";
 
 describe("dispatchAgentHookMessage", () => {
@@ -30,6 +32,136 @@ describe("dispatchAgentHookMessage", () => {
       status: 504,
       body: "fetch failed: Connect Timeout Error",
     });
+  });
+
+  it("dispatches to hook URL with compatibility auth headers", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 202,
+      text: vi.fn().mockResolvedValue("accepted"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await dispatchAgentHookMessage({
+      gatewayUrl: "http://127.0.0.1:18789/",
+      gatewayToken: "gw-token",
+      name: "Smoke",
+      message: "No-op",
+      hookPath: "/hooks/agent",
+    });
+
+    const expectedHookToken = deriveHooksToken("gw-token");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `http://127.0.0.1:18789/hooks/agent?token=${expectedHookToken}`,
+    );
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${expectedHookToken}`,
+        "x-openclaw-token": expectedHookToken,
+      },
+    });
+    expect(result).toEqual({
+      ok: true,
+      status: 202,
+      body: "accepted",
+    });
+  });
+
+  it("retries /hooks/agent with gateway token when derived token is unauthorized", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(new Response("accepted", { status: 200 }));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await triggerOnboardingBootstrap({
+      gatewayUrl: "http://127.0.0.1:18789",
+      gatewayToken: "gw-token",
+      message: "Start",
+      agentId: "main",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      status: 200,
+      body: "accepted",
+    });
+    const expectedHookToken = deriveHooksToken("gw-token");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `http://127.0.0.1:18789/hooks/agent?token=${expectedHookToken}`,
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://127.0.0.1:18789/hooks/agent?token=gw-token");
+    expect(fetchMock.mock.calls[1]?.[1]?.headers).toMatchObject({
+      Authorization: "Bearer gw-token",
+      "x-openclaw-token": "gw-token",
+    });
+  });
+
+  it("falls back to mapped onboarding hook path when /hooks/agent is unavailable", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("Method not allowed", { status: 405 }))
+      .mockResolvedValueOnce(new Response("accepted", { status: 200 }));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await triggerOnboardingBootstrap({
+      gatewayUrl: "http://127.0.0.1:18789",
+      gatewayToken: "gw-token",
+      message: "Start",
+      agentId: "main",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      status: 200,
+      body: "accepted",
+    });
+    const expectedHookToken = deriveHooksToken("gw-token");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `http://127.0.0.1:18789/hooks/agent?token=${expectedHookToken}`,
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      `http://127.0.0.1:18789/hooks/onboarding-bootstrap?token=${expectedHookToken}`,
+    );
+  });
+
+  it("retries mapped hook path with gateway token when mapped derived token is unauthorized", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("Method not allowed", { status: 405 }))
+      .mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }))
+      .mockResolvedValueOnce(new Response("accepted", { status: 202 }));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await triggerOnboardingBootstrap({
+      gatewayUrl: "http://127.0.0.1:18789",
+      gatewayToken: "gw-token",
+      message: "Start",
+      agentId: "main",
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      status: 202,
+      body: "accepted",
+    });
+
+    const expectedHookToken = deriveHooksToken("gw-token");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      `http://127.0.0.1:18789/hooks/agent?token=${expectedHookToken}`,
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      `http://127.0.0.1:18789/hooks/onboarding-bootstrap?token=${expectedHookToken}`,
+    );
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(
+      "http://127.0.0.1:18789/hooks/onboarding-bootstrap?token=gw-token",
+    );
   });
 });
 
