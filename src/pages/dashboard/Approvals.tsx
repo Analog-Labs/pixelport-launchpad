@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { sanitizeContent } from '@/lib/sanitizeContent';
 import type { PaperclipApproval } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 
 // ── Approval card ──────────────────────────────────────────────────────────────
 
@@ -111,7 +111,7 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
           {approval.type}
         </span>
         <span className="font-mono text-[11px] text-muted-foreground">
-          {formatDistanceToNow(new Date(approval.createdAt), { addSuffix: true })}
+          {(() => { const d = parseISO(approval.createdAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
         </span>
       </div>
 

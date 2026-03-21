@@ -5,7 +5,7 @@ import { AgentCardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { formatCostCents, formatDurationMs } from '@/lib/costColoring';
 import type { HeartbeatRun, PaperclipAgent } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 
 function AgentPulseDot({ status }: { status: PaperclipAgent['status'] }) {
   const color =
@@ -46,7 +46,7 @@ function RunTimelineEntry({ run }: { run: HeartbeatRun }) {
         <span className="shrink-0">{formatCostCents(run.costCents)}</span>
       )}
       <span className="shrink-0 text-zinc-600">
-        {formatDistanceToNow(new Date(run.startedAt), { addSuffix: true })}
+        {(() => { const d = parseISO(run.startedAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
       </span>
     </div>
   );

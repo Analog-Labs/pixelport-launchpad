@@ -6,7 +6,7 @@ import { RunHistorySkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { getCostColor, formatCostCents, formatDurationMs } from '@/lib/costColoring';
 import type { HeartbeatRun } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 
 // ── Run detail panel ───────────────────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ function RunDetail({ runId }: { runId: string }) {
           {eventsQuery.data.events.map((evt) => (
             <div key={evt.id} className="font-mono text-[11px] text-muted-foreground flex gap-2">
               <span className="text-zinc-600">
-                {formatDistanceToNow(new Date(evt.createdAt), { addSuffix: true })}
+                {(() => { const d = parseISO(evt.createdAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
               </span>
               <span className="capitalize">{evt.type}</span>
               {evt.message && <span className="text-zinc-500 truncate">— {evt.message}</span>}
@@ -81,7 +81,7 @@ function RunRow({ run, budgetCents }: { run: HeartbeatRun; budgetCents?: number 
           {formatCostCents(cost)}
         </span>
         <span className="font-mono text-[11px] text-zinc-600 shrink-0">
-          {formatDistanceToNow(new Date(run.startedAt), { addSuffix: true })}
+          {(() => { const d = parseISO(run.startedAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
         </span>
         {expanded ? (
           <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

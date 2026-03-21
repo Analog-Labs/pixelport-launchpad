@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import type { IssueStatus, PaperclipIssue } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 
 const COLUMNS: { status: IssueStatus; label: string }[] = [
   { status: 'backlog', label: 'Backlog' },
@@ -191,7 +191,7 @@ function TaskDetailPanel({
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="font-medium text-foreground">{c.author ?? 'Agent'}</span>
                         <span className="font-mono text-[10px] text-zinc-600">
-                          {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
+                          {(() => { const d = parseISO(c.createdAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
                         </span>
                       </div>
                       <p className="text-muted-foreground">{c.body}</p>

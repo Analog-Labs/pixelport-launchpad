@@ -51,5 +51,13 @@ export async function paperclipFetch<T>(
     throw new PaperclipFetchError(message, response.status, path);
   }
 
+  // 204 No Content and other empty responses have no JSON body — return undefined
+  // rather than letting .json() throw a SyntaxError on an empty stream.
+  const contentLength = response.headers.get('content-length');
+  const contentType = response.headers.get('content-type') ?? '';
+  if (response.status === 204 || contentLength === '0' || !contentType.includes('application/json')) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }
