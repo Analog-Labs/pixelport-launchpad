@@ -97,7 +97,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .maybeSingle();
 
     if (existingTenant) {
-      const { gateway_token, ...safeTenant } = existingTenant;
+      const { gateway_token, agent_api_key, paperclip_api_key, ...safeTenant } = existingTenant;
       return res.status(200).json({ tenant: safeTenant, created: false });
     }
 
@@ -220,7 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .maybeSingle();
 
       if (racedTenant) {
-        const { gateway_token, ...safeRacedTenant } = racedTenant;
+        const { gateway_token, agent_api_key, paperclip_api_key, ...safeRacedTenant } = racedTenant;
         return res.status(200).json({ tenant: safeRacedTenant, created: false });
       }
     }
@@ -243,7 +243,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     } catch (inngestError) {
       console.error('Failed to send Inngest provisioning event:', inngestError);
       // Tenant is created but provisioning won't start — return 201 with warning
-      const { gateway_token, ...safeTenant } = newTenant;
+      const { gateway_token, agent_api_key, paperclip_api_key, ...safeTenant } = newTenant;
       return res.status(201).json({
         tenant: safeTenant,
         created: true,
@@ -251,7 +251,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    const { gateway_token, ...safeTenant } = newTenant;
+    const { gateway_token, agent_api_key, paperclip_api_key, ...safeTenant } = newTenant;
     return res.status(201).json({ tenant: safeTenant, created: true });
   } catch (error) {
     console.error('Unexpected error in tenant creation:', error);

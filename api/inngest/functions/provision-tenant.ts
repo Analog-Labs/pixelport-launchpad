@@ -395,6 +395,9 @@ export const provisionTenant = inngest.createFunction(
       // Generate agent API key for Chief → Vercel API auth
       const agentApiKey = `ppk-${randomUUID()}`;
 
+      // Generate Paperclip API key for dashboard proxy → Paperclip auth
+      const paperclipApiKey = `pak-${randomUUID()}`;
+
       const cloudInit = buildCloudInit({
         tenantSlug: tenant.slug,
         tenantName: tenant.name,
@@ -410,6 +413,7 @@ export const provisionTenant = inngest.createFunction(
         geminiApiKey: process.env.GEMINI_API_KEY || '',
         agentmailApiKey: AGENTMAIL_API_KEY || '',
         agentApiKey,
+        paperclipApiKey,
         onboardingData: tenant.onboarding_data ?? {},
       });
 
@@ -463,6 +467,7 @@ export const provisionTenant = inngest.createFunction(
         dropletId: String(result.droplet.id),
         gatewayToken,
         agentApiKey,
+        paperclipApiKey,
         requestedSize,
         requestedRegion,
       };
@@ -563,6 +568,7 @@ export const provisionTenant = inngest.createFunction(
           gateway_token: droplet.gatewayToken,
           agentmail_inbox: agentmailInbox,
           agent_api_key: droplet.agentApiKey,
+          paperclip_api_key: droplet.paperclipApiKey,
           onboarding_data: nextOnboardingData,
         })
         .eq('id', tenantId);
@@ -621,6 +627,103 @@ export const provisionTenant = inngest.createFunction(
       }
 
       return { verified: true, status: response.status };
+    });
+
+    // Poll for Paperclip readiness on port 3100
+    const paperclipUrl = `http://${dropletIp}:3100`;
+    const paperclipMaxAttempts = 20;
+    let paperclipReady = false;
+    for (let i = 0; i < paperclipMaxAttempts; i += 1) {
+      const isReady = await step.run(`check-paperclip-${i}`, async () => {
+        try {
+          const response = await fetch(`${paperclipUrl}/api/health`, {
+            headers: { Authorization: `Bearer ${droplet.paperclipApiKey}` },
+            signal: AbortSignal.timeout(5_000),
+          });
+
+          return response.ok;
+        } catch {
+          return false;
+        }
+      });
+
+      if (isReady) {
+        paperclipReady = true;
+        break;
+      }
+
+      if (i < paperclipMaxAttempts - 1) {
+        await step.sleep(`wait-paperclip-${i}`, '10s');
+      }
+    }
+
+    if (!paperclipReady) {
+      throw new Error('Paperclip server did not become healthy within 3 minutes');
+    }
+
+    // Discover or create the Paperclip company and store its ID
+    const paperclipCompanyId = await step.run('discover-paperclip-company', async () => {
+      // List existing companies
+      const listRes = await fetch(`${paperclipUrl}/api/companies`, {
+        headers: {
+          Authorization: `Bearer ${droplet.paperclipApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (listRes.ok) {
+        const body = (await listRes.json()) as Array<{ id: string }> | { companies?: Array<{ id: string }>; data?: Array<{ id: string }> };
+        // Handle both array response and wrapped object response
+        const companies = Array.isArray(body)
+          ? body
+          : (body.companies ?? body.data ?? []);
+        if (companies.length === 1) {
+          return companies[0].id;
+        }
+        if (companies.length > 1) {
+          // Defensive: single-tenant droplet should have exactly one company.
+          // Log warning and use the first, but this indicates unexpected state.
+          console.warn(
+            `[provision-tenant] Expected 1 Paperclip company, found ${companies.length} for tenant ${tenant.slug}. Using first.`,
+          );
+          return companies[0].id;
+        }
+      }
+
+      // No companies found or list failed — create one
+      const createRes = await fetch(`${paperclipUrl}/api/companies`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${droplet.paperclipApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name: tenant.name }),
+        signal: AbortSignal.timeout(10_000),
+      });
+
+      if (!createRes.ok) {
+        const errText = await createRes.text();
+        throw new Error(`Failed to create Paperclip company (HTTP ${createRes.status}): ${errText}`);
+      }
+
+      const created = (await createRes.json()) as { id: string } | { company: { id: string } };
+      const companyId = 'company' in created ? created.company.id : created.id;
+      if (!companyId) {
+        throw new Error('Paperclip company creation returned no ID');
+      }
+      return companyId;
+    });
+
+    await step.run('store-paperclip-company-id', async () => {
+      const { error } = await supabase
+        .from('tenants')
+        .update({ paperclip_company_id: paperclipCompanyId })
+        .eq('id', tenantId);
+
+      if (error) {
+        throw new Error(`Failed to store Paperclip company ID: ${error.message}`);
+      }
     });
 
     await step.run('create-agent-records', async () => {
@@ -835,6 +938,7 @@ export function buildCloudInit(params: {
   geminiApiKey: string;
   agentmailApiKey: string;
   agentApiKey: string;
+  paperclipApiKey: string;
   onboardingData: Json;
 }): string {
   const agentName = (params.onboardingData.agent_name as string) || 'Luna';
@@ -940,6 +1044,7 @@ MEMORY_OPENAI_API_KEY=${params.memoryOpenAiApiKey}
 GEMINI_API_KEY=${params.geminiApiKey}
 AGENTMAIL_API_KEY=${params.agentmailApiKey}
 PIXELPORT_API_KEY=${params.agentApiKey}
+PAPERCLIP_API_KEY=${params.paperclipApiKey}
 SLACK_APP_TOKEN=${process.env.SLACK_APP_TOKEN || ''}
 ENV_FILE
 

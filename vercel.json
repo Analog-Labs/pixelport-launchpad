@@ -12,6 +12,9 @@
     },
     "api/debug/test-provision.ts": {
       "maxDuration": 30
+    },
+    "api/tenant-proxy/[...path].ts": {
+      "maxDuration": 20
     }
   },
   "ignoreCommand": "bash ./tools/vercel-ignore-paperclip-only.sh"
