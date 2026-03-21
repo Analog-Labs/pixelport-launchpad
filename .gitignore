@@ -44,3 +44,4 @@ supabase/.temp/
 
 # Playwright output artifacts (screenshots, snapshots)
 output/playwright/
+.gstack/
