@@ -57,16 +57,28 @@ Only run `open` if the user says yes. Always run `touch` to mark as seen. This o
 If `TEL_PROMPTED` is `no` AND `LAKE_INTRO` is `yes`: After the lake intro is handled,
 ask the user about telemetry. Use AskUserQuestion:
 
-> gstack can share anonymous usage data (which skills you use, how long they take, crash info)
-> to help improve the project. No code, file paths, or repo names are ever sent.
+> Help gstack get better! Community mode shares usage data (which skills you use, how long
+> they take, crash info) with a stable device ID so we can track trends and fix bugs faster.
+> No code, file paths, or repo names are ever sent.
 > Change anytime with `gstack-config set telemetry off`.
 
 Options:
-- A) Yes, share anonymous data (recommended)
+- A) Help gstack get better! (recommended)
 - B) No thanks
 
-If A: run `~/.codex/skills/gstack/bin/gstack-config set telemetry anonymous`
-If B: run `~/.codex/skills/gstack/bin/gstack-config set telemetry off`
+If A: run `~/.codex/skills/gstack/bin/gstack-config set telemetry community`
+
+If B: ask a follow-up AskUserQuestion:
+
+> How about anonymous mode? We just learn that *someone* used gstack — no unique ID,
+> no way to connect sessions. Just a counter that helps us know if anyone's out there.
+
+Options:
+- A) Sure, anonymous is fine
+- B) No thanks, fully off
+
+If B→A: run `~/.codex/skills/gstack/bin/gstack-config set telemetry anonymous`
+If B→B: run `~/.codex/skills/gstack/bin/gstack-config set telemetry off`
 
 Always run:
 ```bash
@@ -179,7 +191,14 @@ RECOMMENDATION: [what the user should do next]
 After the skill workflow completes (success, error, or abort), log the telemetry event.
 Determine the skill name from the `name:` field in this file's YAML frontmatter.
 Determine the outcome from the workflow result (success if completed normally, error
-if it failed, abort if the user interrupted). Run this bash:
+if it failed, abort if the user interrupted).
+
+**PLAN MODE EXCEPTION — ALWAYS RUN:** This command writes telemetry to
+`~/.gstack/analytics/` (user config directory, not project files). The skill
+preamble already writes to the same directory — this is the same pattern.
+Skipping this command loses session duration and outcome data.
+
+Run this bash:
 
 ```bash
 _TEL_END=$(date +%s)
@@ -409,7 +428,7 @@ From commit diffs, estimate PR sizes and bucket them:
 - **Small** (<100 LOC)
 - **Medium** (100-500 LOC)
 - **Large** (500-1500 LOC)
-- **XL** (1500+ LOC) — flag these with file counts
+- **XL** (1500+ LOC)
 
 ### Step 8: Focus Score + Ship of the Week
 
@@ -601,14 +620,13 @@ Narrative interpreting what the team-wide patterns mean:
 
 Narrative covering:
 - Commit type mix and what it reveals
-- PR size discipline (are PRs staying small?)
+- PR size distribution and what it reveals about shipping cadence
 - Fix-chain detection (sequences of fix commits on the same subsystem)
 - Version bump discipline
 
 ### Code Quality Signals
 - Test LOC ratio trend
 - Hotspot analysis (are the same files churning?)
-- Any XL PRs that should have been split
 - Greptile signal ratio and trend (if history exists): "Greptile: X% signal (Y valid catches, Z false positives)"
 
 ### Test Health
@@ -647,7 +665,7 @@ For each teammate (sorted by commits descending), write a section:
   - "Fixed the N+1 query that was causing 2s load times on the dashboard"
 - **Opportunity for growth**: 1 specific, constructive suggestion. Frame as investment, not criticism. Examples:
   - "Test coverage on the payment module is at 8% — worth investing in before the next feature lands on top of it"
-  - "3 of the 5 PRs were 800+ LOC — breaking these up would catch issues earlier and make review easier"
+  - "Most commits land in a single burst — spacing work across the day could reduce context-switching fatigue"
   - "All commits land between 1-4am — sustainable pace matters for code quality long-term"
 
 **AI collaboration note:** If many commits have `Co-Authored-By` AI trailers (e.g., Claude, Copilot), note the AI-assisted commit percentage as a team metric. Frame it neutrally — "N% of commits were AI-assisted" — without judgment.
