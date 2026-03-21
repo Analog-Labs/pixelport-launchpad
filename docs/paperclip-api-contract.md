@@ -14,7 +14,7 @@ This document maps the Paperclip API surface needed for the PixelPort dashboard 
 
 Paperclip route source-of-truth audited at pinned runtime tag:
 
-- Repo: `/Users/sanchal/paperclip`
+- Repo: local clone of `paperclip` (Analog-Labs/paperclip)
 - Tag: `v2026.318.0`
 - Commit: `78c714c29ac9aa1a8ca85aebe48f7f1ee7e57e4d`
 
@@ -106,7 +106,7 @@ Proxy contract for PixelPort dashboard:
 
 ## Request/response shape notes (critical)
 
-## `GET /api/companies/:companyId/issues`
+### `GET /api/companies/:companyId/issues`
 
 Supported query params in route implementation:
 
@@ -120,7 +120,7 @@ Supported query params in route implementation:
 - `labelId`
 - `q`
 
-## `PATCH /api/issues/:id`
+### `PATCH /api/issues/:id`
 
 Supports (partial):
 
@@ -131,7 +131,7 @@ Supports (partial):
 - `hiddenAt`
 - `comment` (adds comment in same mutation)
 
-## `GET /api/issues/:id/comments`
+### `GET /api/issues/:id/comments`
 
 Supports:
 
@@ -141,14 +141,14 @@ Supports:
 
 Known bug discovered in runtime smoke: when `after` points to an existing comment ID, endpoint returned `500` instead of `[]`/delta payload.
 
-## `GET /api/companies/:companyId/heartbeat-runs`
+### `GET /api/companies/:companyId/heartbeat-runs`
 
 Supports:
 
 - `agentId`
 - `limit` (server clamps range)
 
-## `GET /api/heartbeat-runs/:runId/events`
+### `GET /api/heartbeat-runs/:runId/events`
 
 Supports:
 
@@ -215,7 +215,7 @@ Initial proxy allowlist to unblock T3 core views quickly:
 - `/api/issues/:id/comments/:commentId`
 - `/api/issues/:id/checkout`
 - `/api/issues/:id/release`
-- `/api/issues/:id` (PATCH)
+- `PATCH /api/issues/:id`
 - `/api/companies/:companyId/heartbeat-runs`
 - `/api/heartbeat-runs/:runId`
 - `/api/heartbeat-runs/:runId/events`
