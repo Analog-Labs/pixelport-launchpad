@@ -23,6 +23,8 @@ export interface Tenant {
   litellm_team_id: string | null;
   agentmail_inbox: string | null;
   agent_api_key: string | null;
+  paperclip_company_id: string | null;
+  paperclip_api_key: string | null;
   onboarding_data: Record<string, unknown>;
   settings: Record<string, unknown>;
   trial_ends_at: string | null;

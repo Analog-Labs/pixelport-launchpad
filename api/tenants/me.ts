@@ -13,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       tenantId: tenant.id,
       fallbackOnboardingData: tenant.onboarding_data,
     });
-    const { gateway_token, ...safeTenant } = tenant;
+    const { gateway_token, agent_api_key, paperclip_api_key, ...safeTenant } = tenant;
     return res.status(200).json({
       ...safeTenant,
       onboarding_data: bootstrap.snapshot.onboardingData,
