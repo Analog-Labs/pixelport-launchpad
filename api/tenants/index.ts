@@ -220,7 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         .maybeSingle();
 
       if (racedTenant) {
-        const { gateway_token, ...safeRacedTenant } = racedTenant;
+        const { gateway_token, agent_api_key, paperclip_api_key, ...safeRacedTenant } = racedTenant;
         return res.status(200).json({ tenant: safeRacedTenant, created: false });
       }
     }

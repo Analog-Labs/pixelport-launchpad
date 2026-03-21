@@ -245,8 +245,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       },
     });
 
-    // Strip gateway token from response
-    const { gateway_token, ...safeTenant } = newTenant;
+    // Strip sensitive tokens from response
+    const { gateway_token, agent_api_key, paperclip_api_key, ...safeTenant } = newTenant;
 
     return res.status(201).json({
       action: 'created',
