@@ -22,12 +22,13 @@ export function sanitizeContent(raw: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;');
 
-  // Step 2: convert URLs to links (operating on the escaped string)
-  const withLinks = escaped.replace(
-    URL_PATTERN,
-    (url) =>
-      `<a href="${url}" target="_blank" rel="noopener noreferrer" class="underline text-amber-400/80 hover:text-amber-400">${url}</a>`,
-  );
+  // Step 2: convert URLs to links (operating on the escaped string).
+  // URLs captured here are HTML-escaped (& → &amp;). The href needs &amp; for valid
+  // HTML, but the display text should show & so we decode it for human readability.
+  const withLinks = escaped.replace(URL_PATTERN, (escapedUrl) => {
+    const displayUrl = escapedUrl.replace(/&amp;/g, '&');
+    return `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer" class="underline text-amber-400/80 hover:text-amber-400">${displayUrl}</a>`;
+  });
 
   // Step 3: DOMPurify — only allow <a> with safe attributes
   return DOMPurify.sanitize(withLinks, {

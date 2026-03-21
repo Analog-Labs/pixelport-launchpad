@@ -56,7 +56,7 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
           toast.success('Draft saved');
           setEditing(false);
         },
-        onError: () => toast.error('Failed to save draft'),
+        onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to save draft'),
       },
     );
   };
@@ -69,7 +69,7 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
           toast.success('Approved');
           setEditing(false);
         },
-        onError: () => toast.error('Failed to approve'),
+        onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to approve'),
       },
     );
   };
@@ -77,7 +77,7 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
   const handleApprove = useCallback(() => {
     approveMutation.mutate(approval.id, {
       onSuccess: () => toast.success('Approved'),
-      onError: () => toast.error('Failed to approve'),
+      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to approve'),
     });
   }, [approveMutation, approval.id]);
 
@@ -86,7 +86,7 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
       { approvalId: approval.id },
       {
         onSuccess: () => toast.success('Rejected'),
-        onError: () => toast.error('Failed to reject'),
+        onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to reject'),
       },
     );
   }, [rejectMutation, approval.id]);

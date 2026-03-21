@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { paperclipFetch } from '@/lib/paperclipFetch';
-import type { IssueComment, IssuesResponse, PaperclipIssue } from '@/lib/paperclip-types';
+import type { IssueComment, IssueStatus, IssuesResponse, PaperclipIssue } from '@/lib/paperclip-types';
 
 const QUERY_KEY = ['paperclip', 'issues'] as const;
 
@@ -46,7 +46,7 @@ export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ issueId, status }: { issueId: string; status: string }) =>
+    mutationFn: ({ issueId, status }: { issueId: string; status: IssueStatus }) =>
       paperclipFetch<PaperclipIssue>(
         `issues/${issueId}`,
         { method: 'PATCH', body: JSON.stringify({ status }) },
@@ -56,7 +56,7 @@ export function useUpdateTaskStatus() {
       await queryClient.cancelQueries({ queryKey: QUERY_KEY });
       const previous = queryClient.getQueryData<IssuesResponse>(QUERY_KEY);
       queryClient.setQueryData<IssuesResponse>(QUERY_KEY, (old) => ({
-        issues: old?.issues.map((i) => (i.id === issueId ? { ...i, status: status as PaperclipIssue['status'] } : i)) ?? [],
+        issues: old?.issues.map((i) => (i.id === issueId ? { ...i, status } : i)) ?? [],
       }));
       return { previous };
     },
