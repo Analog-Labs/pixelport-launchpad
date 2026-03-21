@@ -83,8 +83,8 @@ export function matchProxyRoute(
       const seg = incomingSegments[i];
 
       if (pat.startsWith(':')) {
-        // Dynamic segment — must be non-empty
-        if (!seg) {
+        // Dynamic segment — must be non-empty and not a path traversal token
+        if (!seg || seg === '.' || seg === '..') {
           matched = false;
           break;
         }

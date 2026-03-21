@@ -256,6 +256,14 @@ describe('matchProxyRoute — edge cases', () => {
     expect(matchProxyRoute('GET', 'issues/../../secrets', COMPANY_ID)).toBeNull();
   });
 
+  it('rejects dot-segment traversal in dynamic params', () => {
+    // ".." in a :id position would cause URL normalization to escape the allowlist
+    expect(matchProxyRoute('GET', 'approvals/../issues', COMPANY_ID)).toBeNull();
+    expect(matchProxyRoute('GET', 'issues/../comments', COMPANY_ID)).toBeNull();
+    expect(matchProxyRoute('GET', 'issues/./comments', COMPANY_ID)).toBeNull();
+    expect(matchProxyRoute('GET', 'heartbeat-runs/..', COMPANY_ID)).toBeNull();
+  });
+
   it('rejects extra segments beyond known patterns', () => {
     expect(matchProxyRoute('GET', 'issues/abc/comments/c1/extra', COMPANY_ID)).toBeNull();
   });
