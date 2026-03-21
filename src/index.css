@@ -143,3 +143,15 @@ body::after {
 .cta-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite, shimmer 3s ease-in-out infinite;
 }
+
+/* Task detail slide-in from right */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Skeleton shimmer pass (different from button shimmer) */
+@keyframes skeleton-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
