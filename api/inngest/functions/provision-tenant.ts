@@ -1132,6 +1132,8 @@ mkdir -p /opt/paperclip-db /opt/paperclip
 chown -R 1000:1000 /opt/paperclip
 
 docker rm -f paperclip-db >/dev/null 2>&1 || true
+# Remove stale data directory (may exist from a previous provisioning or golden snapshot base)
+rm -rf /opt/paperclip-db
 if docker image inspect postgres:17-alpine >/dev/null 2>&1; then
   echo "Using preloaded postgres:17-alpine"
 else
