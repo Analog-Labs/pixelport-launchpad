@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 
 const COLUMNS: { status: IssueStatus; label: string }[] = [
-  { status: 'backlog', label: 'Backlog' },
+  { status: 'todo', label: 'Backlog' },
   { status: 'in_progress', label: 'In Progress' },
   { status: 'in_review', label: 'In Review' },
   { status: 'done', label: 'Done' },

@@ -38,7 +38,7 @@ export interface HeartbeatRunEvent {
   createdAt: string;
 }
 
-export type IssueStatus = 'backlog' | 'in_progress' | 'in_review' | 'done';
+export type IssueStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
 
 export interface IssueAssignee {
   id: string;

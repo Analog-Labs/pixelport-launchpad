@@ -66,7 +66,7 @@ describe('Kanban drag-and-drop → PATCH (useUpdateTaskStatus)', () => {
 
   it('performs optimistic update before server responds', async () => {
     const initial: IssuesResponse = {
-      issues: [{ id: 'task-2', title: 'My Task', status: 'backlog' }],
+      issues: [{ id: 'task-2', title: 'My Task', status: 'todo' }],
     };
 
     let resolveDelay!: () => void;
@@ -105,7 +105,7 @@ describe('Kanban drag-and-drop → PATCH (useUpdateTaskStatus)', () => {
 
   it('reverts optimistic update on PATCH failure', async () => {
     const initial: IssuesResponse = {
-      issues: [{ id: 'task-3', title: 'Revert Me', status: 'backlog' }],
+      issues: [{ id: 'task-3', title: 'Revert Me', status: 'todo' }],
     };
 
     const fetchMock = vi.fn((url: string, init?: RequestInit) => {
@@ -127,8 +127,8 @@ describe('Kanban drag-and-drop → PATCH (useUpdateTaskStatus)', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
-    // Cache should be reverted to backlog
+    // Cache should be reverted to todo
     const cached = client.getQueryData<IssuesResponse>(['paperclip', 'issues']);
-    expect(cached?.issues[0].status).toBe('backlog');
+    expect(cached?.issues[0].status).toBe('todo');
   });
 });

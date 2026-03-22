@@ -124,7 +124,8 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
           onChange={(e) => setEditedContent(e.target.value)}
           className={cn(
             'w-full rounded-lg border border-amber-400/40 bg-zinc-900 px-3 py-2',
-            'text-sm text-foreground resize-none focus:outline-none',
+            'text-sm text-foreground resize-none focus-visible:outline-none',
+            'focus-visible:ring-2 focus-visible:ring-amber-400/40',
             'min-h-[120px]',
           )}
           rows={6}
