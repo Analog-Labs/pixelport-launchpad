@@ -84,7 +84,8 @@ const OPENCLAW_RUNTIME_IMAGE = resolveOpenClawRuntimeImage(
   OPENCLAW_BASE_IMAGE,
   process.env.OPENCLAW_RUNTIME_IMAGE,
 );
-const RECOMMENDED_GOLDEN_IMAGE_SELECTOR = '221189855';
+const RECOMMENDED_GOLDEN_IMAGE_SELECTOR = '221563919'; // R4: paperclip + postgres:17-alpine cached
+const PAPERCLIP_IMAGE = process.env.PAPERCLIP_IMAGE || 'ghcr.io/sanchalr/paperclip:2026.3.11-handoff-p1';
 const COMPATIBILITY_DROPLET_IMAGE_SELECTOR = 'ubuntu-24-04-x64';
 const DEFAULT_PROVISIONING_DROPLET_SIZE = 's-4vcpu-8gb';
 const DEFAULT_PROVISIONING_DROPLET_REGION = 'nyc1';
@@ -399,6 +400,7 @@ export const provisionTenant = inngest.createFunction(
       const paperclipApiKey = `pak-${randomUUID()}`;
 
       const cloudInit = buildCloudInit({
+        tenantId,
         tenantSlug: tenant.slug,
         tenantName: tenant.name,
         gatewayToken,
@@ -406,8 +408,11 @@ export const provisionTenant = inngest.createFunction(
         disableControlUiDeviceAuth: isControlUiDeviceAuthBreakglassEnabled(),
         openclawBaseImage: OPENCLAW_BASE_IMAGE,
         openclawRuntimeImage: OPENCLAW_RUNTIME_IMAGE,
+        paperclipImage: PAPERCLIP_IMAGE,
         openaiApiKey: OPENAI_API_KEY,
         paperclipHandoffSecret: PAPERCLIP_HANDOFF_SECRET,
+        supabaseUrl: supabaseUrl,
+        supabaseServiceRoleKey: supabaseServiceRoleKey,
         memoryOpenAiApiKey: memoryProvisioningPlan.memoryOpenAiApiKey,
         memoryNativeEnabled: memoryProvisioningPlan.effectiveNativeEnabled,
         geminiApiKey: process.env.GEMINI_API_KEY || '',
@@ -661,58 +666,29 @@ export const provisionTenant = inngest.createFunction(
       throw new Error('Paperclip server did not become healthy within 3 minutes');
     }
 
-    // Discover or create the Paperclip company and store its ID
+    // Discover the Paperclip company ID written by cloud-init bootstrap phase.
+    // Cloud-init creates the company in local_trusted mode and PATCHes Supabase
+    // before starting authenticated Paperclip, so the ID is available by the
+    // time the health poll above passes.
     const paperclipCompanyId = await step.run('discover-paperclip-company', async () => {
-      // List existing companies
-      const listRes = await fetch(`${paperclipUrl}/api/companies`, {
-        headers: {
-          Authorization: `Bearer ${droplet.paperclipApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        signal: AbortSignal.timeout(10_000),
-      });
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('paperclip_company_id')
+        .eq('id', tenantId)
+        .single();
 
-      if (listRes.ok) {
-        const body = (await listRes.json()) as Array<{ id: string }> | { companies?: Array<{ id: string }>; data?: Array<{ id: string }> };
-        // Handle both array response and wrapped object response
-        const companies = Array.isArray(body)
-          ? body
-          : (body.companies ?? body.data ?? []);
-        if (companies.length === 1) {
-          return companies[0].id;
-        }
-        if (companies.length > 1) {
-          // Defensive: single-tenant droplet should have exactly one company.
-          // Log warning and use the first, but this indicates unexpected state.
-          console.warn(
-            `[provision-tenant] Expected 1 Paperclip company, found ${companies.length} for tenant ${tenant.slug}. Using first.`,
-          );
-          return companies[0].id;
-        }
+      if (error) {
+        throw new Error(`Failed to read Paperclip company ID from Supabase: ${error.message}`);
       }
 
-      // No companies found or list failed — create one
-      const createRes = await fetch(`${paperclipUrl}/api/companies`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${droplet.paperclipApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: tenant.name }),
-        signal: AbortSignal.timeout(10_000),
-      });
-
-      if (!createRes.ok) {
-        const errText = await createRes.text();
-        throw new Error(`Failed to create Paperclip company (HTTP ${createRes.status}): ${errText}`);
+      if (!data?.paperclip_company_id) {
+        throw new Error(
+          'Paperclip company ID not set in Supabase — cloud-init bootstrap may have failed. ' +
+          'Check /var/log/cloud-init-output.log on the droplet.',
+        );
       }
 
-      const created = (await createRes.json()) as { id: string } | { company: { id: string } };
-      const companyId = 'company' in created ? created.company.id : created.id;
-      if (!companyId) {
-        throw new Error('Paperclip company creation returned no ID');
-      }
-      return companyId;
+      return data.paperclip_company_id as string;
     });
 
     await step.run('store-paperclip-company-id', async () => {
@@ -924,6 +900,7 @@ ${heredocTag}`;
 }
 
 export function buildCloudInit(params: {
+  tenantId: string;
   tenantSlug: string;
   tenantName: string;
   gatewayToken: string;
@@ -931,8 +908,11 @@ export function buildCloudInit(params: {
   disableControlUiDeviceAuth?: boolean;
   openclawBaseImage: string;
   openclawRuntimeImage: string;
+  paperclipImage: string;
   openaiApiKey: string;
   paperclipHandoffSecret: string;
+  supabaseUrl: string;
+  supabaseServiceRoleKey: string;
   memoryOpenAiApiKey: string;
   memoryNativeEnabled: boolean;
   geminiApiKey: string;
@@ -1141,6 +1121,135 @@ normalize_runtime_state_perms() {
 }
 
 normalize_runtime_state_perms
+
+# 9b. Start Paperclip Postgres (external DB — avoids embedded-postgres locale issues)
+PAPERCLIP_DB_PASS="$(openssl rand -hex 24)"
+PAPERCLIP_BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
+docker network create paperclip-net 2>/dev/null || true
+mkdir -p /opt/paperclip-db /opt/paperclip
+chown -R 1000:1000 /opt/paperclip
+
+docker rm -f paperclip-db >/dev/null 2>&1 || true
+if docker image inspect postgres:17-alpine >/dev/null 2>&1; then
+  echo "Using preloaded postgres:17-alpine"
+else
+  docker pull postgres:17-alpine
+fi
+docker run -d --name paperclip-db \\
+  --network paperclip-net \\
+  --restart unless-stopped \\
+  -p 127.0.0.1:5433:5432 \\
+  -e POSTGRES_USER=paperclip \\
+  -e "POSTGRES_PASSWORD=$PAPERCLIP_DB_PASS" \\
+  -e POSTGRES_DB=paperclip \\
+  -v /opt/paperclip-db:/var/lib/postgresql/data \\
+  postgres:17-alpine
+
+# Wait for Postgres to accept connections (up to 60s)
+for i in $(seq 1 30); do
+  if docker exec paperclip-db pg_isready -U paperclip -d paperclip >/dev/null 2>&1; then
+    echo "Postgres ready"
+    break
+  fi
+  sleep 2
+done
+
+# 9c. Bootstrap Paperclip in local_trusted mode (loopback only — no auth required)
+if docker image inspect ${params.paperclipImage} >/dev/null 2>&1; then
+  echo "Using preloaded Paperclip image ${params.paperclipImage}"
+else
+  docker pull ${params.paperclipImage}
+fi
+
+docker rm -f paperclip-bootstrap >/dev/null 2>&1 || true
+docker run -d --name paperclip-bootstrap \\
+  --network host \\
+  -e NODE_ENV=production \\
+  -e HOST=127.0.0.1 \\
+  -e PORT=3100 \\
+  -e DEPLOYMENT_MODE=local_trusted \\
+  -e "DATABASE_URL=postgresql://paperclip:$PAPERCLIP_DB_PASS@127.0.0.1:5433/paperclip" \\
+  -e "BETTER_AUTH_SECRET=$PAPERCLIP_BETTER_AUTH_SECRET" \\
+  -e "PAPERCLIP_HANDOFF_SECRET=${params.paperclipHandoffSecret}" \\
+  -v /opt/paperclip:/opt/paperclip \\
+  ${params.paperclipImage}
+
+# Wait for bootstrap Paperclip health (up to 90s)
+BOOTSTRAP_READY=0
+for i in $(seq 1 30); do
+  if curl -sf http://127.0.0.1:3100/api/health >/dev/null 2>&1; then
+    BOOTSTRAP_READY=1
+    echo "Paperclip bootstrap ready"
+    break
+  fi
+  sleep 3
+done
+
+if [ "$BOOTSTRAP_READY" -ne 1 ]; then
+  echo "Paperclip bootstrap did not become ready within 90s" >&2
+  docker logs paperclip-bootstrap >&2 || true
+  exit 1
+fi
+
+# 9d. Create Paperclip company, agent, and API key via local_trusted bootstrap
+COMPANY_RESP=$(curl -sf -X POST http://127.0.0.1:3100/api/companies \\
+  -H 'Content-Type: application/json' \\
+  -d "{\"name\": \"${params.tenantName}\"}" || echo '{}')
+COMPANY_ID=$(echo "$COMPANY_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id') or d.get('company',{}).get('id',''))" 2>/dev/null || echo '')
+
+if [ -z "$COMPANY_ID" ]; then
+  echo "Failed to create Paperclip company. Response: $COMPANY_RESP" >&2
+  exit 1
+fi
+
+AGENT_RESP=$(curl -sf -X POST "http://127.0.0.1:3100/api/companies/$COMPANY_ID/agents" \\
+  -H 'Content-Type: application/json' \\
+  -d '{"name": "Chief"}' || echo '{}')
+AGENT_ID=$(echo "$AGENT_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id') or d.get('agent',{}).get('id',''))" 2>/dev/null || echo '')
+
+if [ -z "$AGENT_ID" ]; then
+  echo "Failed to create Paperclip agent. Response: $AGENT_RESP" >&2
+  exit 1
+fi
+
+KEY_RESP=$(curl -sf -X POST "http://127.0.0.1:3100/api/companies/$COMPANY_ID/agents/$AGENT_ID/keys" \\
+  -H 'Content-Type: application/json' \\
+  -d '{"name": "chief-key"}' || echo '{}')
+API_TOKEN=$(echo "$KEY_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('token',''))" 2>/dev/null || echo '')
+
+if [ -z "$API_TOKEN" ]; then
+  echo "Failed to create Paperclip API key. Response: $KEY_RESP" >&2
+  exit 1
+fi
+
+# 9e. Write Paperclip company ID and real API key back to Supabase
+curl -sf -X PATCH "${params.supabaseUrl}/rest/v1/tenants?id=eq.${params.tenantId}" \\
+  -H "apikey: ${params.supabaseServiceRoleKey}" \\
+  -H "Authorization: Bearer ${params.supabaseServiceRoleKey}" \\
+  -H 'Content-Type: application/json' \\
+  -H 'Prefer: return=minimal' \\
+  -d "{\"paperclip_company_id\": \"$COMPANY_ID\", \"paperclip_api_key\": \"$API_TOKEN\"}" || {
+  echo "Failed to write Paperclip refs to Supabase" >&2
+  exit 1
+}
+
+# 9f. Stop bootstrap, start Paperclip in authenticated mode on port 3100
+docker stop paperclip-bootstrap && docker rm paperclip-bootstrap
+
+docker rm -f paperclip >/dev/null 2>&1 || true
+docker run -d --name paperclip \\
+  --network paperclip-net \\
+  --restart unless-stopped \\
+  -p 3100:3100 \\
+  -e NODE_ENV=production \\
+  -e HOST=0.0.0.0 \\
+  -e PORT=3100 \\
+  -e DEPLOYMENT_MODE=authenticated \\
+  -e "DATABASE_URL=postgresql://paperclip:$PAPERCLIP_DB_PASS@paperclip-db:5432/paperclip" \\
+  -e "BETTER_AUTH_SECRET=$PAPERCLIP_BETTER_AUTH_SECRET" \\
+  -e "PAPERCLIP_HANDOFF_SECRET=${params.paperclipHandoffSecret}" \\
+  -v /opt/paperclip:/opt/paperclip \\
+  ${params.paperclipImage}
 
 echo "PixelPort provisioning complete for ${params.tenantSlug}"
 `;
