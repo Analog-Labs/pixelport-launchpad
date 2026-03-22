@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
+import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
 
 const Dashboard = () => (
   <SidebarProvider>
@@ -11,7 +12,9 @@ const Dashboard = () => (
           <SidebarTrigger />
         </header>
         <main className="flex-1 p-4 sm:p-6 relative">
-          <Outlet />
+          <DashboardErrorBoundary>
+            <Outlet />
+          </DashboardErrorBoundary>
         </main>
       </div>
     </div>
