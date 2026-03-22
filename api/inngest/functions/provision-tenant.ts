@@ -1196,13 +1196,20 @@ if [ "$BOOTSTRAP_READY" -ne 1 ]; then
 fi
 
 # 9d. Create Paperclip company, agent, and API key via local_trusted bootstrap
-COMPANY_RESP=$(curl -sf -X POST http://127.0.0.1:3100/api/companies \\
-  -H 'Content-Type: application/json' \\
-  -d "{\"name\": \"${params.tenantName}\"}" || echo '{}')
-COMPANY_ID=$(echo "$COMPANY_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id') or d.get('company',{}).get('id',''))" 2>/dev/null || echo '')
+# Retry up to 5 times with 3s delay — DB pool may not be warm on first request
+COMPANY_ID=''
+for attempt in $(seq 1 5); do
+  COMPANY_RESP=$(curl -sf -X POST http://127.0.0.1:3100/api/companies \\
+    -H 'Content-Type: application/json' \\
+    -d "{\"name\": \"${params.tenantName}\"}" || echo '{}')
+  COMPANY_ID=$(echo "$COMPANY_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id') or d.get('company',{}).get('id',''))" 2>/dev/null || echo '')
+  if [ -n "$COMPANY_ID" ]; then break; fi
+  echo "Company creation attempt $attempt failed. Retrying in 3s..." >&2
+  sleep 3
+done
 
 if [ -z "$COMPANY_ID" ]; then
-  echo "Failed to create Paperclip company. Response: $COMPANY_RESP" >&2
+  echo "Failed to create Paperclip company after 5 attempts. Last response: $COMPANY_RESP" >&2
   exit 1
 fi
 
