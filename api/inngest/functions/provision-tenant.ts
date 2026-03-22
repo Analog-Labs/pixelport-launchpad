@@ -85,6 +85,8 @@ const OPENCLAW_RUNTIME_IMAGE = resolveOpenClawRuntimeImage(
   process.env.OPENCLAW_RUNTIME_IMAGE,
 );
 const RECOMMENDED_GOLDEN_IMAGE_SELECTOR = '221563919'; // R4: paperclip + postgres:17-alpine cached
+// Use the local tag that was cached when R4 snapshot was created.
+// The GHCR registry requires auth so we retag it locally during snapshot prep.
 const PAPERCLIP_IMAGE = process.env.PAPERCLIP_IMAGE || 'ghcr.io/sanchalr/paperclip:2026.3.11-handoff-p1';
 const COMPATIBILITY_DROPLET_IMAGE_SELECTOR = 'ubuntu-24-04-x64';
 const DEFAULT_PROVISIONING_DROPLET_SIZE = 's-4vcpu-8gb';
@@ -1167,7 +1169,7 @@ docker run -d --name paperclip-bootstrap \\
   -e NODE_ENV=production \\
   -e HOST=127.0.0.1 \\
   -e PORT=3100 \\
-  -e DEPLOYMENT_MODE=local_trusted \\
+  -e PAPERCLIP_DEPLOYMENT_MODE=local_trusted \\
   -e "DATABASE_URL=postgresql://paperclip:$PAPERCLIP_DB_PASS@127.0.0.1:5433/paperclip" \\
   -e "BETTER_AUTH_SECRET=$PAPERCLIP_BETTER_AUTH_SECRET" \\
   -e "PAPERCLIP_HANDOFF_SECRET=${params.paperclipHandoffSecret}" \\
@@ -1212,7 +1214,7 @@ if [ -z "$AGENT_ID" ]; then
   exit 1
 fi
 
-KEY_RESP=$(curl -sf -X POST "http://127.0.0.1:3100/api/companies/$COMPANY_ID/agents/$AGENT_ID/keys" \\
+KEY_RESP=$(curl -sf -X POST "http://127.0.0.1:3100/api/agents/$AGENT_ID/keys" \\
   -H 'Content-Type: application/json' \\
   -d '{"name": "chief-key"}' || echo '{}')
 API_TOKEN=$(echo "$KEY_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('token',''))" 2>/dev/null || echo '')
@@ -1244,7 +1246,7 @@ docker run -d --name paperclip \\
   -e NODE_ENV=production \\
   -e HOST=0.0.0.0 \\
   -e PORT=3100 \\
-  -e DEPLOYMENT_MODE=authenticated \\
+  -e PAPERCLIP_DEPLOYMENT_MODE=authenticated \\
   -e "DATABASE_URL=postgresql://paperclip:$PAPERCLIP_DB_PASS@paperclip-db:5432/paperclip" \\
   -e "BETTER_AUTH_SECRET=$PAPERCLIP_BETTER_AUTH_SECRET" \\
   -e "PAPERCLIP_HANDOFF_SECRET=${params.paperclipHandoffSecret}" \\
