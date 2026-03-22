@@ -14,16 +14,12 @@ The Founder makes all product, architecture, and UX decisions — escalate to th
 ## Key References
 | What | Where |
 |------|-------|
-| Architecture decisions (2026-03-19) | `docs/decision-brief-2026-03-19.md` |
-| Transition plan | `docs/transition-plan-2026-03-19.md` |
-| Pivot plan (2026-03-16) | `docs/pixelport-pivot-plan-2026-03-16.md` |
 | Session log | `docs/SESSION-LOG.md` |
 | Active plan | `docs/ACTIVE-PLAN.md` |
 | Project history | `docs/pixelport-project-status.md` |
 | Design system | `DESIGN.md` |
 | V1 Full Wedge design | `docs/designs/v1-full-wedge.md` |
 
-Read the Decision Brief and Transition Plan first when starting a new task.
 Read SESSION-LOG.md only if you need historical context for a specific question.
 
 ## Dev Commands
@@ -59,3 +55,7 @@ In QA mode, flag any code that doesn't match DESIGN.md.
 Use /browse from gstack for all web browsing. Never use mcp__claude-in-chrome__* tools.
 Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /review, /ship, /browse, /qa, /qa-only, /design-review, /setup-browser-cookies, /retro, /investigate, /document-release, /codex, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade.
 If skills aren't working: `cd .claude/skills/gstack && ./setup`
+
+Project artifacts (design docs, CEO plans, test plans, review logs) are stored in:
+`~/.gstack/projects/Analog-Labs-pixelport-launchpad/`
+Always read this folder for upstream context before starting implementation work.
