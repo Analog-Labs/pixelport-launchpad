@@ -8,7 +8,7 @@ import StepProvisioning from "@/components/onboarding/StepProvisioning";
 import StepTaskSetup, { type AgentSuggestionInput } from "@/components/onboarding/StepTaskSetup";
 import StepConnectTools from "@/components/onboarding/StepConnectTools";
 import { getPostAuthRedirectPath } from "@/lib/dashboard-redirect";
-import { isTaskStepUnlocked, type TenantStatusResponse } from "@/lib/runtime-bridge-contract";
+import { resolveTaskStepUnlocked, type TenantStatusResponse } from "@/lib/runtime-bridge-contract";
 
 interface OnboardingFormData {
   company_name: string;
@@ -41,8 +41,13 @@ function readString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function isProvisionReady(status: string | null | undefined): boolean {
-  return isTaskStepUnlocked(status);
+function readBootstrapStatus(onboardingData: Record<string, unknown> | null | undefined): string | null {
+  if (!isRecord(onboardingData) || !isRecord(onboardingData.bootstrap)) {
+    return null;
+  }
+
+  const status = readString(onboardingData.bootstrap.status).trim();
+  return status || null;
 }
 
 function isLaunchCompleted(onboardingData: Record<string, unknown> | null | undefined): boolean {
@@ -213,6 +218,7 @@ const Onboarding = () => {
 
   const [provisionStatus, setProvisionStatus] = useState<string | null>(null);
   const [bootstrapStatus, setBootstrapStatus] = useState<string | null>(null);
+  const [taskStepUnlocked, setTaskStepUnlocked] = useState(false);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const [provisionPolling, setProvisionPolling] = useState(false);
   const [provisionError, setProvisionError] = useState("");
@@ -226,7 +232,13 @@ const Onboarding = () => {
   const redirectPath = getPostAuthRedirectPath(location.state);
 
   const effectiveProvisionStatus = provisionStatus ?? tenant?.status ?? null;
-  const provisioningReady = isProvisionReady(effectiveProvisionStatus);
+  const tenantOnboardingData = isRecord(tenant?.onboarding_data) ? tenant.onboarding_data : null;
+  const effectiveBootstrapStatus = bootstrapStatus ?? readBootstrapStatus(tenantOnboardingData);
+  const provisioningReady = resolveTaskStepUnlocked({
+    status: effectiveProvisionStatus,
+    bootstrapStatus: effectiveBootstrapStatus,
+    taskStepUnlocked,
+  });
 
   const changeStep = useCallback((next: number) => {
     setFadeIn(false);
@@ -288,9 +300,15 @@ const Onboarding = () => {
       }
 
       const nextStatus = typeof payload.status === "string" ? payload.status : tenant.status;
-      const nextTaskStepUnlocked = payload.task_step_unlocked ?? isProvisionReady(nextStatus);
+      const nextBootstrapStatus = typeof payload.bootstrap_status === "string" ? payload.bootstrap_status : null;
+      const nextTaskStepUnlocked = resolveTaskStepUnlocked({
+        status: nextStatus,
+        bootstrapStatus: nextBootstrapStatus,
+        taskStepUnlocked: payload.task_step_unlocked,
+      });
       setProvisionStatus(nextStatus);
-      setBootstrapStatus(typeof payload.bootstrap_status === "string" ? payload.bootstrap_status : null);
+      setBootstrapStatus(nextBootstrapStatus);
+      setTaskStepUnlocked(nextTaskStepUnlocked);
       setLastCheckedAt(new Date().toISOString());
 
       if (nextTaskStepUnlocked) {
@@ -361,6 +379,7 @@ const Onboarding = () => {
 
       setProvisionStatus(payload.tenant?.status || "provisioning");
       setBootstrapStatus(null);
+      setTaskStepUnlocked(false);
       setLastCheckedAt(new Date().toISOString());
 
       await refreshTenant();
@@ -496,15 +515,21 @@ const Onboarding = () => {
     }
 
     setProvisionStatus(tenant.status);
+    const onboardingData = isRecord(tenant.onboarding_data) ? tenant.onboarding_data : {};
+    const bootstrapFromTenant = readBootstrapStatus(onboardingData);
+    const nextTaskStepUnlocked = resolveTaskStepUnlocked({
+      status: tenant.status,
+      bootstrapStatus: bootstrapFromTenant,
+    });
+    setBootstrapStatus(bootstrapFromTenant);
+    setTaskStepUnlocked(nextTaskStepUnlocked);
 
     if (hydratedTenantIdRef.current === tenant.id) {
       return;
     }
 
-    const onboardingData = isRecord(tenant.onboarding_data) ? tenant.onboarding_data : {};
     setData(buildFormStateFromTenant(tenant.name, onboardingData));
-
-    setStep(isProvisionReady(tenant.status) ? 3 : 2);
+    setStep(nextTaskStepUnlocked ? 3 : 2);
     hydratedTenantIdRef.current = tenant.id;
   }, [tenant]);
 
@@ -518,7 +543,11 @@ const Onboarding = () => {
   if (!user) return <Navigate to="/login" replace />;
 
   const onboardingData = isRecord(tenant?.onboarding_data) ? tenant.onboarding_data : null;
-  if (tenant && isProvisionReady(tenant.status) && isLaunchCompleted(onboardingData)) {
+  const tenantProvisionReady = resolveTaskStepUnlocked({
+    status: tenant?.status,
+    bootstrapStatus: readBootstrapStatus(onboardingData),
+  });
+  if (tenant && tenantProvisionReady && isLaunchCompleted(onboardingData)) {
     return <Navigate to={redirectPath} replace />;
   }
 

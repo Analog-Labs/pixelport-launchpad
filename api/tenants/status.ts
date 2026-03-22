@@ -20,12 +20,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     });
     const tenantStatus = typeof tenant.status === 'string' ? tenant.status : null;
     const bootstrapStatus = bootstrap.effectiveState.status ?? null;
+    const taskStepUnlocked =
+      isTaskStepUnlocked(tenantStatus) ||
+      (typeof bootstrapStatus === 'string' && bootstrapStatus.trim().toLowerCase() === 'completed');
 
     const payload: TenantStatusBridgePayload = {
       contract_version: THIN_BRIDGE_CONTRACT_VERSION,
       status: tenantStatus,
       bootstrap_status: bootstrapStatus,
-      task_step_unlocked: isTaskStepUnlocked(tenantStatus),
+      task_step_unlocked: taskStepUnlocked,
       has_agent_output: bootstrap.progress.hasAgentOutput,
       has_droplet: !!tenant.droplet_id,
       has_gateway: !!tenant.gateway_token,
