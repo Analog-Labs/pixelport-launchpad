@@ -644,7 +644,6 @@ export const provisionTenant = inngest.createFunction(
       const isReady = await step.run(`check-paperclip-${i}`, async () => {
         try {
           const response = await fetch(`${paperclipUrl}/api/health`, {
-            headers: { Authorization: `Bearer ${droplet.paperclipApiKey}` },
             signal: AbortSignal.timeout(5_000),
           });
 
@@ -1256,6 +1255,7 @@ docker run -d --name paperclip \\
   -e HOST=0.0.0.0 \\
   -e PORT=3100 \\
   -e PAPERCLIP_DEPLOYMENT_MODE=authenticated \\
+  -e "BETTER_AUTH_URL=http://$(curl -s http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address):3100" \\
   -e "DATABASE_URL=postgresql://paperclip:$PAPERCLIP_DB_PASS@paperclip-db:5432/paperclip" \\
   -e "BETTER_AUTH_SECRET=$PAPERCLIP_BETTER_AUTH_SECRET" \\
   -e "PAPERCLIP_HANDOFF_SECRET=${params.paperclipHandoffSecret}" \\
