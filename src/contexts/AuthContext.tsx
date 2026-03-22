@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import {
@@ -44,6 +45,7 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [tenant, setTenant] = useState<TenantProfile | null>(null);
@@ -61,6 +63,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setTenant(null);
       setTenantLoading(false);
       clearPixelportSessionState();
+      // Clear TanStack Query cache on sign-out to prevent cross-account data leaks
+      // when a different user logs in on the same tab.
+      queryClient.clear();
       return;
     }
 
