@@ -7,6 +7,69 @@
 
 ## Last Session
 
+- **Date:** 2026-03-22 (session 121)
+- **Who worked:** Founder + Claude Code
+- **What was done:**
+  - Consolidated project tooling: set up gstack globally for Claude Code and Codex (symlinks in `~/.claude/skills/` and `~/.codex/skills/`), and per-project in pixelport-launchpad (`.claude/skills/` and `.agents/skills/`).
+  - Fixed gstack slug drift: moved misplaced T2 test plan from `~/.gstack/projects/albany/` to correct path under `Analog-Labs-pixelport-launchpad/`. Cleaned orphan `ceo-plans/` directory at top level.
+  - Updated `CLAUDE.md` and `AGENTS.md` with gstack artifacts path (`~/.gstack/projects/Analog-Labs-pixelport-launchpad/`), cleaned stale references to old decision brief and transition plan, updated key references table.
+  - Pushed docs update to main: commit `db36a0a`.
+  - Reviewed Conductor workspace state: 5 workspaces (chennai, vienna, albany, hamburg, hangzhou). Chennai = T3 implementation attempt (PR #31 open, 75K+ lines changed, includes generated test fixtures — not production-ready).
+  - Mapped full gstack skill chain and artifact locations for future sessions.
+  - Updated `docs/ACTIVE-PLAN.md` from stale P6 to current V1 Full Wedge program (T1–T6).
+  - Updated `docs/SESSION-LOG.md` to bridge the gap from session 116 to current.
+- **What's next:**
+  - Start T3 implementation fresh in Codex, using `docs/designs/t3-dashboard-core.md` as spec.
+  - Archive Conductor `chennai` workspace.
+- **Blockers:** None.
+
+- **Date:** 2026-03-21 (session 120)
+- **Who worked:** Founder + Conductor (chennai workspace)
+- **What was done:**
+  - T3 dashboard implementation attempted in Conductor workspace `chennai` (branch `sanchalr/t3-dashboard-core-views`).
+  - Built all 5 dashboard views (Home, Agent Status, Task Board, Run History, Approval Queue) + sidebar badges.
+  - Multiple review and fix rounds (review fixes, adversarial review fixes).
+  - Deployed to production on Vercel, synced with Inngest.
+  - 4 production fixes applied: rm stale paperclip-db, company creation retry, BETTER_AUTH_URL, bad auth header removal.
+  - PR #31 opened but outcome not satisfactory — 75K+ lines, includes generated test data, needs redo.
+- **What's next:**
+  - Redo T3 implementation cleanly in Codex.
+- **Blockers:** PR #31 not merge-ready.
+
+- **Date:** 2026-03-21 (session 119)
+- **Who worked:** Founder + Conductor (multiple workspaces)
+- **What was done:**
+  - Ran `/plan-ceo-review` for T3 (branch `sanchalr/t3-ceo-review`, EXPANSION mode).
+  - Generated T3 CEO plan: `~/.gstack/projects/Analog-Labs-pixelport-launchpad/ceo-plans/2026-03-21-t3-dashboard-core.md`.
+  - Promoted T3 plan to `docs/designs/t3-dashboard-core.md` and merged via PR #30 (`b285590`).
+  - Ran `/plan-eng-review` for T3, generated test plan in `~/.gstack/projects/`.
+- **What's next:**
+  - Implement T3 core views.
+- **Blockers:** None.
+
+- **Date:** 2026-03-21 (session 118)
+- **Who worked:** Founder + Conductor
+- **What was done:**
+  - T2 proxy layer implemented (branch `sanchalr/t2-eng-review`). Built tenant proxy at `api/tenant-proxy/[...path].ts` with allowlist.
+  - Ran `/plan-eng-review` for T2, generated test plan.
+  - Merged PR #29 (`15cc13d`).
+- **What's next:**
+  - Plan and implement T3 dashboard core views.
+- **Blockers:** None.
+
+- **Date:** 2026-03-20–21 (session 117)
+- **Who worked:** Founder + Conductor + Claude Code
+- **What was done:**
+  - Ran `/office-hours` to brainstorm V1 Full Wedge design (branch `sanchalr/office-hours-pixelport`).
+  - Generated design doc in `~/.gstack/projects/`.
+  - Ran `/plan-ceo-review` for V1 Full Wedge, generated CEO plan: `~/.gstack/projects/Analog-Labs-pixelport-launchpad/ceo-plans/2026-03-20-v1-full-wedge.md`.
+  - Ran `/design-consultation`, created `DESIGN.md` (design system).
+  - T1 Paperclip API audit completed (branch `sanchalr/dashboard-api-audit`), documented in `docs/paperclip-api-contract.md`.
+  - Merged PR #27 (V1 Full Wedge design + design system, `a1616eb`) and PR #28 (T1 audit, `d6a6a4e`).
+- **What's next:**
+  - Build T2 proxy layer.
+- **Blockers:** None.
+
 - **Date:** 2026-03-19 (session 116)
 - **Who worked:** Founder + Codex
 - **What was done:**
