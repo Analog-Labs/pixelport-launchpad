@@ -1253,12 +1253,13 @@ if [ -z "$API_TOKEN" ]; then
 fi
 
 # Persist the generated Paperclip refs before switching to authenticated mode.
+SUPABASE_PAYLOAD="$(printf '{"paperclip_company_id":"%s","paperclip_api_key":"%s"}' "$COMPANY_ID" "$API_TOKEN")"
 curl -sf -X PATCH "${params.supabaseUrl}/rest/v1/tenants?id=eq.${params.tenantId}" \\
   -H "apikey: ${params.supabaseServiceRoleKey}" \\
   -H "Authorization: Bearer ${params.supabaseServiceRoleKey}" \\
   -H 'Content-Type: application/json' \\
   -H 'Prefer: return=minimal' \\
-  -d "{\"paperclip_company_id\":\"$COMPANY_ID\",\"paperclip_api_key\":\"$API_TOKEN\"}" >/dev/null || {
+  -d "$SUPABASE_PAYLOAD" >/dev/null || {
   echo "Failed to persist Paperclip refs in Supabase" >&2
   exit 1
 }
