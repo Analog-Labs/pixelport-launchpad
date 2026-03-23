@@ -194,7 +194,7 @@ function TaskDetailPanel({
               </p>
               {commentsQuery.isLoading ? (
                 <div className="h-12 bg-amber-500/5 rounded animate-pulse" />
-              ) : commentsQuery.data?.comments.length ? (
+              ) : commentsQuery.data?.comments?.length ? (
                 <div className="space-y-3">
                   {commentsQuery.data.comments.map((c) => (
                     <div key={c.id} className="text-sm">

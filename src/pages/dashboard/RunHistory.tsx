@@ -28,7 +28,7 @@ function RunDetail({ runId }: { runId: string }) {
       {detailQuery.data?.name && (
         <p className="text-sm font-satoshi text-foreground">{detailQuery.data.name}</p>
       )}
-      {eventsQuery.data?.events.length ? (
+      {eventsQuery.data?.events?.length ? (
         <div className="space-y-1.5">
           <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600">Events</p>
           {eventsQuery.data.events.map((evt) => (
