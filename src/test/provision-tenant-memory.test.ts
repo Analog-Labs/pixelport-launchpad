@@ -492,7 +492,9 @@ describe("provision tenant memory config", () => {
     expect(script).toContain(
       '"scopes":["operator.read","operator.write","operator.admin","operator.approvals","operator.pairing"]',
     );
-    expect(script).toContain('"disableDeviceAuth":true');
+    expect(script).toContain('"disableDeviceAuth":false');
+    expect(script).toContain('"deviceId":"');
+    expect(script).toContain('"devicePrivateKeyPem":"-----BEGIN PRIVATE KEY-----\\n');
     expect(script).toContain("--add-host host.docker.internal:host-gateway");
     expect(script).toContain("PAPERCLIP_DEPLOYMENT_MODE=authenticated");
     expect(script).toContain("sed -i.bak \"s/^PAPERCLIP_API_KEY=.*/PAPERCLIP_API_KEY=$API_TOKEN/\" /opt/openclaw/.env || true");
