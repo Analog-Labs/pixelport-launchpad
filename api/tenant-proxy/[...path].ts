@@ -1,6 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
-import { proxyToPaperclip, ProxyTimeoutError } from '../lib/gateway';
+import {
+  proxyToPaperclip,
+  proxyToPaperclipAsBoard,
+  ProxyTimeoutError,
+} from '../lib/gateway';
 import { matchProxyRoute } from '../lib/paperclip-proxy-allowlist';
 
 function resolveProxyPath(req: VercelRequest): string {
@@ -33,6 +37,15 @@ function resolveForwardedQueryString(req: VercelRequest): string {
   return query ? `?${query}` : '';
 }
 
+function isBoardOnlyApprovalMutation(method: string, proxyPath: string): boolean {
+  if (method.toUpperCase() !== 'POST') {
+    return false;
+  }
+
+  const normalizedPath = proxyPath.replace(/^\/+|\/+$/g, '');
+  return /^approvals\/[^/]+\/(approve|reject|request-revision)$/.test(normalizedPath);
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
@@ -46,7 +59,7 @@ export default async function handler(
     }
 
     // 2. Authenticate dashboard user
-    const { tenant } = await authenticateRequest(req);
+    const { tenant, userId } = await authenticateRequest(req);
 
     // 3. Validate tenant has Paperclip infrastructure
     if (!tenant.droplet_ip) {
@@ -72,10 +85,25 @@ export default async function handler(
     const targetPath = match.targetPath + queryString;
 
     // 6. Forward to Paperclip
-    const response = await proxyToPaperclip(tenant, targetPath, {
+    const requestOptions = {
       method,
       body: ['POST', 'PATCH', 'PUT'].includes(method) ? req.body : undefined,
-    });
+    };
+    let response: Response;
+
+    if (isBoardOnlyApprovalMutation(method, proxyPath)) {
+      try {
+        response = await proxyToPaperclipAsBoard(tenant, userId, targetPath, requestOptions);
+      } catch (error) {
+        console.error(
+          '[tenant-proxy] Board handoff failed, falling back to agent key proxy:',
+          error,
+        );
+        response = await proxyToPaperclip(tenant, targetPath, requestOptions);
+      }
+    } else {
+      response = await proxyToPaperclip(tenant, targetPath, requestOptions);
+    }
 
     // 7. Return Paperclip response to browser
     const body = await response.text();

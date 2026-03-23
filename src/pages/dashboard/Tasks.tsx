@@ -12,7 +12,13 @@ import {
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { X } from 'lucide-react';
-import { usePaperclipTasks, usePaperclipTaskDetail, usePaperclipTaskComments, useUpdateTaskStatus } from '@/hooks/usePaperclipTasks';
+import {
+  usePaperclipTasks,
+  usePaperclipTaskDetail,
+  usePaperclipTaskComments,
+  useUpdateTaskStatus,
+  useCreateTaskComment,
+} from '@/hooks/usePaperclipTasks';
 import { ProxyQueryWrapper } from '@/components/dashboard/ProxyQueryWrapper';
 import { KanbanSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { Button } from '@/components/ui/button';
@@ -135,6 +141,8 @@ function TaskDetailPanel({
 }) {
   const detailQuery = usePaperclipTaskDetail(issueId);
   const commentsQuery = usePaperclipTaskComments(issueId);
+  const createComment = useCreateTaskComment(issueId);
+  const [commentBody, setCommentBody] = useState('');
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -145,6 +153,24 @@ function TaskDetailPanel({
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [onClose]);
+
+  const handleCommentSubmit = () => {
+    const body = commentBody.trim();
+    if (!body) return;
+
+    createComment.mutate(
+      { body },
+      {
+        onSuccess: () => {
+          setCommentBody('');
+          toast.success('Comment added');
+        },
+        onError: () => {
+          toast.error('Failed to add comment');
+        },
+      },
+    );
+  };
 
   return (
     <div
@@ -211,6 +237,30 @@ function TaskDetailPanel({
               ) : (
                 <p className="text-xs text-zinc-600">No comments yet.</p>
               )}
+
+              <div className="mt-3 space-y-2">
+                <textarea
+                  value={commentBody}
+                  onChange={(event) => setCommentBody(event.target.value)}
+                  placeholder="Add a comment"
+                  rows={3}
+                  className={cn(
+                    'w-full rounded-lg border border-border bg-zinc-900/50 px-3 py-2',
+                    'text-sm text-foreground resize-none focus-visible:outline-none',
+                    'focus-visible:ring-2 focus-visible:ring-amber-400/40',
+                  )}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={handleCommentSubmit}
+                    disabled={createComment.isPending || commentBody.trim().length === 0}
+                    className="min-h-[40px] sm:min-h-0"
+                  >
+                    {createComment.isPending ? 'Posting...' : 'Post comment'}
+                  </Button>
+                </div>
+              </div>
             </div>
           </>
         ) : null}

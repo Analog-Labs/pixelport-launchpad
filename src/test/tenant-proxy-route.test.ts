@@ -24,9 +24,11 @@ vi.mock('../../api/lib/auth', () => ({
 
 // Mock gateway module
 const proxyToPaperclip = vi.fn();
+const proxyToPaperclipAsBoard = vi.fn();
 
 vi.mock('../../api/lib/gateway', () => ({
   proxyToPaperclip,
+  proxyToPaperclipAsBoard,
   ProxyTimeoutError: class ProxyTimeoutError extends Error {
     constructor(target: string) {
       super(`Proxy timeout to ${target}`);
@@ -249,6 +251,37 @@ describe('GET/POST /api/tenant-proxy/[...path]', () => {
       '/api/issues/i-1/comments',
       { method: 'POST', body: reqBody },
     );
+  });
+
+  it('uses board session proxy for approval decision mutations', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/approvals/ap-1/approve' });
+    proxyToPaperclipAsBoard.mockResolvedValue(
+      mockFetchResponse(200, '{"status":"approved"}'),
+    );
+
+    const req = {
+      method: 'POST',
+      query: { path: ['approvals', 'ap-1', 'approve'] },
+      url: '/api/tenant-proxy/approvals/ap-1/approve',
+      body: {},
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(proxyToPaperclipAsBoard).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-1',
+      '/api/approvals/ap-1/approve',
+      { method: 'POST', body: {} },
+    );
+    expect(proxyToPaperclip).not.toHaveBeenCalled();
   });
 
   it('preserves query string in forwarded request', async () => {

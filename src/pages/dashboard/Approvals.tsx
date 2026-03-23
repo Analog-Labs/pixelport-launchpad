@@ -15,6 +15,14 @@ import type { PaperclipApproval } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 
+function formatTokenLabel(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 // ── Approval card ──────────────────────────────────────────────────────────────
 
 function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
@@ -95,7 +103,8 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
   const isLoading =
     approveMutation.isPending || rejectMutation.isPending || editMutation.isPending;
 
-  const safeHtml = sanitizeContent(approval.content);
+  const approvalBody = approval.content.trim();
+  const safeHtml = sanitizeContent(approvalBody);
 
   return (
     <div
@@ -109,12 +118,18 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
       {/* Header: type badge + timestamp */}
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex items-center rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-mono text-amber-400">
-          {approval.type}
+          {formatTokenLabel(approval.type)}
         </span>
         <span className="font-mono text-[11px] text-muted-foreground">
           {(() => { const d = parseISO(approval.createdAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
         </span>
       </div>
+
+      {approval.title && (
+        <h2 className="font-satoshi font-bold text-base text-foreground">
+          {approval.title}
+        </h2>
+      )}
 
       {/* Content body — editable or display */}
       {editing ? (
@@ -131,14 +146,28 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
           rows={6}
         />
       ) : (
-        <div
-          className={cn(
-            'text-sm font-satoshi font-medium text-foreground leading-relaxed',
-            !expanded && 'line-clamp-4',
+        <>
+          {approvalBody ? (
+            <div
+              className={cn(
+                'text-sm font-satoshi font-medium text-foreground leading-relaxed cursor-pointer',
+                !expanded && 'line-clamp-4',
+              )}
+              dangerouslySetInnerHTML={{ __html: safeHtml }}
+              onClick={() => setExpanded((v) => !v)}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No preview text available yet for this approval.
+            </p>
           )}
-          dangerouslySetInnerHTML={{ __html: safeHtml }}
-          onClick={() => setExpanded((v) => !v)}
-        />
+          {approval.requestedAction && (
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Requested action:</span>{' '}
+              {approval.requestedAction}
+            </p>
+          )}
+        </>
       )}
 
       {/* Media placeholder — stays visible during edit per Full Wedge spec */}
@@ -150,6 +179,7 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
       <div className="font-mono text-[11px] text-muted-foreground flex gap-3">
         {approval.platform && <span>Platform: {approval.platform}</span>}
         {approval.createdBy && <span>By: {approval.createdBy}</span>}
+        {approval.seedTag && <span>Seed: {approval.seedTag}</span>}
       </div>
 
       {/* Action buttons */}

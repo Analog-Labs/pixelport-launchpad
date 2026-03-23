@@ -57,7 +57,7 @@ describe('Approval inline edit — 3-call flow (ED-1)', () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByText('social_post');
+    await screen.findByText('Social Post');
 
     // Click Edit
     fireEvent.click(screen.getByRole('button', { name: /edit/i }));
@@ -106,7 +106,7 @@ describe('Approval inline edit — 3-call flow (ED-1)', () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByText('social_post');
+    await screen.findByText('Social Post');
     fireEvent.click(screen.getByRole('button', { name: /edit/i }));
 
     const textarea = await screen.findByRole('textbox');

@@ -31,6 +31,19 @@ const pendingApproval = {
   payload: { content: 'Check out our new feature' },
 };
 
+const payloadOnlyApproval = {
+  id: 'ap-2',
+  type: 'approve_ceo_strategy',
+  content: '',
+  createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+  status: 'pending',
+  payload: {
+    title: 'Week 1 Strategy Checkpoint',
+    summary: 'Initial strategy draft for Duolingo Growth Lab',
+    requestedAction: 'Approve or request revisions before campaign execution.',
+  },
+};
+
 describe('Approvals page — approve mutation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,7 +70,7 @@ describe('Approvals page — approve mutation', () => {
     );
 
     // Wait for approval to appear
-    await screen.findByText('social_post');
+    await screen.findByText('Social Post');
 
     // Click Approve button
     const approveBtn = screen.getByRole('button', { name: /approve/i });
@@ -106,7 +119,7 @@ describe('Approvals page — approve mutation', () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByText('social_post');
+    await screen.findByText('Social Post');
 
     const rejectBtn = screen.getByRole('button', { name: /reject/i });
     fireEvent.click(rejectBtn);
@@ -118,5 +131,32 @@ describe('Approvals page — approve mutation', () => {
       expect(rejectCalls.length).toBeGreaterThanOrEqual(1);
       expect(rejectCalls[0][1]?.method).toBe('POST');
     });
+  });
+
+  it('renders payload summary when approval content is empty', async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (String(url).includes('companies/approvals')) {
+        return Promise.resolve(makeResponse({ approvals: [payloadOnlyApproval] }));
+      }
+      throw new Error(`Unhandled: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <Approvals />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText('Week 1 Strategy Checkpoint');
+    expect(
+      screen.getByText(/Initial strategy draft for Duolingo Growth Lab/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/Approve or request revisions before campaign execution/i)
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText(/Requested action:/i)).toBeInTheDocument();
   });
 });

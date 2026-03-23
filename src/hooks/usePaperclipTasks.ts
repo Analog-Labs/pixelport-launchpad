@@ -9,6 +9,7 @@ import {
 import type { IssueComment, IssueStatus, IssuesResponse, PaperclipIssue } from '@/lib/paperclip-types';
 
 const QUERY_KEY = ['paperclip', 'issues'] as const;
+const issueCommentsQueryKey = (issueId: string) => ['paperclip', 'issue-comments', issueId] as const;
 
 export function usePaperclipTasks() {
   const { session } = useAuth();
@@ -46,13 +47,60 @@ export function usePaperclipTaskComments(issueId: string) {
   const token = session?.access_token ?? '';
 
   return useQuery<{ comments: IssueComment[] }>({
-    queryKey: ['paperclip', 'issue-comments', issueId],
+    queryKey: issueCommentsQueryKey(issueId),
     queryFn: async () =>
       normalizeCommentsResponse(
         await paperclipFetch<unknown>(`issues/${issueId}/comments`, {}, token),
       ),
     enabled: !!token && !!issueId,
     refetchOnWindowFocus: false,
+  });
+}
+
+export function useCreateTaskComment(issueId: string) {
+  const { session } = useAuth();
+  const token = session?.access_token ?? '';
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ body }: { body: string }) => {
+      const response = await paperclipFetch<unknown>(
+        `issues/${issueId}/comments`,
+        { method: 'POST', body: JSON.stringify({ body }) },
+        token,
+      );
+      return normalizeCommentsResponse([response]).comments[0]
+        ?? {
+          id: `comment-${Date.now()}`,
+          body,
+          author: 'You',
+          createdAt: new Date().toISOString(),
+        };
+    },
+    onMutate: async ({ body }) => {
+      const queryKey = issueCommentsQueryKey(issueId);
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<{ comments: IssueComment[] }>(queryKey);
+      const optimisticComment: IssueComment = {
+        id: `optimistic-${Date.now()}`,
+        body,
+        author: 'You',
+        createdAt: new Date().toISOString(),
+      };
+      queryClient.setQueryData<{ comments: IssueComment[] }>(queryKey, (old) => ({
+        comments: [...(old?.comments ?? []), optimisticComment],
+      }));
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(issueCommentsQueryKey(issueId), context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: issueCommentsQueryKey(issueId) });
+      queryClient.invalidateQueries({ queryKey: ['paperclip', 'issue', issueId] });
+    },
   });
 }
 

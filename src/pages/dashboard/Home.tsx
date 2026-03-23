@@ -8,8 +8,21 @@ import { ProxyQueryWrapper } from '@/components/dashboard/ProxyQueryWrapper';
 import { AgentCardSkeleton, HomeSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { Button } from '@/components/ui/button';
 import { formatCostCents } from '@/lib/costColoring';
+import { launchChiefWorkspace } from '@/lib/runtime-launch';
 import type { PaperclipAgent } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { useState } from 'react';
+
+function resolveAgentDisplayName(agent: PaperclipAgent, preferredChiefName?: string): string {
+  const preferred = preferredChiefName?.trim();
+  if (!preferred) return agent.name;
+  const canonical = agent.name.trim().toLowerCase();
+  if (canonical === 'chief' || canonical === 'chief of staff') {
+    return preferred;
+  }
+  return agent.name;
+}
 
 function AgentPulseDot({ status }: { status: PaperclipAgent['status'] }) {
   const color =
@@ -35,7 +48,17 @@ function AgentPulseDot({ status }: { status: PaperclipAgent['status'] }) {
   );
 }
 
-function AgentSummaryCard({ agent }: { agent: PaperclipAgent }) {
+function AgentSummaryCard({
+  agent,
+  displayName,
+  onOpenChief,
+  opening,
+}: {
+  agent: PaperclipAgent;
+  displayName: string;
+  onOpenChief: () => void;
+  opening: boolean;
+}) {
   const budgetPct =
     agent.budgetLimitCents && agent.budgetLimitCents > 0
       ? Math.min(100, ((agent.budgetUsedCents ?? 0) / agent.budgetLimitCents) * 100)
@@ -49,7 +72,15 @@ function AgentSummaryCard({ agent }: { agent: PaperclipAgent }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <AgentPulseDot status={agent.status} />
-          <span className="font-satoshi font-bold text-base text-foreground">{agent.name}</span>
+          <button
+            type="button"
+            onClick={onOpenChief}
+            disabled={opening}
+            className="font-satoshi font-bold text-base text-foreground hover:text-amber-300 transition-colors disabled:opacity-60"
+            title="Open Chief workspace"
+          >
+            {displayName}
+          </button>
         </div>
         <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
           {agent.status}
@@ -77,12 +108,34 @@ function AgentSummaryCard({ agent }: { agent: PaperclipAgent }) {
 }
 
 export default function Home() {
-  const { tenant } = useAuth();
+  const { tenant, session } = useAuth();
+  const [openingAgentId, setOpeningAgentId] = useState<string | null>(null);
   const badgesQuery = useSidebarBadges();
   const agentsQuery = usePaperclipAgents();
   const dashboardQuery = usePaperclipDashboard();
 
   const companyName = String(tenant?.onboarding_data?.company_name || tenant?.name || 'your company');
+  const preferredChiefName =
+    typeof tenant?.onboarding_data?.agent_name === 'string'
+      ? tenant.onboarding_data.agent_name
+      : undefined;
+  const accessToken = session?.access_token ?? '';
+
+  const handleOpenChief = async (agentId: string) => {
+    if (!accessToken) {
+      toast.error('Session expired. Please sign in again.');
+      return;
+    }
+
+    try {
+      setOpeningAgentId(agentId);
+      await launchChiefWorkspace(accessToken, 'dashboard_home_agent_card');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to open Chief workspace');
+    } finally {
+      setOpeningAgentId(null);
+    }
+  };
 
   // Show full skeleton while either query is loading on first load
   if (badgesQuery.isLoading || agentsQuery.isLoading || dashboardQuery.isLoading) {
@@ -175,7 +228,13 @@ export default function Home() {
             return (
               <div className="grid sm:grid-cols-2 gap-4">
                 {data.agents.map((agent) => (
-                  <AgentSummaryCard key={agent.id} agent={agent} />
+                  <AgentSummaryCard
+                    key={agent.id}
+                    agent={agent}
+                    displayName={resolveAgentDisplayName(agent, preferredChiefName)}
+                    onOpenChief={() => handleOpenChief(agent.id)}
+                    opening={openingAgentId === agent.id}
+                  />
                 ))}
               </div>
             );

@@ -1,12 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { usePaperclipAgents, usePaperclipAgentRuns, usePaperclipLiveRuns } from '@/hooks/usePaperclipAgents';
 import { ProxyQueryWrapper } from '@/components/dashboard/ProxyQueryWrapper';
 import { AgentCardSkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { formatCostCents, formatDurationMs } from '@/lib/costColoring';
+import { useAuth } from '@/contexts/AuthContext';
+import { launchChiefWorkspace } from '@/lib/runtime-launch';
 import type { HeartbeatRun, PaperclipAgent } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
+import { toast } from 'sonner';
 
 function AgentPulseDot({ status }: { status: PaperclipAgent['status'] }) {
   const color =
@@ -28,6 +31,16 @@ function AgentPulseDot({ status }: { status: PaperclipAgent['status'] }) {
       <span className={cn('relative inline-flex h-2.5 w-2.5 rounded-full', color)} />
     </span>
   );
+}
+
+function resolveAgentDisplayName(agent: PaperclipAgent, preferredChiefName?: string): string {
+  const preferred = preferredChiefName?.trim();
+  if (!preferred) return agent.name;
+  const canonical = agent.name.trim().toLowerCase();
+  if (canonical === 'chief' || canonical === 'chief of staff') {
+    return preferred;
+  }
+  return agent.name;
 }
 
 function RunTimelineEntry({ run }: { run: HeartbeatRun }) {
@@ -81,7 +94,17 @@ function AgentActivityTimeline({ agentId }: { agentId: string }) {
   );
 }
 
-function AgentCard({ agent }: { agent: PaperclipAgent }) {
+function AgentCard({
+  agent,
+  displayName,
+  onOpenChief,
+  opening,
+}: {
+  agent: PaperclipAgent;
+  displayName: string;
+  onOpenChief: () => void;
+  opening: boolean;
+}) {
   const budgetPct =
     agent.budgetLimitCents && agent.budgetLimitCents > 0
       ? Math.min(100, ((agent.budgetUsedCents ?? 0) / agent.budgetLimitCents) * 100)
@@ -105,7 +128,15 @@ function AgentCard({ agent }: { agent: PaperclipAgent }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <AgentPulseDot status={agent.status} />
-          <span className="font-satoshi font-bold text-base text-foreground">{agent.name}</span>
+          <button
+            type="button"
+            onClick={onOpenChief}
+            disabled={opening}
+            className="font-satoshi font-bold text-base text-foreground hover:text-amber-300 transition-colors disabled:opacity-60"
+            title="Open Chief workspace"
+          >
+            {displayName}
+          </button>
         </div>
         <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
           {statusLabel}
@@ -149,8 +180,10 @@ function AgentCard({ agent }: { agent: PaperclipAgent }) {
 }
 
 export default function Agents() {
+  const { tenant, session } = useAuth();
   const agentsQuery = usePaperclipAgents();
   const liveRunsQuery = usePaperclipLiveRuns();
+  const [openingAgentId, setOpeningAgentId] = useState<string | null>(null);
 
   const activeRunByAgentId = useMemo(() => {
     const map = new Map<string, { description?: string }>();
@@ -159,6 +192,27 @@ export default function Agents() {
     }
     return map;
   }, [liveRunsQuery.data?.runs]);
+  const preferredChiefName =
+    typeof tenant?.onboarding_data?.agent_name === 'string'
+      ? tenant.onboarding_data.agent_name
+      : undefined;
+  const accessToken = session?.access_token ?? '';
+
+  const handleOpenChief = async (agentId: string) => {
+    if (!accessToken) {
+      toast.error('Session expired. Please sign in again.');
+      return;
+    }
+
+    try {
+      setOpeningAgentId(agentId);
+      await launchChiefWorkspace(accessToken, 'dashboard_agents_card');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to open Chief workspace');
+    } finally {
+      setOpeningAgentId(null);
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6">
@@ -189,7 +243,13 @@ export default function Agents() {
                 const status = liveRun ? 'running' : agent.status;
                 const currentTask = liveRun?.description || agent.currentTask;
                 return (
-                  <AgentCard key={agent.id} agent={{ ...agent, status, currentTask }} />
+                  <AgentCard
+                    key={agent.id}
+                    agent={{ ...agent, status, currentTask }}
+                    displayName={resolveAgentDisplayName(agent, preferredChiefName)}
+                    onOpenChief={() => handleOpenChief(agent.id)}
+                    opening={openingAgentId === agent.id}
+                  />
                 );
               })}
             </div>

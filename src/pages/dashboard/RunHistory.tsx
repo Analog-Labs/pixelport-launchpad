@@ -8,6 +8,14 @@ import type { HeartbeatRun } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 
+function formatTokenLabel(raw: string): string {
+  return raw
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 // ── Run detail panel ───────────────────────────────────────────────────────────
 
 function RunDetail({ runId }: { runId: string }) {
@@ -36,13 +44,20 @@ function RunDetail({ runId }: { runId: string }) {
               <span className="text-zinc-600">
                 {(() => { const d = parseISO(evt.createdAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
               </span>
-              <span className="capitalize">{evt.type}</span>
+              <span>{formatTokenLabel(evt.type)}</span>
               {evt.message && <span className="text-zinc-500 truncate">— {evt.message}</span>}
             </div>
           ))}
         </div>
       ) : (
-        <p className="font-mono text-[11px] text-zinc-600">No events recorded.</p>
+        <div className="space-y-1">
+          <p className="font-mono text-[11px] text-zinc-600">No timeline events recorded yet.</p>
+          {detailQuery.data?.error && (
+            <p className="font-mono text-[11px] text-red-300/80 truncate">
+              Last error: {detailQuery.data.error}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
@@ -69,9 +84,16 @@ function RunRow({ run, budgetCents }: { run: HeartbeatRun; budgetCents?: number 
         ) : (
           <XCircle className="h-4 w-4 text-red-400 shrink-0" />
         )}
-        <span className="font-satoshi text-sm text-foreground flex-1 truncate">
-          {run.name ?? run.id.slice(0, 12)}
-        </span>
+        <div className="flex-1 min-w-0">
+          <span className="font-satoshi text-sm text-foreground truncate block">
+            {run.name ?? run.id.slice(0, 12)}
+          </span>
+          {run.wakeReason && (
+            <span className="font-mono text-[10px] text-zinc-600 truncate block">
+              Wake: {formatTokenLabel(run.wakeReason)}
+            </span>
+          )}
+        </div>
         {run.durationMs != null && (
           <span className="font-mono text-[11px] text-muted-foreground shrink-0">
             {formatDurationMs(run.durationMs)}
