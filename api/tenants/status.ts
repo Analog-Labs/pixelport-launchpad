@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
-import { reconcileBootstrapState } from '../lib/bootstrap-state';
+import { getBootstrapState, reconcileBootstrapState } from '../lib/bootstrap-state';
 import { classifyGatewayFailure } from '../lib/openclaw-bootstrap-guard';
 import { tryRecoverProvisioningTenant } from '../lib/provisioning-recovery';
 import {
@@ -19,15 +19,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const recovery = await tryRecoverProvisioningTenant(tenant);
     const effectiveTenant = recovery.tenant;
 
-    const bootstrap = await reconcileBootstrapState({
-      tenantId: effectiveTenant.id,
-      fallbackOnboardingData: effectiveTenant.onboarding_data,
-    });
     const tenantStatus = typeof effectiveTenant.status === 'string' ? effectiveTenant.status : null;
-    const bootstrapStatus = bootstrap.effectiveState.status ?? null;
-    const bootstrapError = typeof bootstrap.effectiveState.last_error === 'string' && bootstrap.effectiveState.last_error
+    const fallbackBootstrapState = getBootstrapState(effectiveTenant.onboarding_data);
+    let bootstrapStatus: string | null = fallbackBootstrapState.status;
+    let bootstrapLastError: string | null = fallbackBootstrapState.last_error;
+    let hasAgentOutput = false;
+
+    try {
+      const bootstrap = await reconcileBootstrapState({
+        tenantId: effectiveTenant.id,
+        fallbackOnboardingData: effectiveTenant.onboarding_data,
+      });
+      bootstrapStatus = bootstrap.effectiveState.status ?? null;
+      bootstrapLastError = bootstrap.effectiveState.last_error;
+      hasAgentOutput = bootstrap.progress.hasAgentOutput;
+    } catch (error) {
+      console.warn(
+        `[tenants/status] reconcileBootstrapState failed for tenant ${effectiveTenant.id}; ` +
+          `using fallback bootstrap state=${fallbackBootstrapState.status}: ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    const bootstrapError = typeof bootstrapLastError === 'string' && bootstrapLastError
       ? classifyGatewayFailure({
-        message: bootstrap.effectiveState.last_error,
+        message: bootstrapLastError,
       })
       : null;
     const taskStepUnlocked =
@@ -48,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         }
         : null,
       task_step_unlocked: taskStepUnlocked,
-      has_agent_output: bootstrap.progress.hasAgentOutput,
+      has_agent_output: hasAgentOutput,
       has_droplet: !!effectiveTenant.droplet_id,
       has_gateway: !!effectiveTenant.gateway_token,
       has_agentmail: !!effectiveTenant.agentmail_inbox,

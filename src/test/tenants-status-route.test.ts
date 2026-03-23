@@ -8,6 +8,14 @@ const errorResponse = vi.fn((res: MockResponse, error: unknown) =>
   })
 );
 const reconcileBootstrapState = vi.fn();
+const getBootstrapState = vi.fn(() => ({
+  status: "not_started",
+  source: null,
+  requested_at: null,
+  accepted_at: null,
+  completed_at: null,
+  last_error: null,
+}));
 const tryRecoverProvisioningTenant = vi.fn(async (tenant: unknown) => ({
   tenant,
   recovered: false,
@@ -21,6 +29,7 @@ vi.mock("../../api/lib/auth", () => ({
 
 vi.mock("../../api/lib/bootstrap-state", () => ({
   reconcileBootstrapState,
+  getBootstrapState,
 }));
 
 vi.mock("../../api/lib/provisioning-recovery", () => ({
@@ -184,6 +193,63 @@ describe("GET /api/tenants/status", () => {
         last_error: "[missing_operator_scope] missing scope: operator.write",
       },
       changed: true,
+    });
+
+    const req = { method: "GET" };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      contract_version: THIN_BRIDGE_CONTRACT_VERSION,
+      status: "provisioning",
+      bootstrap_status: "failed",
+      bootstrap_error: {
+        tag: "missing_operator_scope",
+        retryable: false,
+        message: "[missing_operator_scope] missing scope: operator.write",
+        missing_scope: "operator.write",
+        request_id: null,
+      },
+      task_step_unlocked: false,
+      has_agent_output: false,
+      has_droplet: true,
+      has_gateway: true,
+      has_agentmail: false,
+      trial_ends_at: null,
+      plan: "trial",
+    });
+  });
+
+  it("falls back to persisted bootstrap state when reconciliation errors", async () => {
+    const { default: handler } = await import("../../api/tenants/status");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-4",
+        status: "provisioning",
+        droplet_id: "droplet-4",
+        gateway_token: "gw-4",
+        agentmail_inbox: null,
+        trial_ends_at: null,
+        plan: "trial",
+        onboarding_data: {
+          bootstrap: {
+            status: "failed",
+            last_error: "[missing_operator_scope] missing scope: operator.write",
+          },
+        },
+      },
+    });
+    reconcileBootstrapState.mockRejectedValue(new Error("Transient Supabase fetch failure"));
+    getBootstrapState.mockReturnValue({
+      status: "failed",
+      source: "provisioning",
+      requested_at: "2026-03-23T08:00:00.000Z",
+      accepted_at: null,
+      completed_at: null,
+      last_error: "[missing_operator_scope] missing scope: operator.write",
     });
 
     const req = { method: "GET" };
