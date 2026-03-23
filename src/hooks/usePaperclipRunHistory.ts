@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { paperclipFetch } from '@/lib/paperclipFetch';
+import {
+  normalizeHeartbeatRunsResponse,
+  normalizeRunDetail,
+  normalizeRunEventsResponse,
+} from '@/lib/paperclip-normalize';
 import type { HeartbeatRun, HeartbeatRunEvent, HeartbeatRunsResponse } from '@/lib/paperclip-types';
 
 export function usePaperclipRunHistory() {
@@ -9,7 +14,10 @@ export function usePaperclipRunHistory() {
 
   return useQuery<HeartbeatRunsResponse>({
     queryKey: ['paperclip', 'heartbeat-runs'],
-    queryFn: () => paperclipFetch<HeartbeatRunsResponse>('companies/heartbeat-runs', {}, token),
+    queryFn: async () =>
+      normalizeHeartbeatRunsResponse(
+        await paperclipFetch<unknown>('companies/heartbeat-runs', {}, token),
+      ),
     enabled: !!token,
     refetchOnWindowFocus: false,
   });
@@ -21,7 +29,15 @@ export function usePaperclipRunDetail(runId: string) {
 
   return useQuery<HeartbeatRun>({
     queryKey: ['paperclip', 'heartbeat-run', runId],
-    queryFn: () => paperclipFetch<HeartbeatRun>(`heartbeat-runs/${runId}`, {}, token),
+    queryFn: async () =>
+      normalizeRunDetail(
+        await paperclipFetch<unknown>(`heartbeat-runs/${runId}`, {}, token),
+      )
+      ?? {
+        id: runId,
+        result: 'success',
+        startedAt: new Date().toISOString(),
+      },
     enabled: !!token && !!runId,
     refetchOnWindowFocus: false,
   });
@@ -34,8 +50,10 @@ export function usePaperclipRunEvents(runId: string) {
 
   return useQuery<{ events: HeartbeatRunEvent[] }>({
     queryKey: ['paperclip', 'heartbeat-run-events', runId],
-    queryFn: () =>
-      paperclipFetch<{ events: HeartbeatRunEvent[] }>(`heartbeat-runs/${runId}/events`, {}, token),
+    queryFn: async () =>
+      normalizeRunEventsResponse(
+        await paperclipFetch<unknown>(`heartbeat-runs/${runId}/events`, {}, token),
+      ),
     enabled: !!token && !!runId,
     refetchInterval: 5_000,
     refetchOnWindowFocus: false,

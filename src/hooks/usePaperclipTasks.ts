@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { paperclipFetch } from '@/lib/paperclipFetch';
+import {
+  normalizeCommentsResponse,
+  normalizeIssuesResponse,
+  normalizeTaskDetail,
+} from '@/lib/paperclip-normalize';
 import type { IssueComment, IssueStatus, IssuesResponse, PaperclipIssue } from '@/lib/paperclip-types';
 
 const QUERY_KEY = ['paperclip', 'issues'] as const;
@@ -11,7 +16,8 @@ export function usePaperclipTasks() {
 
   return useQuery<IssuesResponse>({
     queryKey: QUERY_KEY,
-    queryFn: () => paperclipFetch<IssuesResponse>('companies/issues', {}, token),
+    queryFn: async () =>
+      normalizeIssuesResponse(await paperclipFetch<unknown>('companies/issues', {}, token)),
     enabled: !!token,
     refetchOnWindowFocus: false,
   });
@@ -23,7 +29,13 @@ export function usePaperclipTaskDetail(issueId: string) {
 
   return useQuery<PaperclipIssue>({
     queryKey: ['paperclip', 'issue', issueId],
-    queryFn: () => paperclipFetch<PaperclipIssue>(`issues/${issueId}`, {}, token),
+    queryFn: async () =>
+      normalizeTaskDetail(await paperclipFetch<unknown>(`issues/${issueId}`, {}, token))
+      ?? {
+        id: issueId,
+        title: 'Task',
+        status: 'todo',
+      },
     enabled: !!token && !!issueId,
     refetchOnWindowFocus: false,
   });
@@ -35,8 +47,10 @@ export function usePaperclipTaskComments(issueId: string) {
 
   return useQuery<{ comments: IssueComment[] }>({
     queryKey: ['paperclip', 'issue-comments', issueId],
-    queryFn: () =>
-      paperclipFetch<{ comments: IssueComment[] }>(`issues/${issueId}/comments`, {}, token),
+    queryFn: async () =>
+      normalizeCommentsResponse(
+        await paperclipFetch<unknown>(`issues/${issueId}/comments`, {}, token),
+      ),
     enabled: !!token && !!issueId,
     refetchOnWindowFocus: false,
   });

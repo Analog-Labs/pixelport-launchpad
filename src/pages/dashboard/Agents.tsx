@@ -66,7 +66,7 @@ function AgentActivityTimeline({ agentId }: { agentId: string }) {
     );
   }
 
-  if (!query.data?.runs.length) {
+  if (!query.data?.runs?.length) {
     return (
       <p className="font-mono text-[11px] text-zinc-600">No activity yet</p>
     );

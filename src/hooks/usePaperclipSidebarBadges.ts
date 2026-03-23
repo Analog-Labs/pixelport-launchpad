@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
+import { normalizeSidebarBadges } from '@/lib/paperclip-normalize';
 import { paperclipFetch } from '@/lib/paperclipFetch';
 import type { SidebarBadges } from '@/lib/paperclip-types';
 
@@ -10,7 +11,10 @@ export function usePaperclipSidebarBadges() {
 
   return useQuery<SidebarBadges>({
     queryKey: ['paperclip', 'sidebar-badges'],
-    queryFn: () => paperclipFetch<SidebarBadges>('companies/sidebar-badges', {}, token),
+    queryFn: async () =>
+      normalizeSidebarBadges(
+        await paperclipFetch<unknown>('companies/sidebar-badges', {}, token),
+      ),
     enabled: !!token,
     refetchInterval: 30_000,
     refetchOnWindowFocus: false,

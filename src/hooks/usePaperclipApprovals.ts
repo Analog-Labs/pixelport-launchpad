@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { paperclipFetch } from '@/lib/paperclipFetch';
+import { normalizeApprovalsResponse } from '@/lib/paperclip-normalize';
 import type { ApprovalsResponse, PaperclipApproval } from '@/lib/paperclip-types';
 
 const QUERY_KEY = ['paperclip', 'approvals'] as const;
@@ -11,8 +12,14 @@ export function usePaperclipApprovals() {
 
   return useQuery<ApprovalsResponse>({
     queryKey: QUERY_KEY,
-    queryFn: () =>
-      paperclipFetch<ApprovalsResponse>('companies/approvals?status=pending&limit=20&offset=0', {}, token),
+    queryFn: async () =>
+      normalizeApprovalsResponse(
+        await paperclipFetch<unknown>(
+          'companies/approvals?status=pending&limit=20&offset=0',
+          {},
+          token,
+        ),
+      ),
     enabled: !!token,
     refetchOnWindowFocus: false,
   });
