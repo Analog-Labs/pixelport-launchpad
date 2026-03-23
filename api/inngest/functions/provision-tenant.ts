@@ -966,6 +966,10 @@ export function buildCloudInit(params: {
     null,
     2
   );
+  const paperclipCompanyPayloadBase64 = Buffer.from(
+    JSON.stringify({ name: params.tenantName }),
+    'utf8',
+  ).toString('base64');
 
   return `#!/bin/bash
 set -euo pipefail
@@ -1211,10 +1215,11 @@ if [ "$BOOTSTRAP_READY" -ne 1 ]; then
 fi
 
 COMPANY_ID=''
+COMPANY_PAYLOAD="$(printf '%s' '${paperclipCompanyPayloadBase64}' | base64 -d)"
 for attempt in $(seq 1 5); do
   COMPANY_RESP=$(curl -sf -X POST http://127.0.0.1:3100/api/companies \\
     -H 'Content-Type: application/json' \\
-    -d "{\"name\": \"${params.tenantName}\"}" || echo '{}')
+    -d "$COMPANY_PAYLOAD" || echo '{}')
   COMPANY_ID=$(echo "$COMPANY_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id') or d.get('company',{}).get('id',''))" 2>/dev/null || echo '')
   if [ -n "$COMPANY_ID" ]; then
     break
