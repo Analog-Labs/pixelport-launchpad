@@ -37,13 +37,21 @@ function resolveForwardedQueryString(req: VercelRequest): string {
   return query ? `?${query}` : '';
 }
 
-function isBoardOnlyApprovalMutation(method: string, proxyPath: string): boolean {
+function requiresBoardSession(method: string, proxyPath: string): boolean {
   if (method.toUpperCase() !== 'POST') {
     return false;
   }
 
   const normalizedPath = proxyPath.replace(/^\/+|\/+$/g, '');
-  return /^approvals\/[^/]+\/(approve|reject|request-revision)$/.test(normalizedPath);
+  // Approval decision mutations require board auth
+  if (/^approvals\/[^/]+\/(approve|reject|request-revision|resubmit)$/.test(normalizedPath)) {
+    return true;
+  }
+  // Issue comment writes require board auth for active/checked-out issues
+  if (/^issues\/[^/]+\/comments$/.test(normalizedPath)) {
+    return true;
+  }
+  return false;
 }
 
 export default async function handler(
@@ -91,7 +99,7 @@ export default async function handler(
     };
     let response: Response;
 
-    if (isBoardOnlyApprovalMutation(method, proxyPath)) {
+    if (requiresBoardSession(method, proxyPath)) {
       try {
         response = await proxyToPaperclipAsBoard(tenant, userId, targetPath, requestOptions);
       } catch (error) {
@@ -100,6 +108,13 @@ export default async function handler(
           error,
         );
         response = await proxyToPaperclip(tenant, targetPath, requestOptions);
+      }
+      // If the response is 401/403, the auth method lacks approval permissions.
+      // Return a clear error instead of the raw Paperclip response.
+      if (response.status === 401 || response.status === 403) {
+        return res.status(403).json({
+          error: 'Approval action not authorized. The workspace may need to be re-provisioned.',
+        });
       }
     } else {
       response = await proxyToPaperclip(tenant, targetPath, requestOptions);

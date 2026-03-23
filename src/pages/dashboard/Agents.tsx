@@ -10,6 +10,7 @@ import type { HeartbeatRun, PaperclipAgent } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+import { resolveAgentDisplayName } from '@/lib/agent-display';
 
 function AgentPulseDot({ status }: { status: PaperclipAgent['status'] }) {
   const color =
@@ -31,16 +32,6 @@ function AgentPulseDot({ status }: { status: PaperclipAgent['status'] }) {
       <span className={cn('relative inline-flex h-2.5 w-2.5 rounded-full', color)} />
     </span>
   );
-}
-
-function resolveAgentDisplayName(agent: PaperclipAgent, preferredChiefName?: string): string {
-  const preferred = preferredChiefName?.trim();
-  if (!preferred) return agent.name;
-  const canonical = agent.name.trim().toLowerCase();
-  if (canonical === 'chief' || canonical === 'chief of staff') {
-    return preferred;
-  }
-  return agent.name;
 }
 
 function RunTimelineEntry({ run }: { run: HeartbeatRun }) {

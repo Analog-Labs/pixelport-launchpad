@@ -5,16 +5,9 @@ import { ProxyQueryWrapper } from '@/components/dashboard/ProxyQueryWrapper';
 import { RunHistorySkeleton } from '@/components/dashboard/DashboardSkeleton';
 import { getCostColor, formatCostCents, formatDurationMs } from '@/lib/costColoring';
 import type { HeartbeatRun } from '@/lib/paperclip-types';
+import { humanizeToken } from '@/lib/paperclip-normalize';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
-
-function formatTokenLabel(raw: string): string {
-  return raw
-    .trim()
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 // ── Run detail panel ───────────────────────────────────────────────────────────
 
@@ -44,7 +37,7 @@ function RunDetail({ runId }: { runId: string }) {
               <span className="text-zinc-600">
                 {(() => { const d = parseISO(evt.createdAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
               </span>
-              <span>{formatTokenLabel(evt.type)}</span>
+              <span>{humanizeToken(evt.type)}</span>
               {evt.message && <span className="text-zinc-500 truncate">— {evt.message}</span>}
             </div>
           ))}
@@ -90,7 +83,7 @@ function RunRow({ run, budgetCents }: { run: HeartbeatRun; budgetCents?: number 
           </span>
           {run.wakeReason && (
             <span className="font-mono text-[10px] text-zinc-600 truncate block">
-              Wake: {formatTokenLabel(run.wakeReason)}
+              Wake: {humanizeToken(run.wakeReason)}
             </span>
           )}
         </div>

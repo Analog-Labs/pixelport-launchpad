@@ -13,16 +13,7 @@ import type { PaperclipAgent } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useState } from 'react';
-
-function resolveAgentDisplayName(agent: PaperclipAgent, preferredChiefName?: string): string {
-  const preferred = preferredChiefName?.trim();
-  if (!preferred) return agent.name;
-  const canonical = agent.name.trim().toLowerCase();
-  if (canonical === 'chief' || canonical === 'chief of staff') {
-    return preferred;
-  }
-  return agent.name;
-}
+import { resolveAgentDisplayName } from '@/lib/agent-display';
 
 function AgentPulseDot({ status }: { status: PaperclipAgent['status'] }) {
   const color =

@@ -93,9 +93,8 @@ export function useCreateTaskComment(issueId: string) {
       return { previous };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(issueCommentsQueryKey(issueId), context.previous);
-      }
+      const rollback = context?.previous ?? { comments: [] };
+      queryClient.setQueryData(issueCommentsQueryKey(issueId), rollback);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: issueCommentsQueryKey(issueId) });

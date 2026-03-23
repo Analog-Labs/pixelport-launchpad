@@ -56,7 +56,7 @@ function parseIsoTimestamp(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function humanizeToken(raw: string | undefined): string | undefined {
+export function humanizeToken(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
   const normalized = raw
     .trim()

@@ -12,16 +12,9 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { sanitizeContent } from '@/lib/sanitizeContent';
 import type { PaperclipApproval } from '@/lib/paperclip-types';
+import { humanizeToken } from '@/lib/paperclip-normalize';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
-
-function formatTokenLabel(raw: string): string {
-  return raw
-    .trim()
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 // ── Approval card ──────────────────────────────────────────────────────────────
 
@@ -118,7 +111,7 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
       {/* Header: type badge + timestamp */}
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex items-center rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-mono text-amber-400">
-          {formatTokenLabel(approval.type)}
+          {humanizeToken(approval.type) ?? approval.type}
         </span>
         <span className="font-mono text-[11px] text-muted-foreground">
           {(() => { const d = parseISO(approval.createdAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
