@@ -148,6 +148,14 @@ const OPENCLAW_GATEWAY_DOCKER_HOST_ALIAS = 'host.docker.internal';
 const OPENCLAW_GATEWAY_DEFAULT_WS_PORT = 18789;
 const OPENCLAW_GATEWAY_SESSION_KEY_STRATEGY = 'issue';
 const OPENCLAW_GATEWAY_WAIT_TIMEOUT_MS = 120_000;
+const OPENCLAW_GATEWAY_ROLE = 'operator';
+const OPENCLAW_GATEWAY_SCOPES = [
+  'operator.read',
+  'operator.write',
+  'operator.admin',
+  'operator.approvals',
+  'operator.pairing',
+] as const;
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
@@ -689,6 +697,8 @@ function buildOpenClawGatewayAdapterConfig(params: {
     headers: {
       'x-openclaw-token': params.gatewayToken,
     },
+    role: OPENCLAW_GATEWAY_ROLE,
+    scopes: [...OPENCLAW_GATEWAY_SCOPES],
     sessionKeyStrategy: OPENCLAW_GATEWAY_SESSION_KEY_STRATEGY,
     waitTimeoutMs: OPENCLAW_GATEWAY_WAIT_TIMEOUT_MS,
     disableDeviceAuth: isOpenClawGatewayDeviceAuthDisabled(),

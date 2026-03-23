@@ -488,6 +488,10 @@ describe("provision tenant memory config", () => {
     expect(script).toContain('"adapterType":"openclaw_gateway"');
     expect(script).toContain('"url":"ws://host.docker.internal:18789"');
     expect(script).toContain('"x-openclaw-token":"gw-token"');
+    expect(script).toContain('"role":"operator"');
+    expect(script).toContain(
+      '"scopes":["operator.read","operator.write","operator.admin","operator.approvals","operator.pairing"]',
+    );
     expect(script).toContain('"disableDeviceAuth":true');
     expect(script).toContain("--add-host host.docker.internal:host-gateway");
     expect(script).toContain("PAPERCLIP_DEPLOYMENT_MODE=authenticated");
