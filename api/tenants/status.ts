@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { reconcileBootstrapState } from '../lib/bootstrap-state';
+import { tryRecoverProvisioningTenant } from '../lib/provisioning-recovery';
 import {
   THIN_BRIDGE_CONTRACT_VERSION,
   isTaskStepUnlocked,
@@ -14,11 +15,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   try {
     const { tenant } = await authenticateRequest(req);
+    const recovery = await tryRecoverProvisioningTenant(tenant);
+    const effectiveTenant = recovery.tenant;
+
     const bootstrap = await reconcileBootstrapState({
-      tenantId: tenant.id,
-      fallbackOnboardingData: tenant.onboarding_data,
+      tenantId: effectiveTenant.id,
+      fallbackOnboardingData: effectiveTenant.onboarding_data,
     });
-    const tenantStatus = typeof tenant.status === 'string' ? tenant.status : null;
+    const tenantStatus = typeof effectiveTenant.status === 'string' ? effectiveTenant.status : null;
     const bootstrapStatus = bootstrap.effectiveState.status ?? null;
     const taskStepUnlocked =
       isTaskStepUnlocked(tenantStatus) ||
@@ -30,11 +34,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       bootstrap_status: bootstrapStatus,
       task_step_unlocked: taskStepUnlocked,
       has_agent_output: bootstrap.progress.hasAgentOutput,
-      has_droplet: !!tenant.droplet_id,
-      has_gateway: !!tenant.gateway_token,
-      has_agentmail: !!tenant.agentmail_inbox,
-      trial_ends_at: tenant.trial_ends_at ?? null,
-      plan: tenant.plan ?? null,
+      has_droplet: !!effectiveTenant.droplet_id,
+      has_gateway: !!effectiveTenant.gateway_token,
+      has_agentmail: !!effectiveTenant.agentmail_inbox,
+      trial_ends_at: effectiveTenant.trial_ends_at ?? null,
+      plan: effectiveTenant.plan ?? null,
     };
 
     return res.status(200).json(payload);

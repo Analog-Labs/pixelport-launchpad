@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
+import { tryRecoverProvisioningTenant } from '../lib/provisioning-recovery';
 import {
   buildGatewayControlUiLaunchUrl,
   buildPaperclipHandoffPayload,
@@ -32,6 +33,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   try {
     const { tenant, userId } = await authenticateRequest(req);
+    const recovery = await tryRecoverProvisioningTenant(tenant);
+    const effectiveTenant = recovery.tenant;
 
     const missingEnv = getMissingPaperclipHandoffEnv(process.env);
     if (missingEnv.length > 0) {
@@ -41,17 +44,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    if (!isPaperclipHandoffReadyStatus(tenant.status)) {
+    if (!isPaperclipHandoffReadyStatus(effectiveTenant.status)) {
       return res.status(409).json({
         error: 'Tenant is not ready for Paperclip runtime handoff.',
-        status: tenant.status,
+        status: effectiveTenant.status,
       });
     }
 
     const runtimeUrl = resolvePaperclipRuntimeUrl({
-      onboardingData: tenant.onboarding_data,
-      tenantSlug: tenant.slug,
-      dropletIp: tenant.droplet_ip,
+      onboardingData: effectiveTenant.onboarding_data,
+      tenantSlug: effectiveTenant.slug,
+      dropletIp: effectiveTenant.droplet_ip,
       runtimeBaseDomain: process.env.PAPERCLIP_RUNTIME_BASE_DOMAIN,
     });
     if (!runtimeUrl) {
@@ -61,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    const workspaceLaunchUrl = buildGatewayControlUiLaunchUrl(runtimeUrl, tenant.gateway_token);
+    const workspaceLaunchUrl = buildGatewayControlUiLaunchUrl(runtimeUrl, effectiveTenant.gateway_token);
     if (!workspaceLaunchUrl) {
       return res.status(409).json({
         error: 'Paperclip runtime auth token unavailable for this tenant.',
@@ -87,9 +90,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const payload = buildPaperclipHandoffPayload({
       userId,
       tenantId: tenant.id,
-      tenantSlug: tenant.slug,
-      tenantStatus: tenant.status,
-      tenantPlan: tenant.plan,
+      tenantSlug: effectiveTenant.slug,
+      tenantStatus: effectiveTenant.status,
+      tenantPlan: effectiveTenant.plan,
       source,
       ttlSeconds: config.ttlSeconds,
     });
@@ -104,11 +107,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       handoff_token: handoffToken,
       expires_at: new Date(payload.exp * 1000).toISOString(),
       tenant: {
-        id: tenant.id,
-        slug: tenant.slug,
-        name: tenant.name,
-        status: tenant.status,
-        plan: tenant.plan,
+        id: effectiveTenant.id,
+        slug: effectiveTenant.slug,
+        name: effectiveTenant.name,
+        status: effectiveTenant.status,
+        plan: effectiveTenant.plan,
       },
       user_id: userId,
       source,
