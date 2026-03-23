@@ -14,6 +14,13 @@ export interface TenantStatusBridgePayload {
   contract_version: string;
   status: string | null;
   bootstrap_status: string | null;
+  bootstrap_error?: {
+    tag: string;
+    retryable: boolean;
+    message: string;
+    missing_scope?: string | null;
+    request_id?: string | null;
+  } | null;
   task_step_unlocked: boolean;
   has_agent_output: boolean;
   has_droplet: boolean;

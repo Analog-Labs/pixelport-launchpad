@@ -12,8 +12,13 @@ import { buildWorkspaceScaffold } from '../../lib/workspace-contract';
 import {
   buildBootstrapHooksConfig,
   buildOnboardingBootstrapMessage,
-  triggerOnboardingBootstrap,
 } from '../../lib/onboarding-bootstrap';
+import {
+  autoApproveGatewayPairing,
+  classifyGatewayFailure,
+  dispatchBootstrapWithPairingRecovery,
+  formatGatewayDiagnostic,
+} from '../../lib/openclaw-bootstrap-guard';
 
 // Inline client creation — importing from a local file that re-exports inngest
 // crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
@@ -142,12 +147,36 @@ type PaperclipApprovalRecord = {
   payload?: Record<string, unknown> | null;
 };
 
+type PaperclipWakeResponse = {
+  id?: string;
+  run?: {
+    id?: string;
+  };
+};
+
+type PaperclipHeartbeatRunRecord = {
+  id?: string;
+  status?: string | null;
+  error?: string | null;
+  errorCode?: string | null;
+  stdoutExcerpt?: string | null;
+  stderrExcerpt?: string | null;
+};
+
 const ONBOARDING_KICKOFF_SEED_TAG = 'pixelport_onboarding_kickoff_v1';
 const OPENCLAW_GATEWAY_ADAPTER_TYPE = 'openclaw_gateway';
 const OPENCLAW_GATEWAY_DOCKER_HOST_ALIAS = 'host.docker.internal';
 const OPENCLAW_GATEWAY_DEFAULT_WS_PORT = 18789;
 const OPENCLAW_GATEWAY_SESSION_KEY_STRATEGY = 'issue';
 const OPENCLAW_GATEWAY_WAIT_TIMEOUT_MS = 120_000;
+const OPENCLAW_GATEWAY_ROLE = 'operator';
+const OPENCLAW_GATEWAY_SCOPES = [
+  'operator.read',
+  'operator.write',
+  'operator.admin',
+  'operator.approvals',
+  'operator.pairing',
+] as const;
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
@@ -621,8 +650,9 @@ async function createTenantDropletWithFallback(
   const failureStatus = lastFailure?.status ?? 500;
   const failureBody = summarizeDigitalOceanErrorBody(lastFailure?.body ?? 'unknown droplet error');
 
+  const diagnosticTag = failureStatus === 422 ? 'droplet_capacity_422' : 'gateway_request_failed';
   throw new Error(
-    `Droplet creation failed (HTTP ${failureStatus}): ${failureBody} ` +
+    `[${diagnosticTag}] Droplet creation failed (HTTP ${failureStatus}): ${failureBody} ` +
       `[size=${params.size}, region=${params.requestedRegion}, image=${params.image}, attempted_regions=${attemptedRegionSummary}]`,
   );
 }
@@ -689,9 +719,98 @@ function buildOpenClawGatewayAdapterConfig(params: {
     headers: {
       'x-openclaw-token': params.gatewayToken,
     },
+    role: OPENCLAW_GATEWAY_ROLE,
+    scopes: [...OPENCLAW_GATEWAY_SCOPES],
     sessionKeyStrategy: OPENCLAW_GATEWAY_SESSION_KEY_STRATEGY,
     waitTimeoutMs: OPENCLAW_GATEWAY_WAIT_TIMEOUT_MS,
     disableDeviceAuth: isOpenClawGatewayDeviceAuthDisabled(),
+  };
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .filter((entry): entry is string => typeof entry === 'string')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  }
+
+  return [];
+}
+
+function readGatewayTokenFromAdapterConfig(adapterConfig: Record<string, unknown> | null | undefined): string | null {
+  if (!adapterConfig || typeof adapterConfig !== 'object') {
+    return null;
+  }
+
+  const headers =
+    adapterConfig.headers && typeof adapterConfig.headers === 'object'
+      ? (adapterConfig.headers as Record<string, unknown>)
+      : null;
+
+  if (headers) {
+    const headerToken = headers['x-openclaw-token'];
+    if (typeof headerToken === 'string' && headerToken.trim().length > 0) {
+      return headerToken.trim();
+    }
+  }
+
+  if (typeof adapterConfig.token === 'string' && adapterConfig.token.trim().length > 0) {
+    return adapterConfig.token.trim();
+  }
+
+  return null;
+}
+
+function readChiefGatewayState(chiefAgent: PaperclipAgentRecord): {
+  adapterType: string;
+  role: string | null;
+  scopes: string[];
+  missingScopes: string[];
+  gatewayWsUrl: string | null;
+  gatewayToken: string | null;
+  disableDeviceAuth: boolean | null;
+  expectedDeviceId: string | null;
+} {
+  const adapterType =
+    typeof chiefAgent.adapterType === 'string'
+      ? chiefAgent.adapterType.trim()
+      : '';
+  const adapterConfig =
+    chiefAgent.adapterConfig && typeof chiefAgent.adapterConfig === 'object'
+      ? (chiefAgent.adapterConfig as Record<string, unknown>)
+      : null;
+
+  const role = typeof adapterConfig?.role === 'string' ? adapterConfig.role.trim() : null;
+  const scopes = normalizeStringArray(adapterConfig?.scopes);
+  const missingScopes = OPENCLAW_GATEWAY_SCOPES.filter((scope) => !scopes.includes(scope));
+  const gatewayWsUrl = typeof adapterConfig?.url === 'string' ? adapterConfig.url.trim() : null;
+  const gatewayToken = readGatewayTokenFromAdapterConfig(adapterConfig);
+  const disableDeviceAuth = typeof adapterConfig?.disableDeviceAuth === 'boolean'
+    ? adapterConfig.disableDeviceAuth
+    : null;
+  const expectedDeviceId = typeof adapterConfig?.deviceId === 'string'
+    ? adapterConfig.deviceId.trim()
+    : typeof adapterConfig?.device_id === 'string'
+      ? adapterConfig.device_id.trim()
+      : null;
+
+  return {
+    adapterType,
+    role,
+    scopes,
+    missingScopes,
+    gatewayWsUrl,
+    gatewayToken,
+    disableDeviceAuth,
+    expectedDeviceId,
   };
 }
 
@@ -713,17 +832,26 @@ async function ensureChiefOpenClawGatewayAdapter(params: {
   gatewayWsUrl?: string | null;
   gatewayToken?: string | null;
 }): Promise<PaperclipAgentRecord> {
-  const existingType = typeof params.chiefAgent.adapterType === 'string'
-    ? params.chiefAgent.adapterType.trim()
-    : '';
-  if (existingType === OPENCLAW_GATEWAY_ADAPTER_TYPE) {
+  const gatewayWsUrl = typeof params.gatewayWsUrl === 'string' ? params.gatewayWsUrl.trim() : '';
+  const gatewayToken = typeof params.gatewayToken === 'string' ? params.gatewayToken.trim() : '';
+  const existingState = readChiefGatewayState(params.chiefAgent);
+
+  const requiresPatch =
+    existingState.adapterType !== OPENCLAW_GATEWAY_ADAPTER_TYPE ||
+    existingState.role !== OPENCLAW_GATEWAY_ROLE ||
+    existingState.missingScopes.length > 0 ||
+    existingState.disableDeviceAuth !== isOpenClawGatewayDeviceAuthDisabled() ||
+    (gatewayWsUrl && existingState.gatewayWsUrl !== gatewayWsUrl) ||
+    (gatewayToken && existingState.gatewayToken !== gatewayToken);
+
+  if (!requiresPatch) {
     return params.chiefAgent;
   }
 
-  const gatewayWsUrl = typeof params.gatewayWsUrl === 'string' ? params.gatewayWsUrl.trim() : '';
-  const gatewayToken = typeof params.gatewayToken === 'string' ? params.gatewayToken.trim() : '';
   if (!gatewayWsUrl || !gatewayToken) {
-    return params.chiefAgent;
+    throw new Error(
+      `Chief adapter requires scope/auth patch but gateway URL/token were missing (adapterType=${existingState.adapterType || 'unknown'})`,
+    );
   }
 
   const patchResponse = await fetch(`${params.paperclipUrl}/api/agents/${params.chiefAgent.id}`, {
@@ -765,6 +893,8 @@ async function seedPaperclipKickoffArtifacts(params: {
   gatewayWsUrl?: string | null;
   gatewayToken?: string | null;
 }): Promise<{
+  chiefAgentId: string;
+  expectedDeviceId: string | null;
   createdIssueId: string | null;
   createdApprovalId: string | null;
   wakeRunId: string | null;
@@ -862,13 +992,8 @@ async function seedPaperclipKickoffArtifacts(params: {
   });
 
   if (wakeResponse.ok) {
-    const wakePayload = (await wakeResponse.json()) as { id?: string; run?: { id?: string } };
-    wakeRunId =
-      typeof wakePayload.id === 'string'
-        ? wakePayload.id
-        : typeof wakePayload.run?.id === 'string'
-          ? wakePayload.run.id
-          : null;
+    const wakePayload = (await wakeResponse.json()) as PaperclipWakeResponse;
+    wakeRunId = readWakeRunId(wakePayload);
   }
 
   const existingApprovalsResponse = await fetch(
@@ -891,6 +1016,8 @@ async function seedPaperclipKickoffArtifacts(params: {
 
   if (existingKickoffApprovalId) {
     return {
+      chiefAgentId: chiefAgent.id,
+      expectedDeviceId: readChiefGatewayState(chiefAgent).expectedDeviceId,
       createdIssueId: kickoffIssueId,
       createdApprovalId: existingKickoffApprovalId,
       wakeRunId,
@@ -926,10 +1053,140 @@ async function seedPaperclipKickoffArtifacts(params: {
   const createdApproval = (await approvalResponse.json()) as PaperclipApprovalRecord;
 
   return {
+    chiefAgentId: chiefAgent.id,
+    expectedDeviceId: readChiefGatewayState(chiefAgent).expectedDeviceId,
     createdIssueId: kickoffIssueId,
     createdApprovalId: typeof createdApproval.id === 'string' ? createdApproval.id : null,
     wakeRunId,
   };
+}
+
+function readWakeRunId(payload: PaperclipWakeResponse | null | undefined): string | null {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  if (typeof payload.id === 'string' && payload.id.trim().length > 0) {
+    return payload.id.trim();
+  }
+
+  if (typeof payload.run?.id === 'string' && payload.run.id.trim().length > 0) {
+    return payload.run.id.trim();
+  }
+
+  return null;
+}
+
+async function triggerChiefWakeupRun(params: {
+  paperclipUrl: string;
+  paperclipApiKey: string;
+  chiefAgentId: string;
+  issueId?: string | null;
+  reason: string;
+}): Promise<string> {
+  const wakeResponse = await fetch(`${params.paperclipUrl}/api/agents/${params.chiefAgentId}/wakeup`, {
+    method: 'POST',
+    headers: getPaperclipAgentHeaders(params.paperclipApiKey),
+    body: JSON.stringify({
+      source: 'on_demand',
+      triggerDetail: 'system',
+      reason: params.reason,
+      ...(params.issueId
+        ? {
+            payload: {
+              issueId: params.issueId,
+              taskId: params.issueId,
+            },
+          }
+        : {}),
+    }),
+  });
+
+  if (!wakeResponse.ok) {
+    const errorBody = await wakeResponse.text();
+    throw new Error(
+      `Failed to trigger Chief readiness wake (HTTP ${wakeResponse.status}): ${summarizeDigitalOceanErrorBody(errorBody)}`,
+    );
+  }
+
+  const wakePayload = (await wakeResponse.json()) as PaperclipWakeResponse;
+  const runId = readWakeRunId(wakePayload);
+  if (!runId) {
+    throw new Error('Chief readiness wake did not return a run id');
+  }
+
+  return runId;
+}
+
+async function loadHeartbeatRunRecord(params: {
+  paperclipUrl: string;
+  paperclipApiKey: string;
+  runId: string;
+}): Promise<PaperclipHeartbeatRunRecord> {
+  const runResponse = await fetch(`${params.paperclipUrl}/api/heartbeat-runs/${params.runId}`, {
+    headers: getPaperclipAgentHeaders(params.paperclipApiKey),
+  });
+
+  if (!runResponse.ok) {
+    const errorBody = await runResponse.text();
+    throw new Error(
+      `Failed to read Chief readiness run ${params.runId} (HTTP ${runResponse.status}): ${summarizeDigitalOceanErrorBody(errorBody)}`,
+    );
+  }
+
+  return (await runResponse.json()) as PaperclipHeartbeatRunRecord;
+}
+
+async function loadHeartbeatRunLog(params: {
+  paperclipUrl: string;
+  paperclipApiKey: string;
+  runId: string;
+}): Promise<string> {
+  try {
+    const logResponse = await fetch(
+      `${params.paperclipUrl}/api/heartbeat-runs/${params.runId}/log?limitBytes=262144`,
+      { headers: getPaperclipAgentHeaders(params.paperclipApiKey) },
+    );
+    if (!logResponse.ok) {
+      return '';
+    }
+    return await logResponse.text();
+  } catch {
+    return '';
+  }
+}
+
+function normalizeRunStatus(rawStatus: unknown): string {
+  if (typeof rawStatus !== 'string') {
+    return '';
+  }
+
+  return rawStatus.trim().toLowerCase();
+}
+
+function isRunSucceeded(status: string): boolean {
+  return status === 'succeeded' || status === 'success' || status === 'completed' || status === 'complete';
+}
+
+function isRunTerminalFailure(status: string): boolean {
+  return status === 'failed' || status === 'error' || status === 'timed_out' || status === 'cancelled';
+}
+
+function buildReadinessFailureMessage(params: {
+  run: PaperclipHeartbeatRunRecord;
+  runLog: string;
+}): string {
+  const detailParts = [
+    typeof params.run.errorCode === 'string' ? `errorCode=${params.run.errorCode}` : null,
+    typeof params.run.error === 'string' ? `error=${params.run.error}` : null,
+    typeof params.run.stderrExcerpt === 'string' ? `stderr=${params.run.stderrExcerpt}` : null,
+    typeof params.run.stdoutExcerpt === 'string' ? `stdout=${params.run.stdoutExcerpt}` : null,
+    params.runLog.trim() ? `log=${params.runLog.trim()}` : null,
+  ].filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+
+  return detailParts.length > 0
+    ? detailParts.join(' | ')
+    : 'Chief readiness run failed without diagnostics';
 }
 
 export const provisionTenant = inngest.createFunction(
@@ -1140,7 +1397,7 @@ export const provisionTenant = inngest.createFunction(
     }
 
     if (!dropletIp) {
-      throw new Error('Droplet did not become ready within 5 minutes');
+      throw new Error('[readiness_timeout] Droplet did not become ready within 5 minutes');
     }
 
     const runtimeIngress = await step.run('resolve-runtime-ingress', async () => {
@@ -1236,7 +1493,7 @@ export const provisionTenant = inngest.createFunction(
     }
 
     if (!gatewayReady) {
-      throw new Error('OpenClaw gateway did not become healthy within 10 minutes');
+      throw new Error('[readiness_timeout] OpenClaw gateway did not become healthy within 10 minutes');
     }
 
     await step.run('verify-gateway-config', async () => {
@@ -1283,7 +1540,7 @@ export const provisionTenant = inngest.createFunction(
     }
 
     if (!paperclipReady) {
-      throw new Error('Paperclip server did not become healthy within 3 minutes');
+      throw new Error('[readiness_timeout] Paperclip server did not become healthy within 3 minutes');
     }
 
     const paperclipRefsMaxAttempts = 20;
@@ -1320,7 +1577,7 @@ export const provisionTenant = inngest.createFunction(
 
     if (!paperclipCompanyId || !resolvedPaperclipApiKey) {
       throw new Error(
-        'Paperclip bootstrap did not persist company/key in time. ' +
+        '[readiness_timeout] Paperclip bootstrap did not persist company/key in time. ' +
         'Check cloud-init logs on the droplet (/var/log/cloud-init-output.log).',
       );
     }
@@ -1436,15 +1693,23 @@ export const provisionTenant = inngest.createFunction(
       });
     });
 
-    await step.run('mark-active', async () => {
-      const { error } = await supabase.from('tenants').update({ status: 'active' }).eq('id', tenantId);
+    const persistBootstrapFailure = async (stepName: string, lastError: string) => {
+      onboardingData = await step.run(stepName, async () => {
+        return await persistBootstrapState({
+          tenantId,
+          onboardingData,
+          update: {
+            status: 'failed',
+            source: 'provisioning',
+            lastError,
+          },
+        });
+      });
+    };
 
-      if (error) {
-        throw new Error(`Failed to mark tenant as active: ${error.message}`);
-      }
-    });
+    const gatewayWsUrl = buildOpenClawGatewayWsUrlFromDropletIp(dropletIp);
 
-    await step.run('seed-paperclip-kickoff-artifacts', async () => {
+    const kickoffSeed = await step.run('seed-paperclip-kickoff-artifacts', async () => {
       try {
         const seeded = await seedPaperclipKickoffArtifacts({
           paperclipUrl,
@@ -1452,12 +1717,14 @@ export const provisionTenant = inngest.createFunction(
           paperclipApiKey: resolvedPaperclipApiKey,
           tenantName: tenant.name,
           onboardingData,
-          gatewayWsUrl: buildOpenClawGatewayWsUrlFromDropletIp(dropletIp),
+          gatewayWsUrl,
           gatewayToken: droplet.gatewayToken,
         });
 
         return {
           seeded: true,
+          chiefAgentId: seeded.chiefAgentId,
+          expectedDeviceId: seeded.expectedDeviceId,
           issueId: seeded.createdIssueId,
           approvalId: seeded.createdApprovalId,
           wakeRunId: seeded.wakeRunId,
@@ -1470,6 +1737,8 @@ export const provisionTenant = inngest.createFunction(
 
         return {
           seeded: false,
+          chiefAgentId: null,
+          expectedDeviceId: null,
           issueId: null,
           approvalId: null,
           wakeRunId: null,
@@ -1478,47 +1747,190 @@ export const provisionTenant = inngest.createFunction(
       }
     });
 
-    const bootstrapResult = await step.run('trigger-initial-bootstrap', async () => {
-      try {
-        return await triggerOnboardingBootstrap({
-          gatewayUrl,
+    let chiefAgentId = kickoffSeed.chiefAgentId;
+    let expectedDeviceId = kickoffSeed.expectedDeviceId;
+
+    if (!chiefAgentId) {
+      const chiefFallback = await step.run('resolve-chief-agent-for-readiness', async () => {
+        const agentsResponse = await fetch(
+          `${paperclipUrl}/api/companies/${paperclipCompanyId}/agents`,
+          { headers: getPaperclipAgentHeaders(resolvedPaperclipApiKey) },
+        );
+        if (!agentsResponse.ok) {
+          throw new Error(`Failed to load agents for readiness preflight (HTTP ${agentsResponse.status})`);
+        }
+
+        const agents = (await agentsResponse.json()) as PaperclipAgentRecord[];
+        let chiefAgent = agents.find((agent) => agent.urlKey === 'chief') ?? agents[0];
+        if (!chiefAgent?.id) {
+          throw new Error('No Chief agent available for readiness preflight');
+        }
+
+        chiefAgent = await ensureChiefOpenClawGatewayAdapter({
+          paperclipUrl,
+          paperclipApiKey: resolvedPaperclipApiKey,
+          chiefAgent,
+          gatewayWsUrl,
           gatewayToken: droplet.gatewayToken,
-          message: buildOnboardingBootstrapMessage({
-            tenantName: tenant.name,
-            onboardingData,
-          }),
         });
-      } catch (error) {
+
+        const chiefGatewayState = readChiefGatewayState(chiefAgent);
         return {
-          ok: false,
-          status: 500,
-          body: error instanceof Error ? error.message : 'Unknown bootstrap error',
+          chiefAgentId: chiefAgent.id,
+          expectedDeviceId: chiefGatewayState.expectedDeviceId,
         };
+      });
+
+      chiefAgentId = chiefFallback.chiefAgentId;
+      expectedDeviceId = chiefFallback.expectedDeviceId;
+    }
+
+    let readinessRunId = kickoffSeed.wakeRunId;
+    if (!readinessRunId) {
+      readinessRunId = await step.run('trigger-chief-readiness-run', async () => {
+        return await triggerChiefWakeupRun({
+          paperclipUrl,
+          paperclipApiKey: resolvedPaperclipApiKey,
+          chiefAgentId,
+          issueId: kickoffSeed.issueId,
+          reason: 'provisioning_readiness_preflight',
+        });
+      });
+    }
+
+    const readinessMaxAttempts = 40; // ~200 seconds, bounded by step sleep
+    const maxRetryRuns = 2;
+    let readinessPassed = false;
+    let retryRunsUsed = 0;
+    let lastReadinessFailure = '';
+
+    for (let i = 0; i < readinessMaxAttempts; i += 1) {
+      const run = await step.run(`check-chief-readiness-run-${i}`, async () => {
+        return await loadHeartbeatRunRecord({
+          paperclipUrl,
+          paperclipApiKey: resolvedPaperclipApiKey,
+          runId: readinessRunId,
+        });
+      });
+
+      const normalizedStatus = normalizeRunStatus(run.status);
+      if (isRunSucceeded(normalizedStatus)) {
+        readinessPassed = true;
+        break;
       }
+
+      if (isRunTerminalFailure(normalizedStatus)) {
+        const runLog = await step.run(`load-chief-readiness-log-${i}`, async () => {
+          return await loadHeartbeatRunLog({
+            paperclipUrl,
+            paperclipApiKey: resolvedPaperclipApiKey,
+            runId: readinessRunId,
+          });
+        });
+
+        const failureMessage = buildReadinessFailureMessage({ run, runLog });
+        const diagnostics = classifyGatewayFailure({
+          status: 502,
+          message: failureMessage,
+        });
+        lastReadinessFailure = formatGatewayDiagnostic(diagnostics);
+
+        let shouldRetryRun = false;
+
+        if (diagnostics.tag === 'pairing_required' && retryRunsUsed < maxRetryRuns) {
+          const pairingApproval = await step.run(`approve-chief-pairing-${i}`, async () => {
+            return await autoApproveGatewayPairing({
+              gatewayWsUrl,
+              gatewayToken: droplet.gatewayToken,
+              requestId: diagnostics.requestId,
+              expectedDeviceId,
+            });
+          });
+
+          if (pairingApproval.ok) {
+            shouldRetryRun = true;
+          } else {
+            lastReadinessFailure = `${lastReadinessFailure} | autoPair=${pairingApproval.reason}`;
+          }
+        } else if (diagnostics.retryable && retryRunsUsed < maxRetryRuns) {
+          shouldRetryRun = true;
+        }
+
+        if (shouldRetryRun) {
+          retryRunsUsed += 1;
+          readinessRunId = await step.run(`retry-chief-readiness-run-${i}`, async () => {
+            return await triggerChiefWakeupRun({
+              paperclipUrl,
+              paperclipApiKey: resolvedPaperclipApiKey,
+              chiefAgentId,
+              issueId: kickoffSeed.issueId,
+              reason: `provisioning_readiness_retry_${retryRunsUsed}`,
+            });
+          });
+          continue;
+        }
+
+        await persistBootstrapFailure('persist-bootstrap-failure-readiness', lastReadinessFailure);
+        throw new Error(lastReadinessFailure);
+      }
+
+      if (i < readinessMaxAttempts - 1) {
+        await step.sleep(`wait-chief-readiness-run-${i}`, '5s');
+      }
+    }
+
+    if (!readinessPassed) {
+      const timeoutMessage = lastReadinessFailure
+        ? `[readiness_timeout] Chief readiness run did not succeed: ${lastReadinessFailure}`
+        : '[readiness_timeout] Chief readiness run did not reach success before timeout';
+      await persistBootstrapFailure('persist-bootstrap-failure-readiness-timeout', timeoutMessage);
+      throw new Error(timeoutMessage);
+    }
+
+    const bootstrapResult = await step.run('trigger-initial-bootstrap', async () => {
+      return await dispatchBootstrapWithPairingRecovery({
+        gatewayHttpUrl: gatewayUrl,
+        gatewayWsUrl,
+        gatewayToken: droplet.gatewayToken,
+        expectedDeviceId,
+        message: buildOnboardingBootstrapMessage({
+          tenantName: tenant.name,
+          onboardingData,
+        }),
+      });
     });
 
     if (!bootstrapResult.ok) {
-      console.warn(
-        `Initial onboarding bootstrap did not start for tenant ${tenantId} ` +
-        `(HTTP ${bootstrapResult.status}): ${bootstrapResult.body}`
-      );
+      const diagnostics = bootstrapResult.diagnostics ?? classifyGatewayFailure({
+        status: bootstrapResult.status,
+        message: bootstrapResult.body,
+      });
+      const failureMessage = `${formatGatewayDiagnostic(diagnostics)}${
+        bootstrapResult.autoPairAttempted
+          ? ` autoPair=${bootstrapResult.autoPairReason ?? 'attempted'}`
+          : ''
+      }`;
+      await persistBootstrapFailure('persist-bootstrap-failure-dispatch', failureMessage);
+      throw new Error(failureMessage);
     }
 
     onboardingData = await step.run('persist-bootstrap-result', async () => {
       return await persistBootstrapState({
         tenantId,
         onboardingData,
-        update: bootstrapResult.ok
-          ? {
-              status: 'accepted',
-              source: 'provisioning',
-            }
-          : {
-              status: 'failed',
-              source: 'provisioning',
-              lastError: bootstrapResult.body,
-            },
+        update: {
+          status: 'accepted',
+          source: 'provisioning',
+        },
       });
+    });
+
+    await step.run('mark-active', async () => {
+      const { error } = await supabase.from('tenants').update({ status: 'active' }).eq('id', tenantId);
+
+      if (error) {
+        throw new Error(`Failed to mark tenant as active: ${error.message}`);
+      }
     });
 
     return {
@@ -1529,6 +1941,9 @@ export const provisionTenant = inngest.createFunction(
       agentmailInbox,
       bootstrapAccepted: bootstrapResult.ok,
       bootstrapStatus: bootstrapResult.status,
+      bootstrapDiagnostics: bootstrapResult.diagnostics,
+      bootstrapAutoPairAttempted: bootstrapResult.autoPairAttempted,
+      bootstrapAutoPairApproved: bootstrapResult.autoPairApproved,
       memoryNativeEnabled: memoryProvisioningPlan.effectiveNativeEnabled,
       memoryNativeDowngraded: memoryProvisioningPlan.nativeDowngradedMissingApiKey,
       trialMode: !!trialMode,
