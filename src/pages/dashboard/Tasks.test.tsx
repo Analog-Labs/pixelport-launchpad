@@ -9,7 +9,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
-import { useUpdateTaskStatus } from '@/hooks/usePaperclipTasks';
+import { useCreateTaskComment, useUpdateTaskStatus } from '@/hooks/usePaperclipTasks';
 import type { IssuesResponse } from '@/lib/paperclip-types';
 
 const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }));
@@ -130,5 +130,40 @@ describe('Kanban drag-and-drop → PATCH (useUpdateTaskStatus)', () => {
     // Cache should be reverted to todo
     const cached = client.getQueryData<IssuesResponse>(['paperclip', 'issues']);
     expect(cached?.issues[0].status).toBe('todo');
+  });
+
+  it('posts a task comment and updates comments cache', async () => {
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (String(url).includes('issues/task-4/comments') && init?.method === 'POST') {
+        return Promise.resolve(
+          makeResponse({
+            id: 'comment-1',
+            body: 'Looks good',
+            authorUserId: 'user-1',
+            createdAt: '2026-03-20T00:00:00Z',
+          }),
+        );
+      }
+      if (String(url).includes('issues/task-4/comments')) {
+        return Promise.resolve(makeResponse([]));
+      }
+      return Promise.resolve(makeResponse({ issues: [] }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => useCreateTaskComment('task-4'), { wrapper: wrapper(client) });
+
+    await act(async () => {
+      result.current.mutate({ body: 'Looks good' });
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const postCall = fetchMock.mock.calls.find(
+      ([url, init]) => String(url).includes('issues/task-4/comments') && init?.method === 'POST',
+    );
+    expect(postCall).toBeDefined();
+    expect(JSON.parse(postCall![1].body as string)).toEqual({ body: 'Looks good' });
   });
 });

@@ -24,9 +24,11 @@ vi.mock('../../api/lib/auth', () => ({
 
 // Mock gateway module
 const proxyToPaperclip = vi.fn();
+const proxyToPaperclipAsBoard = vi.fn();
 
 vi.mock('../../api/lib/gateway', () => ({
   proxyToPaperclip,
+  proxyToPaperclipAsBoard,
   ProxyTimeoutError: class ProxyTimeoutError extends Error {
     constructor(target: string) {
       super(`Proxy timeout to ${target}`);
@@ -227,16 +229,17 @@ describe('GET/POST /api/tenant-proxy/[...path]', () => {
       tenant: buildTenant(),
       userId: 'user-1',
     });
-    matchProxyRoute.mockReturnValue({ targetPath: '/api/issues/i-1/comments' });
+    // Use a non-board-session path (e.g. a generic POST) to test body forwarding
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/companies/company-abc/scan' });
     proxyToPaperclip.mockResolvedValue(
-      mockFetchResponse(201, '{"id":"comment-1"}'),
+      mockFetchResponse(201, '{"id":"scan-1"}'),
     );
 
     const reqBody = { content: 'Hello agent' };
     const req = {
       method: 'POST',
-      query: { path: ['issues', 'i-1', 'comments'] },
-      url: '/api/tenant-proxy/issues/i-1/comments',
+      query: { path: ['companies', 'scan'] },
+      url: '/api/tenant-proxy/companies/scan',
       body: reqBody,
     };
     const res = createMockResponse();
@@ -246,9 +249,102 @@ describe('GET/POST /api/tenant-proxy/[...path]', () => {
     expect(res.statusCode).toBe(201);
     expect(proxyToPaperclip).toHaveBeenCalledWith(
       expect.anything(),
-      '/api/issues/i-1/comments',
+      '/api/companies/company-abc/scan',
       { method: 'POST', body: reqBody },
     );
+  });
+
+  it('uses board session proxy for approval decision mutations', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/approvals/ap-1/approve' });
+    proxyToPaperclipAsBoard.mockResolvedValue(
+      mockFetchResponse(200, '{"status":"approved"}'),
+    );
+
+    const req = {
+      method: 'POST',
+      query: { path: ['approvals', 'ap-1', 'approve'] },
+      url: '/api/tenant-proxy/approvals/ap-1/approve',
+      body: {},
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(proxyToPaperclipAsBoard).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-1',
+      '/api/approvals/ap-1/approve',
+      { method: 'POST', body: {} },
+    );
+    expect(proxyToPaperclip).not.toHaveBeenCalled();
+  });
+
+  it('falls back to agent key proxy when board handoff throws', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/approvals/ap-1/reject' });
+    proxyToPaperclipAsBoard.mockRejectedValue(new Error('Handoff timeout'));
+    proxyToPaperclip.mockResolvedValue(
+      mockFetchResponse(403, '{"error":"Forbidden"}'),
+    );
+
+    const req = {
+      method: 'POST',
+      query: { path: ['approvals', 'ap-1', 'reject'] },
+      url: '/api/tenant-proxy/approvals/ap-1/reject',
+      body: {},
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    // Board handoff failed, fell back to agent key proxy which returned 403
+    // The handler should return a clear error instead of forwarding the raw 403
+    expect(res.statusCode).toBe(403);
+    expect(proxyToPaperclipAsBoard).toHaveBeenCalled();
+    expect(proxyToPaperclip).toHaveBeenCalled();
+    const body = res.body as { error: string };
+    expect(body.error).toContain('not authorized');
+  });
+
+  it('uses board session proxy for issue comment writes', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/issues/task-1/comments' });
+    proxyToPaperclipAsBoard.mockResolvedValue(
+      mockFetchResponse(200, '{"id":"comment-1","body":"test"}'),
+    );
+
+    const req = {
+      method: 'POST',
+      query: { path: ['issues', 'task-1', 'comments'] },
+      url: '/api/tenant-proxy/issues/task-1/comments',
+      body: { body: 'test' },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(proxyToPaperclipAsBoard).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-1',
+      '/api/issues/task-1/comments',
+      { method: 'POST', body: { body: 'test' } },
+    );
+    expect(proxyToPaperclip).not.toHaveBeenCalled();
   });
 
   it('preserves query string in forwarded request', async () => {

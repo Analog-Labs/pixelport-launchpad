@@ -39,6 +39,34 @@ function readNumber(value: unknown): number | undefined {
   return undefined;
 }
 
+function readId(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(Math.trunc(value));
+  }
+  return undefined;
+}
+
+function parseIsoTimestamp(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+export function humanizeToken(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const normalized = raw
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) return undefined;
+  return normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function normalizeAgentStatus(status: unknown): PaperclipAgent['status'] {
   const raw = readString(status)?.toLowerCase();
   if (raw === 'running' || raw === 'active' || raw === 'busy') return 'running';
@@ -50,10 +78,26 @@ function normalizeAgentStatus(status: unknown): PaperclipAgent['status'] {
 function normalizeRunStatus(status: unknown, result: unknown): LiveRun['status'] {
   const raw = readString(status)?.toLowerCase();
   const outcome = readString(result)?.toLowerCase();
-  if (raw === 'failed' || raw === 'error' || outcome === 'failed' || outcome === 'error') {
+  if (
+    raw === 'failed'
+    || raw === 'error'
+    || raw === 'timed_out'
+    || raw === 'timeout'
+    || raw === 'cancelled'
+    || raw === 'canceled'
+    || outcome === 'failed'
+    || outcome === 'error'
+  ) {
     return 'failed';
   }
-  if (raw === 'complete' || raw === 'completed' || raw === 'success' || outcome === 'success') {
+  if (
+    raw === 'complete'
+    || raw === 'completed'
+    || raw === 'success'
+    || raw === 'succeeded'
+    || outcome === 'success'
+    || outcome === 'succeeded'
+  ) {
     return 'complete';
   }
   return 'running';
@@ -117,26 +161,57 @@ function normalizeHeartbeatRun(raw: unknown): HeartbeatRun | null {
   const id = readString(raw.id);
   if (!id) return null;
 
-  const result = normalizeRunStatus(raw.status, raw.result) === 'failed' ? 'failed' : 'success';
+  const runStatus = normalizeRunStatus(raw.status, raw.result);
+  const result = runStatus === 'failed' ? 'failed' : 'success';
   const startedAt =
     readString(raw.startedAt)
     ?? readString(raw.started_at)
     ?? readString(raw.createdAt)
     ?? new Date().toISOString();
+  const completedAt =
+    readString(raw.completedAt)
+    ?? readString(raw.completed_at)
+    ?? readString(raw.finishedAt)
+    ?? readString(raw.finished_at);
+  const durationFromTimestamps = (() => {
+    const startMs = parseIsoTimestamp(startedAt);
+    const finishMs = parseIsoTimestamp(completedAt);
+    if (startMs === undefined || finishMs === undefined) return undefined;
+    const delta = finishMs - startMs;
+    return delta >= 0 ? delta : undefined;
+  })();
+  const contextSnapshot = isRecord(raw.contextSnapshot) ? raw.contextSnapshot : null;
+  const wakeReason = contextSnapshot ? readString(contextSnapshot.wakeReason) : undefined;
+  const issueId = contextSnapshot ? readString(contextSnapshot.issueId) : undefined;
+  const triggerDetail = readString(raw.triggerDetail);
+  const errorCode = readString(raw.errorCode);
+  const derivedName =
+    readString(raw.name)
+    ?? readString(raw.title)
+    ?? (wakeReason ? humanizeToken(wakeReason) : undefined)
+    ?? (errorCode ? humanizeToken(errorCode) : undefined)
+    ?? (
+      triggerDetail && triggerDetail.toLowerCase() !== 'system'
+        ? humanizeToken(triggerDetail)
+        : undefined
+    );
 
   return {
     id,
     agentId: readString(raw.agentId) ?? readString(raw.agent_id),
-    name: readString(raw.name) ?? readString(raw.title),
+    name: derivedName,
     result,
-    durationMs: readNumber(raw.durationMs) ?? readNumber(raw.duration_ms),
+    status: readString(raw.status) ?? runStatus,
+    durationMs:
+      readNumber(raw.durationMs)
+      ?? readNumber(raw.duration_ms)
+      ?? durationFromTimestamps,
     costCents: readNumber(raw.costCents) ?? readNumber(raw.cost_cents),
     startedAt,
-    completedAt:
-      readString(raw.completedAt)
-      ?? readString(raw.completed_at)
-      ?? readString(raw.finishedAt)
-      ?? readString(raw.finished_at),
+    completedAt,
+    error: readString(raw.error),
+    wakeReason,
+    issueId,
   };
 }
 
@@ -173,12 +248,20 @@ function normalizeComment(raw: unknown): IssueComment | null {
   if (!isRecord(raw)) return null;
   const id = readString(raw.id);
   if (!id) return null;
+  const authorAgentId = readString(raw.authorAgentId) ?? readString(raw.author_agent_id);
+  const authorUserId = readString(raw.authorUserId) ?? readString(raw.author_user_id);
 
   return {
     id,
     body: readString(raw.body) ?? readString(raw.content) ?? '',
-    author: readString(raw.author) ?? readString(raw.authorName),
+    author:
+      readString(raw.author)
+      ?? readString(raw.authorName)
+      ?? (authorUserId ? 'You' : undefined)
+      ?? (authorAgentId ? 'Chief' : undefined),
     createdAt: readString(raw.createdAt) ?? readString(raw.created_at) ?? new Date().toISOString(),
+    authorAgentId,
+    authorUserId,
   };
 }
 
@@ -189,11 +272,26 @@ function normalizeApproval(raw: unknown): PaperclipApproval | null {
 
   const payload = isRecord(raw.payload) ? raw.payload : undefined;
   const payloadContent = payload ? readString(payload.content) : undefined;
+  const payloadTitle = payload ? readString(payload.title) : undefined;
+  const payloadSummary = payload ? readString(payload.summary) : undefined;
+  const payloadRequestedAction = payload ? readString(payload.requestedAction) : undefined;
+  const payloadSeedTag = payload ? readString(payload.seedTag) : undefined;
+  const composedContent = [
+    payloadContent,
+    payloadSummary,
+    payloadRequestedAction,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join('\n\n');
 
   return {
     id,
     type: readString(raw.type) ?? 'Approval',
-    content: readString(raw.content) ?? payloadContent ?? '',
+    content: readString(raw.content) ?? composedContent,
+    title: payloadTitle,
+    summary: payloadSummary,
+    requestedAction: payloadRequestedAction,
+    seedTag: payloadSeedTag,
     platform: readString(raw.platform),
     createdBy: readString(raw.createdBy) ?? readString(raw.created_by) ?? readString(raw.agentName),
     createdAt: readString(raw.createdAt) ?? readString(raw.created_at) ?? new Date().toISOString(),
@@ -204,12 +302,12 @@ function normalizeApproval(raw: unknown): PaperclipApproval | null {
 
 function normalizeRunEvent(raw: unknown): HeartbeatRunEvent | null {
   if (!isRecord(raw)) return null;
-  const id = readString(raw.id);
+  const id = readId(raw.id);
   if (!id) return null;
 
   return {
     id,
-    type: readString(raw.type) ?? 'event',
+    type: readString(raw.type) ?? readString(raw.eventType) ?? 'event',
     message: readString(raw.message),
     createdAt: readString(raw.createdAt) ?? readString(raw.created_at) ?? new Date().toISOString(),
   };

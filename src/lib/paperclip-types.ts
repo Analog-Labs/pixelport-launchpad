@@ -25,10 +25,14 @@ export interface HeartbeatRun {
   agentId?: string;
   name?: string;
   result: 'success' | 'failed';
+  status?: string;
   durationMs?: number;
   costCents?: number;
   startedAt: string;
   completedAt?: string;
+  error?: string;
+  wakeReason?: string;
+  issueId?: string;
 }
 
 export interface HeartbeatRunEvent {
@@ -62,12 +66,18 @@ export interface IssueComment {
   body: string;
   author?: string;
   createdAt: string;
+  authorAgentId?: string;
+  authorUserId?: string;
 }
 
 export interface PaperclipApproval {
   id: string;
   type: string;
   content: string;
+  title?: string;
+  summary?: string;
+  requestedAction?: string;
+  seedTag?: string;
   platform?: string;
   createdBy?: string;
   createdAt: string;

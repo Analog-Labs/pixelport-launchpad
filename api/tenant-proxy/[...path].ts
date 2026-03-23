@@ -1,6 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
-import { proxyToPaperclip, ProxyTimeoutError } from '../lib/gateway';
+import {
+  proxyToPaperclip,
+  proxyToPaperclipAsBoard,
+  ProxyTimeoutError,
+} from '../lib/gateway';
 import { matchProxyRoute } from '../lib/paperclip-proxy-allowlist';
 
 function resolveProxyPath(req: VercelRequest): string {
@@ -33,6 +37,23 @@ function resolveForwardedQueryString(req: VercelRequest): string {
   return query ? `?${query}` : '';
 }
 
+function requiresBoardSession(method: string, proxyPath: string): boolean {
+  if (method.toUpperCase() !== 'POST') {
+    return false;
+  }
+
+  const normalizedPath = proxyPath.replace(/^\/+|\/+$/g, '');
+  // Approval decision mutations require board auth
+  if (/^approvals\/[^/]+\/(approve|reject|request-revision|resubmit)$/.test(normalizedPath)) {
+    return true;
+  }
+  // Issue comment writes require board auth for active/checked-out issues
+  if (/^issues\/[^/]+\/comments$/.test(normalizedPath)) {
+    return true;
+  }
+  return false;
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
@@ -46,7 +67,7 @@ export default async function handler(
     }
 
     // 2. Authenticate dashboard user
-    const { tenant } = await authenticateRequest(req);
+    const { tenant, userId } = await authenticateRequest(req);
 
     // 3. Validate tenant has Paperclip infrastructure
     if (!tenant.droplet_ip) {
@@ -72,10 +93,32 @@ export default async function handler(
     const targetPath = match.targetPath + queryString;
 
     // 6. Forward to Paperclip
-    const response = await proxyToPaperclip(tenant, targetPath, {
+    const requestOptions = {
       method,
       body: ['POST', 'PATCH', 'PUT'].includes(method) ? req.body : undefined,
-    });
+    };
+    let response: Response;
+
+    if (requiresBoardSession(method, proxyPath)) {
+      try {
+        response = await proxyToPaperclipAsBoard(tenant, userId, targetPath, requestOptions);
+      } catch (error) {
+        console.error(
+          '[tenant-proxy] Board handoff failed, falling back to agent key proxy:',
+          error,
+        );
+        response = await proxyToPaperclip(tenant, targetPath, requestOptions);
+      }
+      // If the response is 401/403, the auth method lacks approval permissions.
+      // Return a clear error instead of the raw Paperclip response.
+      if (response.status === 401 || response.status === 403) {
+        return res.status(403).json({
+          error: 'Approval action not authorized. The workspace may need to be re-provisioned.',
+        });
+      }
+    } else {
+      response = await proxyToPaperclip(tenant, targetPath, requestOptions);
+    }
 
     // 7. Return Paperclip response to browser
     const body = await response.text();
