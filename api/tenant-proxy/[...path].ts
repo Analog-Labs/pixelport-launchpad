@@ -3,16 +3,43 @@ import { authenticateRequest, errorResponse } from '../lib/auth';
 import { proxyToPaperclip, ProxyTimeoutError } from '../lib/gateway';
 import { matchProxyRoute } from '../lib/paperclip-proxy-allowlist';
 
+function resolveProxyPath(req: VercelRequest): string {
+  const pathParam = req.query.path;
+
+  if (Array.isArray(pathParam)) {
+    return pathParam.join('/');
+  }
+
+  if (typeof pathParam === 'string') {
+    return pathParam;
+  }
+
+  // Fallback for environments that do not expose catch-all params reliably.
+  const url = req.url ?? '';
+  const pathname = url.split('?')[0] ?? '';
+  const prefix = '/api/tenant-proxy/';
+  if (pathname.startsWith(prefix)) {
+    return pathname.slice(prefix.length);
+  }
+
+  return '';
+}
+
+function resolveForwardedQueryString(req: VercelRequest): string {
+  const rawUrl = req.url ?? '/';
+  const parsed = new URL(rawUrl, 'https://pixelport.local');
+  parsed.searchParams.delete('path');
+  const query = parsed.searchParams.toString();
+  return query ? `?${query}` : '';
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ): Promise<VercelResponse> {
   try {
-    // 1. Extract proxy path from catch-all param
-    const pathParam = req.query.path;
-    const proxyPath = Array.isArray(pathParam)
-      ? pathParam.join('/')
-      : pathParam || '';
+    // 1. Extract proxy path from catch-all param or query fallback.
+    const proxyPath = resolveProxyPath(req);
 
     if (!proxyPath) {
       return res.status(400).json({ error: 'Missing proxy path' });
@@ -40,9 +67,8 @@ export default async function handler(
       return res.status(404).json({ error: 'Route not found' });
     }
 
-    // 5. Preserve query string from original request
-    const qsIndex = req.url?.indexOf('?') ?? -1;
-    const queryString = qsIndex >= 0 ? req.url!.slice(qsIndex) : '';
+    // 5. Preserve query string from original request (excluding `path`).
+    const queryString = resolveForwardedQueryString(req);
     const targetPath = match.targetPath + queryString;
 
     // 6. Forward to Paperclip

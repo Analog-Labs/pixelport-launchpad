@@ -278,6 +278,34 @@ describe('GET/POST /api/tenant-proxy/[...path]', () => {
     );
   });
 
+  it('supports query-style proxy path and excludes the path query from forwarded request', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/companies/company-abc/issues' });
+    proxyToPaperclip.mockResolvedValue(
+      mockFetchResponse(200, '[]'),
+    );
+
+    const req = {
+      method: 'GET',
+      query: { path: 'companies/issues', status: 'in_progress', limit: '20' },
+      url: '/api/tenant-proxy?path=companies/issues&status=in_progress&limit=20',
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(matchProxyRoute).toHaveBeenCalledWith('GET', 'companies/issues', 'company-abc');
+    expect(proxyToPaperclip).toHaveBeenCalledWith(
+      expect.anything(),
+      '/api/companies/company-abc/issues?status=in_progress&limit=20',
+      expect.anything(),
+    );
+  });
+
   it('returns 504 on ProxyTimeoutError', async () => {
     const { default: handler } = await import('../../api/tenant-proxy/[...path]');
     const { ProxyTimeoutError } = await import('../../api/lib/gateway');
