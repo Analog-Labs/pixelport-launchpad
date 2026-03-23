@@ -94,4 +94,54 @@ describe("GET /api/tenants/status", () => {
       plan: "trial",
     });
   });
+
+  it("unlocks task step when bootstrap is completed even if tenant status lags", async () => {
+    const { default: handler } = await import("../../api/tenants/status");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-2",
+        status: "provisioning",
+        droplet_id: "droplet-2",
+        gateway_token: "gw-2",
+        agentmail_inbox: null,
+        trial_ends_at: null,
+        plan: "trial",
+        onboarding_data: {},
+      },
+    });
+    reconcileBootstrapState.mockResolvedValue({
+      snapshot: {
+        onboardingData: {},
+        updatedAt: "2026-03-22T17:00:00.000Z",
+      },
+      progress: {
+        hasAgentOutput: true,
+      },
+      effectiveState: {
+        status: "completed",
+        last_error: null,
+      },
+      changed: true,
+    });
+
+    const req = { method: "GET" };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      contract_version: THIN_BRIDGE_CONTRACT_VERSION,
+      status: "provisioning",
+      bootstrap_status: "completed",
+      task_step_unlocked: true,
+      has_agent_output: true,
+      has_droplet: true,
+      has_gateway: true,
+      has_agentmail: false,
+      trial_ends_at: null,
+      plan: "trial",
+    });
+  });
 });
