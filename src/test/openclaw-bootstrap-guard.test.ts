@@ -40,6 +40,19 @@ describe("openclaw bootstrap guard", () => {
     expect(diagnostics.retryable).toBe(true);
   });
 
+  it("treats missing operator.pairing scope as pairing-recovery eligible", async () => {
+    const { classifyGatewayFailure, isPairingRecoveryEligible } = await import("../../api/lib/openclaw-bootstrap-guard");
+
+    const diagnostics = classifyGatewayFailure({
+      status: 500,
+      message: "openclaw_gateway_pairing_required: missing scope: operator.pairing",
+    });
+
+    expect(diagnostics.tag).toBe("missing_operator_scope");
+    expect(diagnostics.missingScope).toBe("operator.pairing");
+    expect(isPairingRecoveryEligible(diagnostics)).toBe(true);
+  });
+
   it("passes through successful bootstrap dispatch without auto-pair attempts", async () => {
     const { dispatchBootstrapWithPairingRecovery } = await import("../../api/lib/openclaw-bootstrap-guard");
 

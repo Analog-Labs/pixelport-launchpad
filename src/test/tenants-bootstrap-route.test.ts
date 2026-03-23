@@ -7,6 +7,7 @@ const errorResponse = vi.fn((res: MockResponse, error: unknown) =>
   })
 );
 const repairBootstrapHooksOnDroplet = vi.fn();
+const approveGatewayPairingViaSsh = vi.fn();
 const loadBootstrapSnapshot = vi.fn();
 const reconcileBootstrapState = vi.fn();
 const transitionBootstrapState = vi.fn();
@@ -31,6 +32,10 @@ vi.mock("../../api/lib/auth", () => ({
 
 vi.mock("../../api/lib/bootstrap-hooks-repair", () => ({
   repairBootstrapHooksOnDroplet,
+}));
+
+vi.mock("../../api/lib/openclaw-pairing-ssh", () => ({
+  approveGatewayPairingViaSsh,
 }));
 
 vi.mock("../../api/lib/bootstrap-state", () => ({

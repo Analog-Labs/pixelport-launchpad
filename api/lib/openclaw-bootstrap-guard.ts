@@ -182,6 +182,14 @@ export function formatGatewayDiagnostic(diagnostics: GatewayDiagnostic): string 
   return `[${diagnostics.tag}]${scopeSuffix}${requestSuffix} ${diagnostics.message}`;
 }
 
+export function isPairingRecoveryEligible(diagnostics: GatewayDiagnostic): boolean {
+  if (diagnostics.tag === 'pairing_required') {
+    return true;
+  }
+
+  return diagnostics.tag === 'missing_operator_scope' && diagnostics.missingScope === 'operator.pairing';
+}
+
 class GatewayWsClient {
   private ws: WebSocket | null = null;
 
@@ -433,6 +441,7 @@ export async function autoApproveGatewayPairing(params: {
 }): Promise<PairingApprovalResult> {
   const client = new GatewayWsClient(params.gatewayWsUrl, {
     Authorization: `Bearer ${params.gatewayToken}`,
+    'x-openclaw-token': params.gatewayToken,
   });
 
   try {
@@ -516,6 +525,9 @@ export async function dispatchBootstrapWithPairingRecovery(params: {
   gatewayToken: string;
   message: string;
   expectedDeviceId?: string | null;
+  fallbackPairingApproval?: (context: {
+    diagnostics: GatewayDiagnostic;
+  }) => Promise<PairingApprovalResult>;
 }): Promise<BootstrapDispatchResult> {
   const first = await triggerOnboardingBootstrap({
     gatewayUrl: params.gatewayHttpUrl,
@@ -538,7 +550,7 @@ export async function dispatchBootstrapWithPairingRecovery(params: {
     message: first.body,
   });
 
-  if (firstDiagnostics.tag !== 'pairing_required') {
+  if (!isPairingRecoveryEligible(firstDiagnostics)) {
     return {
       ...first,
       diagnostics: firstDiagnostics,
@@ -557,6 +569,49 @@ export async function dispatchBootstrapWithPairingRecovery(params: {
   });
 
   if (!pairingResult.ok) {
+    if (params.fallbackPairingApproval) {
+      const fallback = await params.fallbackPairingApproval({
+        diagnostics: firstDiagnostics,
+      });
+
+      if (fallback.ok) {
+        const retryAfterFallback = await triggerOnboardingBootstrap({
+          gatewayUrl: params.gatewayHttpUrl,
+          gatewayToken: params.gatewayToken,
+          message: params.message,
+        });
+
+        if (retryAfterFallback.ok) {
+          return {
+            ...retryAfterFallback,
+            diagnostics: null,
+            autoPairAttempted: true,
+            autoPairApproved: fallback.approved,
+            autoPairReason: `fallback:${fallback.reason}`,
+          };
+        }
+
+        return {
+          ...retryAfterFallback,
+          diagnostics: classifyGatewayFailure({
+            status: retryAfterFallback.status,
+            message: retryAfterFallback.body,
+          }),
+          autoPairAttempted: true,
+          autoPairApproved: fallback.approved,
+          autoPairReason: `fallback:${fallback.reason}`,
+        };
+      }
+
+      return {
+        ...first,
+        diagnostics: firstDiagnostics,
+        autoPairAttempted: true,
+        autoPairApproved: false,
+        autoPairReason: `${pairingResult.reason}; fallback=${fallback.reason}`,
+      };
+    }
+
     return {
       ...first,
       diagnostics: firstDiagnostics,
