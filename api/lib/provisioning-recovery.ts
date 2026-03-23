@@ -18,7 +18,7 @@ function hasRecoveryPrerequisites(tenant: Tenant): boolean {
   return (
     tenant.status?.trim().toLowerCase() === 'provisioning'
     && !!tenant.droplet_ip
-    && !!tenant.paperclip_api_key
+    && (!!tenant.paperclip_api_key || !!tenant.agent_api_key || !!tenant.gateway_token)
   );
 }
 
@@ -64,23 +64,39 @@ function readCompanyIdFromPayload(payload: unknown): string | null {
   return null;
 }
 
-async function discoverOrCreatePaperclipCompany(tenant: Tenant): Promise<string | null> {
+async function resolveWorkingPaperclipAuthKey(tenant: Tenant): Promise<string | null> {
+  const candidateKeys = [
+    tenant.paperclip_api_key,
+    tenant.agent_api_key,
+    tenant.gateway_token,
+  ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+
+  const paperclipUrl = `http://${tenant.droplet_ip}:3100`;
+  for (const key of candidateKeys) {
+    try {
+      const res = await fetch(`${paperclipUrl}/api/health`, {
+        headers: { Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (res.ok) {
+        return key;
+      }
+    } catch {
+      // Try next candidate.
+    }
+  }
+
+  return null;
+}
+
+async function discoverOrCreatePaperclipCompany(tenant: Tenant, authKey: string): Promise<string | null> {
   const paperclipUrl = `http://${tenant.droplet_ip}:3100`;
   const headers = {
-    Authorization: `Bearer ${tenant.paperclip_api_key}`,
+    Authorization: `Bearer ${authKey}`,
     'Content-Type': 'application/json',
   };
 
-  // 1. Ensure Paperclip API is responsive.
-  const healthRes = await fetch(`${paperclipUrl}/api/health`, {
-    headers,
-    signal: AbortSignal.timeout(5_000),
-  });
-  if (!healthRes.ok) {
-    return null;
-  }
-
-  // 2. Discover existing company.
+  // 1. Discover existing company.
   const listRes = await fetch(`${paperclipUrl}/api/companies`, {
     headers,
     signal: AbortSignal.timeout(10_000),
@@ -94,7 +110,7 @@ async function discoverOrCreatePaperclipCompany(tenant: Tenant): Promise<string 
     }
   }
 
-  // 3. Create if missing.
+  // 2. Create if missing.
   const createRes = await fetch(`${paperclipUrl}/api/companies`, {
     method: 'POST',
     headers,
@@ -120,7 +136,12 @@ export async function tryRecoverProvisioningTenant(tenant: Tenant): Promise<Reco
   }
 
   try {
-    const companyId = await discoverOrCreatePaperclipCompany(tenant);
+    const authKey = await resolveWorkingPaperclipAuthKey(tenant);
+    if (!authKey) {
+      return { tenant, recovered: false, reason: 'paperclip-auth-unavailable' };
+    }
+
+    const companyId = await discoverOrCreatePaperclipCompany(tenant, authKey);
     if (!companyId) {
       return { tenant, recovered: false, reason: 'paperclip-not-ready' };
     }
@@ -128,6 +149,7 @@ export async function tryRecoverProvisioningTenant(tenant: Tenant): Promise<Reco
     const updates: Partial<Tenant> = {
       status: 'active',
       paperclip_company_id: companyId,
+      paperclip_api_key: tenant.paperclip_api_key ?? authKey,
     };
 
     const { data, error } = await supabase
