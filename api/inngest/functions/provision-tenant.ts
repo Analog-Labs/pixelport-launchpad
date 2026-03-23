@@ -93,6 +93,34 @@ const DEFAULT_PROVISIONING_DROPLET_REGION = 'nyc1';
 const RUNTIME_SSLIP_TEMPLATE_TOKEN = '__PUBLIC_IPV4_DASH__';
 const DEFAULT_ENABLE_RUNTIME_SSLIP_FALLBACK = true;
 const DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH = true;
+const DO_REGION_FALLBACK_ORDER = ['nyc1', 'nyc3', 'sfo3', 'tor1', 'ams3', 'lon1', 'fra1', 'sgp1'];
+
+type DigitalOceanApiErrorBody = {
+  id?: string;
+  message?: string;
+};
+
+type ExistingTenantDroplet = {
+  id: number;
+  region: string | null;
+};
+
+type CreateTenantDropletParams = {
+  tenantSlug: string;
+  name: string;
+  image: string;
+  size: string;
+  requestedRegion: string;
+  userData: string;
+  tags: string[];
+  sshKeyIds: number[];
+};
+
+type CreateTenantDropletResult = {
+  dropletId: string;
+  requestedRegion: string;
+  reusedExisting: boolean;
+};
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
@@ -298,6 +326,266 @@ export function resolveOpenClawRuntimeImage(
   return override && override.length > 0 ? override : baseImage;
 }
 
+function normalizeRegionSlug(region: string): string {
+  return region.trim().toLowerCase();
+}
+
+export function summarizeDigitalOceanErrorBody(rawBody: string): string {
+  const trimmed = rawBody.trim();
+  if (!trimmed) {
+    return 'empty error body';
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as DigitalOceanApiErrorBody;
+    const id = typeof parsed.id === 'string' ? parsed.id.trim() : '';
+    const message = typeof parsed.message === 'string' ? parsed.message.trim() : '';
+
+    if (id && message) {
+      return `${id}: ${message}`;
+    }
+
+    if (message) {
+      return message;
+    }
+
+    if (id) {
+      return id;
+    }
+  } catch {
+    // Fall back to raw text if the payload is not JSON.
+  }
+
+  return trimmed;
+}
+
+export function isDropletNameConflictError(rawBody: string): boolean {
+  const normalized = summarizeDigitalOceanErrorBody(rawBody).toLowerCase();
+  return (
+    normalized.includes('name is already in use') ||
+    normalized.includes('name already in use') ||
+    normalized.includes('name is not unique')
+  );
+}
+
+export function isDropletRegionOrImageConstraintError(rawBody: string): boolean {
+  const normalized = summarizeDigitalOceanErrorBody(rawBody).toLowerCase();
+
+  if (isDropletNameConflictError(rawBody)) {
+    return false;
+  }
+
+  return (
+    normalized.includes('region') ||
+    normalized.includes('size') ||
+    normalized.includes('slug') ||
+    normalized.includes('not available') ||
+    normalized.includes('image')
+  );
+}
+
+export function buildDropletRegionFallbackOrder(
+  requestedRegion: string,
+  availableImageRegions: string[],
+): string[] {
+  const preferredOrder = DO_REGION_FALLBACK_ORDER.map((region) => normalizeRegionSlug(region));
+  const normalizedRequestedRegion = normalizeRegionSlug(requestedRegion);
+  const normalizedAvailableRegions = Array.from(
+    new Set(
+      availableImageRegions
+        .map((region) => normalizeRegionSlug(region))
+        .filter((region) => region.length > 0),
+    ),
+  );
+  const availableRegionSet = new Set(normalizedAvailableRegions);
+  const result: string[] = [];
+
+  const pushIfAllowed = (region: string): void => {
+    if (region.length === 0) {
+      return;
+    }
+
+    if (availableRegionSet.size > 0 && !availableRegionSet.has(region)) {
+      return;
+    }
+
+    if (!result.includes(region)) {
+      result.push(region);
+    }
+  };
+
+  pushIfAllowed(normalizedRequestedRegion);
+
+  for (const preferredRegion of preferredOrder) {
+    pushIfAllowed(preferredRegion);
+  }
+
+  for (const availableRegion of normalizedAvailableRegions) {
+    pushIfAllowed(availableRegion);
+  }
+
+  if (!result.includes(normalizedRequestedRegion)) {
+    result.unshift(normalizedRequestedRegion);
+  }
+
+  return result;
+}
+
+async function lookupImageRegions(imageSelector: string): Promise<string[]> {
+  const normalizedImageSelector = imageSelector.trim();
+  if (!normalizedImageSelector || !/^\d+$/.test(normalizedImageSelector)) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(`https://api.digitalocean.com/v2/images/${normalizedImageSelector}`, {
+      headers: { Authorization: `Bearer ${DO_API_TOKEN}` },
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as { image?: { regions?: unknown } };
+    if (!payload.image || !Array.isArray(payload.image.regions)) {
+      return [];
+    }
+
+    return payload.image.regions.filter((region): region is string => typeof region === 'string');
+  } catch {
+    return [];
+  }
+}
+
+async function findExistingTenantDroplet(params: {
+  tenantSlug: string;
+  dropletName: string;
+}): Promise<ExistingTenantDroplet | null> {
+  try {
+    const response = await fetch(
+      `https://api.digitalocean.com/v2/droplets?tag_name=tenant-${encodeURIComponent(params.tenantSlug)}&per_page=20`,
+      {
+        headers: { Authorization: `Bearer ${DO_API_TOKEN}` },
+      },
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as {
+      droplets?: Array<{ id?: number; name?: string; region?: { slug?: string } }>;
+    };
+    const droplets = Array.isArray(payload.droplets) ? payload.droplets : [];
+    const byExactName = droplets.find(
+      (droplet) => typeof droplet.name === 'string' && droplet.name === params.dropletName && typeof droplet.id === 'number',
+    );
+    const fallback = droplets.find((droplet) => typeof droplet.id === 'number');
+    const chosen = byExactName ?? fallback;
+
+    if (!chosen || typeof chosen.id !== 'number') {
+      return null;
+    }
+
+    return {
+      id: chosen.id,
+      region: typeof chosen.region?.slug === 'string' ? chosen.region.slug : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function createTenantDropletWithFallback(
+  params: CreateTenantDropletParams,
+): Promise<CreateTenantDropletResult> {
+  const imageRegions = await lookupImageRegions(params.image);
+  const regionQueue = buildDropletRegionFallbackOrder(params.requestedRegion, imageRegions);
+  const attemptedRegions: string[] = [];
+  const normalizedRegionQueue = regionQueue.map((region) => normalizeRegionSlug(region));
+  let lastFailure: { status: number; body: string } | null = null;
+
+  for (const normalizedRegion of normalizedRegionQueue) {
+    attemptedRegions.push(normalizedRegion);
+
+    const dropletBody: Record<string, unknown> = {
+      name: params.name,
+      region: normalizedRegion,
+      size: params.size,
+      image: params.image,
+      user_data: params.userData,
+      tags: params.tags,
+    };
+
+    if (params.sshKeyIds.length > 0) {
+      dropletBody.ssh_keys = params.sshKeyIds;
+    }
+
+    const response = await fetch('https://api.digitalocean.com/v2/droplets', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${DO_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(dropletBody),
+    });
+
+    if (response.ok) {
+      const result = (await response.json()) as { droplet: { id: number } };
+
+      return {
+        dropletId: String(result.droplet.id),
+        requestedRegion: normalizedRegion,
+        reusedExisting: false,
+      };
+    }
+
+    const errorBody = await response.text();
+    lastFailure = { status: response.status, body: errorBody };
+
+    if (response.status === 422 && isDropletNameConflictError(errorBody)) {
+      const existingDroplet = await findExistingTenantDroplet({
+        tenantSlug: params.tenantSlug,
+        dropletName: params.name,
+      });
+
+      if (existingDroplet) {
+        return {
+          dropletId: String(existingDroplet.id),
+          requestedRegion: existingDroplet.region
+            ? normalizeRegionSlug(existingDroplet.region)
+            : normalizedRegion,
+          reusedExisting: true,
+        };
+      }
+    }
+
+    const retriableRegionMismatch =
+      response.status === 422 &&
+      isDropletRegionOrImageConstraintError(errorBody) &&
+      attemptedRegions.length < normalizedRegionQueue.length;
+
+    if (retriableRegionMismatch) {
+      console.warn(
+        `[provision-tenant] Droplet create rejected in region ${normalizedRegion}; ` +
+          `trying fallback region. DO response: ${summarizeDigitalOceanErrorBody(errorBody)}`,
+      );
+      continue;
+    }
+
+    break;
+  }
+
+  const attemptedRegionSummary = attemptedRegions.join(',');
+  const failureStatus = lastFailure?.status ?? 500;
+  const failureBody = summarizeDigitalOceanErrorBody(lastFailure?.body ?? 'unknown droplet error');
+
+  throw new Error(
+    `Droplet creation failed (HTTP ${failureStatus}): ${failureBody} ` +
+      `[size=${params.size}, region=${params.requestedRegion}, image=${params.image}, attempted_regions=${attemptedRegionSummary}]`,
+  );
+}
+
 export const provisionTenant = inngest.createFunction(
   {
     id: 'provision-tenant',
@@ -437,45 +725,31 @@ export const provisionTenant = inngest.createFunction(
         // Non-fatal — droplet just won't have SSH keys
       }
 
-      const dropletBody: Record<string, unknown> = {
+      const createResult = await createTenantDropletWithFallback({
+        tenantSlug: tenant.slug,
         name: `pixelport-${tenant.slug}`,
-        region: requestedRegion,
-        size: requestedSize,
         image: requestedImage,
-        user_data: cloudInit,
+        size: requestedSize,
+        requestedRegion,
+        userData: cloudInit,
         tags: ['pixelport', `tenant-${tenant.slug}`, 'pixelport-trial'],
-      };
-
-      if (sshKeyIds.length > 0) {
-        dropletBody.ssh_keys = sshKeyIds;
-      }
-
-      const response = await fetch('https://api.digitalocean.com/v2/droplets', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${DO_API_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dropletBody),
+        sshKeyIds,
       });
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(
-          `Droplet creation failed (HTTP ${response.status}): ${errorBody} ` +
-          `[size=${requestedSize}, region=${requestedRegion}, image=${requestedImage}]`
+      if (createResult.reusedExisting) {
+        console.warn(
+          `[provision-tenant] Reusing existing tenant droplet ${createResult.dropletId} ` +
+            `for slug ${tenant.slug} after duplicate-name create rejection.`,
         );
       }
 
-      const result = (await response.json()) as { droplet: { id: number } };
-
       return {
-        dropletId: String(result.droplet.id),
+        dropletId: createResult.dropletId,
         gatewayToken,
         agentApiKey,
         paperclipApiKey,
         requestedSize,
-        requestedRegion,
+        requestedRegion: createResult.requestedRegion,
       };
     });
 

@@ -258,6 +258,74 @@ describe("provision tenant memory config", () => {
     expect(baseline.imageSource).toBe("managed");
   });
 
+  it("normalizes DigitalOcean JSON error payloads into concise strings", async () => {
+    const { summarizeDigitalOceanErrorBody } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    expect(
+      summarizeDigitalOceanErrorBody(
+        JSON.stringify({
+          id: "unprocessable_entity",
+          message: "You specified an invalid region.",
+        }),
+      ),
+    ).toBe("unprocessable_entity: You specified an invalid region.");
+
+    expect(summarizeDigitalOceanErrorBody("plain error body")).toBe(
+      "plain error body",
+    );
+  });
+
+  it("detects duplicate-name 422 responses from DigitalOcean", async () => {
+    const { isDropletNameConflictError } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    expect(
+      isDropletNameConflictError(
+        JSON.stringify({
+          id: "unprocessable_entity",
+          message: "name is already in use on this account",
+        }),
+      ),
+    ).toBe(true);
+
+    expect(
+      isDropletNameConflictError(
+        JSON.stringify({
+          id: "unprocessable_entity",
+          message: "image is not available in this region",
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("builds region fallback order constrained by image availability", async () => {
+    const { buildDropletRegionFallbackOrder } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const order = buildDropletRegionFallbackOrder("nyc1", [
+      "nyc3",
+      "sfo3",
+      "nyc1",
+    ]);
+
+    expect(order).toEqual(["nyc1", "nyc3", "sfo3"]);
+  });
+
+  it("keeps requested region first even when image region metadata is empty", async () => {
+    const { buildDropletRegionFallbackOrder } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const order = buildDropletRegionFallbackOrder("nyc1", []);
+
+    expect(order[0]).toBe("nyc1");
+    expect(order).toContain("nyc3");
+  });
+
   it("falls back to legacy image vars when canonical vars are unset", async () => {
     const { resolveDropletBaseline } = await import(
       "../../api/inngest/functions/provision-tenant"
