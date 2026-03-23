@@ -19,13 +19,6 @@ interface OnboardingFormData {
   agent_suggestions: AgentSuggestionInput[];
 }
 
-interface RuntimeHandoffResponse {
-  error?: string;
-  paperclip_runtime_url?: string;
-  workspace_launch_url?: string;
-  handoff_token?: string;
-}
-
 const DEFAULT_AGENT_NAME = "Luna";
 const POLL_INTERVAL_MS = 5000;
 
@@ -52,38 +45,6 @@ function readBootstrapStatus(onboardingData: Record<string, unknown> | null | un
 
 function isLaunchCompleted(onboardingData: Record<string, unknown> | null | undefined): boolean {
   return readString(onboardingData?.launch_completed_at).trim().length > 0;
-}
-
-function resolveWorkspaceUrl(rawUrl: unknown): string | null {
-  const trimmed = readString(rawUrl).trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return null;
-    }
-
-    return parsed.toString();
-  } catch {
-    return null;
-  }
-}
-
-function resolveWorkspaceHandoffUrl(rawRuntimeUrl: unknown, rawHandoffToken: unknown): string | null {
-  const runtimeUrl = resolveWorkspaceUrl(rawRuntimeUrl);
-  const handoffToken = readString(rawHandoffToken).trim();
-
-  if (!runtimeUrl || !handoffToken) {
-    return null;
-  }
-
-  const handoffUrl = new URL("/pixelport/handoff", runtimeUrl);
-  handoffUrl.searchParams.set("handoff_token", handoffToken);
-  handoffUrl.searchParams.set("next", "/");
-  return handoffUrl.toString();
 }
 
 function toGoalsArray(missionGoals: string): string[] {
@@ -431,35 +392,6 @@ const Onboarding = () => {
         agent_suggestions: cleanSuggestions.length > 0 ? cleanSuggestions : buildDefaultAgentSuggestions(cleanAgentName),
       };
 
-      const handoffRes = await fetch("/api/runtime/handoff", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ source: "onboarding-launch" }),
-      });
-
-      let handoffResult: RuntimeHandoffResponse = {};
-      try {
-        handoffResult = (await handoffRes.json()) as RuntimeHandoffResponse;
-      } catch {
-        handoffResult = {};
-      }
-
-      if (!handoffRes.ok) {
-        throw new Error(handoffResult.error || "Failed to open your workspace.");
-      }
-
-      const workspaceUrl = resolveWorkspaceUrl(handoffResult.workspace_launch_url)
-        ?? resolveWorkspaceHandoffUrl(
-          handoffResult.paperclip_runtime_url,
-          handoffResult.handoff_token,
-        );
-      if (!workspaceUrl) {
-        throw new Error("Workspace launch URL is unavailable for this tenant.");
-      }
-
       const payload = {
         ...basePayload,
         launch_completed_at: new Date().toISOString(),
@@ -485,7 +417,8 @@ const Onboarding = () => {
         throw new Error(saveResult.error || "Failed to save onboarding setup.");
       }
 
-      window.location.assign(workspaceUrl);
+      await refreshTenant();
+      window.location.assign(redirectPath);
       return;
     } catch (error) {
       setLaunchError(error instanceof Error ? error.message : "Failed to finalize onboarding.");
