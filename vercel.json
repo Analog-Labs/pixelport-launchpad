@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/tenant-proxy/(.*)",
+      "destination": "/api/tenant-proxy?path=$1"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
@@ -14,6 +18,9 @@
       "maxDuration": 30
     },
     "api/tenant-proxy/[...path].ts": {
+      "maxDuration": 20
+    },
+    "api/tenant-proxy/index.ts": {
       "maxDuration": 20
     }
   },
