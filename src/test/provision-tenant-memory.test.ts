@@ -369,19 +369,24 @@ describe("provision tenant memory config", () => {
     );
 
     const script = buildCloudInit({
+      tenantId: "tenant-123",
       tenantSlug: "pixelport-qa",
       tenantName: "PixelPort QA",
       gatewayToken: "gw-token",
       runtimeHostTemplate: "pixelport-qa.__PUBLIC_IPV4_DASH__.sslip.io",
       openclawBaseImage: "ghcr.io/openclaw/openclaw:2026.3.13-1",
       openclawRuntimeImage: "ghcr.io/openclaw/openclaw:2026.3.13-1",
+      paperclipImage: "pixelport-paperclip:2026.3.11-handoff-p1",
       openaiApiKey: "openai-key",
       paperclipHandoffSecret: "handoff-secret",
+      supabaseUrl: "https://supabase.example.co",
+      supabaseServiceRoleKey: "supabase-service-role",
       memoryOpenAiApiKey: "memory-openai-key",
       memoryNativeEnabled: true,
       geminiApiKey: "",
       agentmailApiKey: "",
       agentApiKey: "ppk-test",
+      paperclipApiKey: "pak-test",
       onboardingData: {
         agent_name: "Luna",
       },
@@ -406,6 +411,14 @@ describe("provision tenant memory config", () => {
     expect(script).toContain("chmod 600 /opt/openclaw/openclaw.json /opt/openclaw/.env");
     expect(script).toContain('"dangerouslyDisableDeviceAuth": true');
     expect(script).toContain("normalize_runtime_state_perms()");
+    expect(script).toContain("docker network create paperclip-net");
+    expect(script).toContain("docker run -d --name paperclip-db");
+    expect(script).toContain("docker run -d --name paperclip-bootstrap");
+    expect(script).toContain("PAPERCLIP_DEPLOYMENT_MODE=local_trusted");
+    expect(script).toContain("curl -sf -X PATCH \"https://supabase.example.co/rest/v1/tenants?id=eq.tenant-123\"");
+    expect(script).toContain("docker run -d --name paperclip");
+    expect(script).toContain("PAPERCLIP_DEPLOYMENT_MODE=authenticated");
+    expect(script).toContain("sed -i.bak \"s/^PAPERCLIP_API_KEY=.*/PAPERCLIP_API_KEY=$API_TOKEN/\" /opt/openclaw/.env || true");
     expect(script).toContain(
       "mkdir -p /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices",
     );
