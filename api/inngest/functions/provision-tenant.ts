@@ -127,6 +127,8 @@ type PaperclipAgentRecord = {
   id: string;
   name?: string | null;
   urlKey?: string | null;
+  adapterType?: string | null;
+  adapterConfig?: Record<string, unknown> | null;
 };
 
 type PaperclipIssueRecord = {
@@ -140,6 +142,11 @@ type PaperclipApprovalRecord = {
 };
 
 const ONBOARDING_KICKOFF_SEED_TAG = 'pixelport_onboarding_kickoff_v1';
+const OPENCLAW_GATEWAY_ADAPTER_TYPE = 'openclaw_gateway';
+const OPENCLAW_GATEWAY_DOCKER_HOST_ALIAS = 'host.docker.internal';
+const OPENCLAW_GATEWAY_DEFAULT_WS_PORT = 18789;
+const OPENCLAW_GATEWAY_SESSION_KEY_STRATEGY = 'issue';
+const OPENCLAW_GATEWAY_WAIT_TIMEOUT_MS = 120_000;
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
@@ -659,12 +666,93 @@ function getPaperclipAgentHeaders(paperclipApiKey: string): HeadersInit {
   };
 }
 
+function buildOpenClawGatewayWsUrlFromDropletIp(dropletIp: string): string {
+  return `ws://${dropletIp}:${OPENCLAW_GATEWAY_DEFAULT_WS_PORT}`;
+}
+
+function buildOpenClawGatewayAdapterConfig(params: {
+  gatewayWsUrl: string;
+  gatewayToken: string;
+}): Record<string, unknown> {
+  return {
+    url: params.gatewayWsUrl,
+    headers: {
+      'x-openclaw-token': params.gatewayToken,
+    },
+    sessionKeyStrategy: OPENCLAW_GATEWAY_SESSION_KEY_STRATEGY,
+    waitTimeoutMs: OPENCLAW_GATEWAY_WAIT_TIMEOUT_MS,
+  };
+}
+
+function buildChiefAgentCreatePayload(params: {
+  gatewayWsUrl: string;
+  gatewayToken: string;
+}): Record<string, unknown> {
+  return {
+    name: 'Chief',
+    adapterType: OPENCLAW_GATEWAY_ADAPTER_TYPE,
+    adapterConfig: buildOpenClawGatewayAdapterConfig(params),
+  };
+}
+
+async function ensureChiefOpenClawGatewayAdapter(params: {
+  paperclipUrl: string;
+  paperclipApiKey: string;
+  chiefAgent: PaperclipAgentRecord;
+  gatewayWsUrl?: string | null;
+  gatewayToken?: string | null;
+}): Promise<PaperclipAgentRecord> {
+  const existingType = typeof params.chiefAgent.adapterType === 'string'
+    ? params.chiefAgent.adapterType.trim()
+    : '';
+  if (existingType === OPENCLAW_GATEWAY_ADAPTER_TYPE) {
+    return params.chiefAgent;
+  }
+
+  const gatewayWsUrl = typeof params.gatewayWsUrl === 'string' ? params.gatewayWsUrl.trim() : '';
+  const gatewayToken = typeof params.gatewayToken === 'string' ? params.gatewayToken.trim() : '';
+  if (!gatewayWsUrl || !gatewayToken) {
+    return params.chiefAgent;
+  }
+
+  const patchResponse = await fetch(`${params.paperclipUrl}/api/agents/${params.chiefAgent.id}`, {
+    method: 'PATCH',
+    headers: getPaperclipAgentHeaders(params.paperclipApiKey),
+    body: JSON.stringify({
+      adapterType: OPENCLAW_GATEWAY_ADAPTER_TYPE,
+      adapterConfig: buildOpenClawGatewayAdapterConfig({
+        gatewayWsUrl,
+        gatewayToken,
+      }),
+    }),
+  });
+
+  if (!patchResponse.ok) {
+    const errorBody = await patchResponse.text();
+    throw new Error(
+      `Failed to upgrade Chief adapter to openclaw gateway (HTTP ${patchResponse.status}): ` +
+      `${summarizeDigitalOceanErrorBody(errorBody)}`,
+    );
+  }
+
+  const patchedAgent = (await patchResponse.json()) as PaperclipAgentRecord;
+  return {
+    ...params.chiefAgent,
+    ...patchedAgent,
+    adapterType: typeof patchedAgent.adapterType === 'string'
+      ? patchedAgent.adapterType
+      : OPENCLAW_GATEWAY_ADAPTER_TYPE,
+  };
+}
+
 async function seedPaperclipKickoffArtifacts(params: {
   paperclipUrl: string;
   paperclipCompanyId: string;
   paperclipApiKey: string;
   tenantName: string;
   onboardingData: Json | null | undefined;
+  gatewayWsUrl?: string | null;
+  gatewayToken?: string | null;
 }): Promise<{
   createdIssueId: string | null;
   createdApprovalId: string | null;
@@ -681,10 +769,18 @@ async function seedPaperclipKickoffArtifacts(params: {
   }
 
   const agents = (await agentsResponse.json()) as PaperclipAgentRecord[];
-  const chiefAgent = agents.find((agent) => agent.urlKey === 'chief') ?? agents[0];
+  let chiefAgent = agents.find((agent) => agent.urlKey === 'chief') ?? agents[0];
   if (!chiefAgent?.id) {
     throw new Error('Paperclip company has no available agent for kickoff seed');
   }
+
+  chiefAgent = await ensureChiefOpenClawGatewayAdapter({
+    paperclipUrl: params.paperclipUrl,
+    paperclipApiKey: params.paperclipApiKey,
+    chiefAgent,
+    gatewayWsUrl: params.gatewayWsUrl,
+    gatewayToken: params.gatewayToken,
+  });
 
   const kickoffIssueTitle = `Onboarding Kickoff — ${params.tenantName}`;
   const existingIssuesResponse = await fetch(
@@ -1345,6 +1441,8 @@ export const provisionTenant = inngest.createFunction(
           paperclipApiKey: resolvedPaperclipApiKey,
           tenantName: tenant.name,
           onboardingData,
+          gatewayWsUrl: buildOpenClawGatewayWsUrlFromDropletIp(dropletIp),
+          gatewayToken: droplet.gatewayToken,
         });
 
         return {
@@ -1515,6 +1613,12 @@ export function buildCloudInit(params: {
     JSON.stringify({ name: params.tenantName }),
     'utf8',
   ).toString('base64');
+  const chiefAgentCreatePayload = JSON.stringify(
+    buildChiefAgentCreatePayload({
+      gatewayWsUrl: `ws://${OPENCLAW_GATEWAY_DOCKER_HOST_ALIAS}:${OPENCLAW_GATEWAY_DEFAULT_WS_PORT}`,
+      gatewayToken: params.gatewayToken,
+    }),
+  ).replace(/'/g, "'\\''");
 
   return `#!/bin/bash
 set -euo pipefail
@@ -1779,7 +1883,7 @@ fi
 
 AGENT_RESP=$(curl -sf -X POST "http://127.0.0.1:3100/api/companies/$COMPANY_ID/agents" \\
   -H 'Content-Type: application/json' \\
-  -d '{"name":"Chief"}' || echo '{}')
+  -d '${chiefAgentCreatePayload}' || echo '{}')
 AGENT_ID=$(echo "$AGENT_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id') or d.get('agent',{}).get('id',''))" 2>/dev/null || echo '')
 
 if [ -z "$AGENT_ID" ]; then
@@ -1821,6 +1925,7 @@ docker rm -f paperclip-bootstrap >/dev/null 2>&1 || true
 docker run -d --name paperclip \\
   --network paperclip-net \\
   --restart unless-stopped \\
+  --add-host ${OPENCLAW_GATEWAY_DOCKER_HOST_ALIAS}:host-gateway \\
   -p 3100:3100 \\
   -e NODE_ENV=production \\
   -e HOST=0.0.0.0 \\
