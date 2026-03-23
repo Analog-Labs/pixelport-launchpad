@@ -98,6 +98,7 @@ const DO_REGION_FALLBACK_ORDER = ['nyc1', 'nyc3', 'sfo3', 'tor1', 'ams3', 'lon1'
 type DigitalOceanApiErrorBody = {
   id?: string;
   message?: string;
+  error?: string;
 };
 
 type ExistingTenantDroplet = {
@@ -121,6 +122,24 @@ type CreateTenantDropletResult = {
   requestedRegion: string;
   reusedExisting: boolean;
 };
+
+type PaperclipAgentRecord = {
+  id: string;
+  name?: string | null;
+  urlKey?: string | null;
+};
+
+type PaperclipIssueRecord = {
+  id: string;
+  title?: string | null;
+};
+
+type PaperclipApprovalRecord = {
+  id: string;
+  payload?: Record<string, unknown> | null;
+};
+
+const ONBOARDING_KICKOFF_SEED_TAG = 'pixelport_onboarding_kickoff_v1';
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
@@ -339,7 +358,12 @@ export function summarizeDigitalOceanErrorBody(rawBody: string): string {
   try {
     const parsed = JSON.parse(trimmed) as DigitalOceanApiErrorBody;
     const id = typeof parsed.id === 'string' ? parsed.id.trim() : '';
-    const message = typeof parsed.message === 'string' ? parsed.message.trim() : '';
+    const message =
+      typeof parsed.message === 'string'
+        ? parsed.message.trim()
+        : typeof parsed.error === 'string'
+          ? parsed.error.trim()
+          : '';
 
     if (id && message) {
       return `${id}: ${message}`;
@@ -584,6 +608,221 @@ async function createTenantDropletWithFallback(
     `Droplet creation failed (HTTP ${failureStatus}): ${failureBody} ` +
       `[size=${params.size}, region=${params.requestedRegion}, image=${params.image}, attempted_regions=${attemptedRegionSummary}]`,
   );
+}
+
+function normalizeGoalList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+    .filter((entry) => entry.length > 0)
+    .slice(0, 5);
+}
+
+function buildOnboardingKickoffIssueDescription(params: {
+  tenantName: string;
+  onboardingData: Json | null | undefined;
+}): string {
+  const onboardingData = params.onboardingData ?? {};
+  const companyUrl = typeof onboardingData.company_url === 'string' ? onboardingData.company_url.trim() : '';
+  const missionGoals = typeof onboardingData.mission_goals === 'string' ? onboardingData.mission_goals.trim() : '';
+  const goals = normalizeGoalList(onboardingData.goals);
+
+  const lines = [
+    `Create the first-week execution plan for ${params.tenantName}.`,
+    companyUrl ? `Company URL: ${companyUrl}` : 'Company URL: not provided',
+    missionGoals ? `Mission goals: ${missionGoals}` : 'Mission goals: not provided',
+    '',
+    'Deliverables:',
+    '- Draft a concrete 7-day marketing plan.',
+    '- Create actionable tasks in Paperclip for the top priorities.',
+    '- Generate at least one pending approval for human review.',
+  ];
+
+  if (goals.length > 0) {
+    lines.push('', 'Onboarding goals:');
+    for (const goal of goals) {
+      lines.push(`- ${goal}`);
+    }
+  }
+
+  lines.push('', `Seed tag: ${ONBOARDING_KICKOFF_SEED_TAG}`);
+  return lines.join('\n');
+}
+
+function getPaperclipAgentHeaders(paperclipApiKey: string): HeadersInit {
+  return {
+    Authorization: `Bearer ${paperclipApiKey}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+async function seedPaperclipKickoffArtifacts(params: {
+  paperclipUrl: string;
+  paperclipCompanyId: string;
+  paperclipApiKey: string;
+  tenantName: string;
+  onboardingData: Json | null | undefined;
+}): Promise<{
+  createdIssueId: string | null;
+  createdApprovalId: string | null;
+  wakeRunId: string | null;
+}> {
+  const headers = getPaperclipAgentHeaders(params.paperclipApiKey);
+
+  const agentsResponse = await fetch(
+    `${params.paperclipUrl}/api/companies/${params.paperclipCompanyId}/agents`,
+    { headers },
+  );
+  if (!agentsResponse.ok) {
+    throw new Error(`Failed to load Paperclip agents (HTTP ${agentsResponse.status})`);
+  }
+
+  const agents = (await agentsResponse.json()) as PaperclipAgentRecord[];
+  const chiefAgent = agents.find((agent) => agent.urlKey === 'chief') ?? agents[0];
+  if (!chiefAgent?.id) {
+    throw new Error('Paperclip company has no available agent for kickoff seed');
+  }
+
+  const kickoffIssueTitle = `Onboarding Kickoff — ${params.tenantName}`;
+  const existingIssuesResponse = await fetch(
+    `${params.paperclipUrl}/api/companies/${params.paperclipCompanyId}/issues?q=${encodeURIComponent(kickoffIssueTitle)}`,
+    { headers },
+  );
+
+  let kickoffIssueId: string | null = null;
+  if (existingIssuesResponse.ok) {
+    const existingIssues = (await existingIssuesResponse.json()) as PaperclipIssueRecord[];
+    const existingKickoffIssue = existingIssues.find(
+      (issue) =>
+        typeof issue.id === 'string' &&
+        typeof issue.title === 'string' &&
+        issue.title.trim().toLowerCase() === kickoffIssueTitle.toLowerCase(),
+    );
+    if (existingKickoffIssue) {
+      kickoffIssueId = existingKickoffIssue.id;
+    }
+  }
+
+  if (!kickoffIssueId) {
+    const kickoffIssueResponse = await fetch(
+      `${params.paperclipUrl}/api/companies/${params.paperclipCompanyId}/issues`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          title: kickoffIssueTitle,
+          description: buildOnboardingKickoffIssueDescription({
+            tenantName: params.tenantName,
+            onboardingData: params.onboardingData,
+          }),
+          status: 'todo',
+          priority: 'high',
+        }),
+      },
+    );
+
+    if (!kickoffIssueResponse.ok) {
+      const errorBody = await kickoffIssueResponse.text();
+      throw new Error(
+        `Failed to seed kickoff issue (HTTP ${kickoffIssueResponse.status}): ${summarizeDigitalOceanErrorBody(errorBody)}`,
+      );
+    }
+
+    const createdIssue = (await kickoffIssueResponse.json()) as PaperclipIssueRecord;
+    kickoffIssueId = typeof createdIssue.id === 'string' ? createdIssue.id : null;
+  }
+
+  let wakeRunId: string | null = null;
+  const wakeResponse = await fetch(`${params.paperclipUrl}/api/agents/${chiefAgent.id}/wakeup`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      source: 'on_demand',
+      triggerDetail: 'system',
+      reason: 'onboarding_kickoff_seed',
+      payload: kickoffIssueId
+        ? {
+            issueId: kickoffIssueId,
+            seedTag: ONBOARDING_KICKOFF_SEED_TAG,
+          }
+        : {
+            seedTag: ONBOARDING_KICKOFF_SEED_TAG,
+          },
+    }),
+  });
+
+  if (wakeResponse.ok) {
+    const wakePayload = (await wakeResponse.json()) as { id?: string; run?: { id?: string } };
+    wakeRunId =
+      typeof wakePayload.id === 'string'
+        ? wakePayload.id
+        : typeof wakePayload.run?.id === 'string'
+          ? wakePayload.run.id
+          : null;
+  }
+
+  const existingApprovalsResponse = await fetch(
+    `${params.paperclipUrl}/api/companies/${params.paperclipCompanyId}/approvals?status=pending`,
+    { headers },
+  );
+  let existingKickoffApprovalId: string | null = null;
+  if (existingApprovalsResponse.ok) {
+    const approvals = (await existingApprovalsResponse.json()) as PaperclipApprovalRecord[];
+    const kickoffApproval = approvals.find((approval) => {
+      if (!approval.payload || typeof approval.payload !== 'object') {
+        return false;
+      }
+      return approval.payload.seedTag === ONBOARDING_KICKOFF_SEED_TAG;
+    });
+    if (kickoffApproval?.id) {
+      existingKickoffApprovalId = kickoffApproval.id;
+    }
+  }
+
+  if (existingKickoffApprovalId) {
+    return {
+      createdIssueId: kickoffIssueId,
+      createdApprovalId: existingKickoffApprovalId,
+      wakeRunId,
+    };
+  }
+
+  const approvalResponse = await fetch(
+    `${params.paperclipUrl}/api/companies/${params.paperclipCompanyId}/approvals`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        type: 'approve_ceo_strategy',
+        requestedByAgentId: chiefAgent.id,
+        issueIds: kickoffIssueId ? [kickoffIssueId] : [],
+        payload: {
+          seedTag: ONBOARDING_KICKOFF_SEED_TAG,
+          title: 'Week 1 Strategy Checkpoint',
+          summary: `Initial strategy draft for ${params.tenantName}`,
+          requestedAction: 'Approve or request revisions before campaign execution.',
+        },
+      }),
+    },
+  );
+
+  if (!approvalResponse.ok) {
+    const errorBody = await approvalResponse.text();
+    throw new Error(
+      `Failed to seed kickoff approval (HTTP ${approvalResponse.status}): ${summarizeDigitalOceanErrorBody(errorBody)}`,
+    );
+  }
+
+  const createdApproval = (await approvalResponse.json()) as PaperclipApprovalRecord;
+
+  return {
+    createdIssueId: kickoffIssueId,
+    createdApprovalId: typeof createdApproval.id === 'string' ? createdApproval.id : null,
+    wakeRunId,
+  };
 }
 
 export const provisionTenant = inngest.createFunction(
@@ -1095,6 +1334,38 @@ export const provisionTenant = inngest.createFunction(
 
       if (error) {
         throw new Error(`Failed to mark tenant as active: ${error.message}`);
+      }
+    });
+
+    await step.run('seed-paperclip-kickoff-artifacts', async () => {
+      try {
+        const seeded = await seedPaperclipKickoffArtifacts({
+          paperclipUrl,
+          paperclipCompanyId,
+          paperclipApiKey: resolvedPaperclipApiKey,
+          tenantName: tenant.name,
+          onboardingData,
+        });
+
+        return {
+          seeded: true,
+          issueId: seeded.createdIssueId,
+          approvalId: seeded.createdApprovalId,
+          wakeRunId: seeded.wakeRunId,
+        };
+      } catch (error) {
+        console.warn(
+          `[provision-tenant] Kickoff seed skipped for tenant ${tenantId}: ` +
+            `${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+
+        return {
+          seeded: false,
+          issueId: null,
+          approvalId: null,
+          wakeRunId: null,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
       }
     });
 
