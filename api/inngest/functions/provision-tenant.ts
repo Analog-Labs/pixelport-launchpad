@@ -93,6 +93,7 @@ const DEFAULT_PROVISIONING_DROPLET_REGION = 'nyc1';
 const RUNTIME_SSLIP_TEMPLATE_TOKEN = '__PUBLIC_IPV4_DASH__';
 const DEFAULT_ENABLE_RUNTIME_SSLIP_FALLBACK = true;
 const DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH = true;
+const DEFAULT_DISABLE_OPENCLAW_GATEWAY_DEVICE_AUTH = true;
 const DO_REGION_FALLBACK_ORDER = ['nyc1', 'nyc3', 'sfo3', 'tor1', 'ams3', 'lon1', 'fra1', 'sgp1'];
 
 type DigitalOceanApiErrorBody = {
@@ -207,6 +208,15 @@ function isControlUiDeviceAuthBreakglassEnabled(env: NodeJS.ProcessEnv = process
   const rawValue = env.OPENCLAW_CONTROL_UI_DISABLE_DEVICE_AUTH?.trim().toLowerCase();
   if (!rawValue) {
     return DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH;
+  }
+
+  return rawValue === '1' || rawValue === 'true' || rawValue === 'yes';
+}
+
+function isOpenClawGatewayDeviceAuthDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const rawValue = env.OPENCLAW_GATEWAY_DISABLE_DEVICE_AUTH?.trim().toLowerCase();
+  if (!rawValue) {
+    return DEFAULT_DISABLE_OPENCLAW_GATEWAY_DEVICE_AUTH;
   }
 
   return rawValue === '1' || rawValue === 'true' || rawValue === 'yes';
@@ -681,6 +691,7 @@ function buildOpenClawGatewayAdapterConfig(params: {
     },
     sessionKeyStrategy: OPENCLAW_GATEWAY_SESSION_KEY_STRATEGY,
     waitTimeoutMs: OPENCLAW_GATEWAY_WAIT_TIMEOUT_MS,
+    disableDeviceAuth: isOpenClawGatewayDeviceAuthDisabled(),
   };
 }
 
