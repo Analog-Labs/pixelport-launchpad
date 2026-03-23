@@ -11,7 +11,18 @@ const loadBootstrapSnapshot = vi.fn();
 const reconcileBootstrapState = vi.fn();
 const transitionBootstrapState = vi.fn();
 const buildOnboardingBootstrapMessage = vi.fn(() => "bootstrap-message");
-const triggerOnboardingBootstrap = vi.fn();
+const dispatchBootstrapWithPairingRecovery = vi.fn();
+const classifyGatewayFailure = vi.fn(({ message }: { message: string }) => ({
+  tag: "gateway_request_failed",
+  retryable: true,
+  message,
+  missingScope: null,
+  requestId: null,
+}));
+const formatGatewayDiagnostic = vi.fn(
+  (diagnostic: { tag: string; message: string }) =>
+    `[${diagnostic.tag}] ${diagnostic.message}`,
+);
 
 vi.mock("../../api/lib/auth", () => ({
   authenticateRequest,
@@ -30,7 +41,12 @@ vi.mock("../../api/lib/bootstrap-state", () => ({
 
 vi.mock("../../api/lib/onboarding-bootstrap", () => ({
   buildOnboardingBootstrapMessage,
-  triggerOnboardingBootstrap,
+}));
+
+vi.mock("../../api/lib/openclaw-bootstrap-guard", () => ({
+  dispatchBootstrapWithPairingRecovery,
+  classifyGatewayFailure,
+  formatGatewayDiagnostic,
 }));
 
 type MockResponse = {
@@ -85,10 +101,14 @@ describe("POST /api/tenants/bootstrap", () => {
       },
       changed: true,
     });
-    triggerOnboardingBootstrap.mockResolvedValue({
+    dispatchBootstrapWithPairingRecovery.mockResolvedValue({
       ok: true,
       status: 202,
       body: "accepted",
+      diagnostics: null,
+      autoPairAttempted: false,
+      autoPairApproved: false,
+      autoPairReason: null,
     });
   });
 
@@ -135,13 +155,16 @@ describe("POST /api/tenants/bootstrap", () => {
     await handler(req as never, res as never);
 
     expect(res.statusCode).toBe(202);
-    expect(triggerOnboardingBootstrap).toHaveBeenCalledTimes(1);
+    expect(dispatchBootstrapWithPairingRecovery).toHaveBeenCalledTimes(1);
     expect(res.body).toEqual({
       accepted: true,
       gateway_status: 202,
       existing_output_present: true,
       hooks_repaired: false,
       bootstrap_status: "accepted",
+      auto_pair_attempted: false,
+      auto_pair_approved: false,
+      auto_pair_reason: null,
     });
   });
 
@@ -188,7 +211,7 @@ describe("POST /api/tenants/bootstrap", () => {
     await handler(req as never, res as never);
 
     expect(res.statusCode).toBe(409);
-    expect(triggerOnboardingBootstrap).not.toHaveBeenCalled();
+    expect(dispatchBootstrapWithPairingRecovery).not.toHaveBeenCalled();
     expect(res.body).toEqual({
       error: "Bootstrap is already in progress.",
       reason: "bootstrap_in_progress",
@@ -196,6 +219,113 @@ describe("POST /api/tenants/bootstrap", () => {
       task_count: 0,
       competitor_count: 0,
       agent_updated_vault_count: 1,
+    });
+  });
+
+  it("returns structured diagnostics when replay dispatch fails", async () => {
+    const { default: handler } = await import("../../api/tenants/bootstrap");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-1",
+        status: "active",
+        name: "Analog",
+        droplet_ip: "127.0.0.1",
+        gateway_token: "gw-1",
+        onboarding_data: {},
+      },
+    });
+    reconcileBootstrapState.mockResolvedValue({
+      snapshot: {
+        onboardingData: {},
+        state: {
+          status: "failed",
+        },
+        updatedAt: "2026-03-10T10:20:00.000Z",
+      },
+      progress: {
+        taskCount: 0,
+        competitorCount: 0,
+        agentUpdatedVaultCount: 0,
+        hasAgentOutput: false,
+      },
+      effectiveState: {
+        status: "failed",
+        last_error: "missing scope: operator.write",
+      },
+      changed: false,
+    });
+
+    dispatchBootstrapWithPairingRecovery.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      body: "missing scope: operator.write",
+      diagnostics: {
+        tag: "missing_operator_scope",
+        retryable: false,
+        message: "missing scope: operator.write",
+        missingScope: "operator.write",
+        requestId: null,
+      },
+      autoPairAttempted: false,
+      autoPairApproved: false,
+      autoPairReason: null,
+    });
+    transitionBootstrapState.mockResolvedValueOnce({
+      snapshot: {
+        onboardingData: {},
+        state: {
+          status: "dispatching",
+          source: "dashboard_replay",
+          requested_at: "2026-03-10T10:30:00.000Z",
+          accepted_at: null,
+          completed_at: null,
+          last_error: null,
+        },
+        updatedAt: "2026-03-10T10:30:00.000Z",
+      },
+      changed: true,
+    });
+    transitionBootstrapState.mockResolvedValueOnce({
+      snapshot: {
+        onboardingData: {},
+        state: {
+          status: "failed",
+          source: "dashboard_replay",
+          requested_at: "2026-03-10T10:30:00.000Z",
+          accepted_at: null,
+          completed_at: null,
+          last_error: "[missing_operator_scope] missing scope: operator.write",
+        },
+        updatedAt: "2026-03-10T10:30:02.000Z",
+      },
+      changed: true,
+    });
+
+    const req = {
+      method: "POST",
+      body: {},
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(502);
+    expect(res.body).toEqual({
+      error: "Gateway rejected onboarding bootstrap",
+      gateway_status: 500,
+      details: "missing scope: operator.write",
+      bootstrap_status: "failed",
+      diagnostics: {
+        tag: "missing_operator_scope",
+        retryable: false,
+        message: "missing scope: operator.write",
+        missingScope: "operator.write",
+        requestId: null,
+      },
+      auto_pair_attempted: false,
+      auto_pair_approved: false,
+      auto_pair_reason: null,
     });
   });
 });

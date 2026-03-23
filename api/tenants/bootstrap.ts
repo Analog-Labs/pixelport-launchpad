@@ -2,7 +2,12 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { repairBootstrapHooksOnDroplet } from '../lib/bootstrap-hooks-repair';
 import { loadBootstrapSnapshot, reconcileBootstrapState, transitionBootstrapState } from '../lib/bootstrap-state';
-import { buildOnboardingBootstrapMessage, triggerOnboardingBootstrap } from '../lib/onboarding-bootstrap';
+import { buildOnboardingBootstrapMessage } from '../lib/onboarding-bootstrap';
+import {
+  classifyGatewayFailure,
+  dispatchBootstrapWithPairingRecovery,
+  formatGatewayDiagnostic,
+} from '../lib/openclaw-bootstrap-guard';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
   if (req.method !== 'POST') {
@@ -91,14 +96,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    let result = await triggerOnboardingBootstrap({
-      gatewayUrl: `http://${tenant.droplet_ip}:18789`,
-      gatewayToken: tenant.gateway_token,
-      message: buildOnboardingBootstrapMessage({
-        tenantName: tenant.name,
-        onboardingData,
-      }),
-    });
+    const gatewayHttpUrl = `http://${tenant.droplet_ip}:18789`;
+    const gatewayWsUrl = `ws://${tenant.droplet_ip}:18789`;
+    const dispatchBootstrap = async () => {
+      return await dispatchBootstrapWithPairingRecovery({
+        gatewayHttpUrl,
+        gatewayWsUrl,
+        gatewayToken: tenant.gateway_token,
+        message: buildOnboardingBootstrapMessage({
+          tenantName: tenant.name,
+          onboardingData,
+        }),
+      });
+    };
+
+    let result = await dispatchBootstrap();
 
     let hooksRepaired = false;
 
@@ -109,14 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         await repairBootstrapHooksOnDroplet(tenant.droplet_ip, tenant.gateway_token);
         hooksRepaired = true;
 
-        result = await triggerOnboardingBootstrap({
-          gatewayUrl: `http://${tenant.droplet_ip}:18789`,
-          gatewayToken: tenant.gateway_token,
-          message: buildOnboardingBootstrapMessage({
-            tenantName: tenant.name,
-            onboardingData,
-          }),
-        });
+        result = await dispatchBootstrap();
       } catch (repairError) {
         const transition = await transitionBootstrapState({
           tenantId: tenant.id,
@@ -142,6 +147,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     if (!result.ok) {
+      const diagnostics = result.diagnostics ?? classifyGatewayFailure({
+        status: result.status,
+        message: result.body,
+      });
+      const failureMessage = `${formatGatewayDiagnostic(diagnostics)}${
+        result.autoPairAttempted ? ` autoPair=${result.autoPairReason ?? 'attempted'}` : ''
+      }`;
+
       const transition = await transitionBootstrapState({
         tenantId: tenant.id,
         fallbackOnboardingData: onboardingData,
@@ -149,7 +162,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         update: {
           status: 'failed',
           source: bootstrapSource,
-          lastError: result.body,
+          lastError: failureMessage,
         },
       });
       bootstrapSnapshot = transition.snapshot;
@@ -160,6 +173,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         gateway_status: result.status,
         details: result.body,
         bootstrap_status: bootstrapSnapshot.state.status,
+        diagnostics,
+        auto_pair_attempted: result.autoPairAttempted,
+        auto_pair_approved: result.autoPairApproved,
+        auto_pair_reason: result.autoPairReason,
       });
     }
 
@@ -181,6 +198,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       existing_output_present: hasAgentOutput,
       hooks_repaired: hooksRepaired,
       bootstrap_status: bootstrapSnapshot.state.status,
+      auto_pair_attempted: result.autoPairAttempted,
+      auto_pair_approved: result.autoPairApproved,
+      auto_pair_reason: result.autoPairReason,
     });
   } catch (error) {
     return errorResponse(res, error);

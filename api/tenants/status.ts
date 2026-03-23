@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { reconcileBootstrapState } from '../lib/bootstrap-state';
+import { classifyGatewayFailure } from '../lib/openclaw-bootstrap-guard';
 import { tryRecoverProvisioningTenant } from '../lib/provisioning-recovery';
 import {
   THIN_BRIDGE_CONTRACT_VERSION,
@@ -24,6 +25,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     });
     const tenantStatus = typeof effectiveTenant.status === 'string' ? effectiveTenant.status : null;
     const bootstrapStatus = bootstrap.effectiveState.status ?? null;
+    const bootstrapError = typeof bootstrap.effectiveState.last_error === 'string' && bootstrap.effectiveState.last_error
+      ? classifyGatewayFailure({
+        message: bootstrap.effectiveState.last_error,
+      })
+      : null;
     const taskStepUnlocked =
       isTaskStepUnlocked(tenantStatus) ||
       (typeof bootstrapStatus === 'string' && bootstrapStatus.trim().toLowerCase() === 'completed');
@@ -32,6 +38,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       contract_version: THIN_BRIDGE_CONTRACT_VERSION,
       status: tenantStatus,
       bootstrap_status: bootstrapStatus,
+      bootstrap_error: bootstrapError
+        ? {
+          tag: bootstrapError.tag,
+          retryable: bootstrapError.retryable,
+          message: bootstrapError.message,
+          missing_scope: bootstrapError.missingScope,
+          request_id: bootstrapError.requestId,
+        }
+        : null,
       task_step_unlocked: taskStepUnlocked,
       has_agent_output: bootstrap.progress.hasAgentOutput,
       has_droplet: !!effectiveTenant.droplet_id,
