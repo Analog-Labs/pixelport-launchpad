@@ -14,30 +14,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { resolveAgentDisplayName } from '@/lib/agent-display';
-
-function AgentPulseDot({ status }: { status: PaperclipAgent['status'] }) {
-  const color =
-    status === 'online'
-      ? 'bg-emerald-500'
-      : status === 'running'
-        ? 'bg-amber-500'
-        : 'bg-red-500';
-
-  const pulse = status === 'online' || status === 'running';
-
-  return (
-    <span className="relative inline-flex h-2 w-2 shrink-0">
-      <span
-        className={cn(
-          'absolute inline-flex h-full w-full rounded-full opacity-75',
-          color,
-          pulse && 'animate-ping',
-        )}
-      />
-      <span className={cn('relative inline-flex h-2 w-2 rounded-full', color)} />
-    </span>
-  );
-}
+import { AgentPulseDot } from '@/components/dashboard/AgentPulseDot';
 
 function AgentSummaryCard({
   agent,
@@ -67,7 +44,7 @@ function AgentSummaryCard({
             type="button"
             onClick={onOpenChief}
             disabled={opening}
-            className="font-satoshi font-bold text-base text-foreground hover:text-amber-300 transition-colors disabled:opacity-60"
+            className="font-satoshi font-bold text-base text-foreground hover:text-amber-300 transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 rounded"
             title="Open Chief workspace"
           >
             {displayName}
@@ -139,6 +116,10 @@ export default function Home() {
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6">
+      <h1 className="text-2xl font-satoshi font-bold text-foreground">
+        Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}
+      </h1>
+
       {/* Approval banner — action-first. Only render once badges query has resolved. */}
       {badgesResolved && pendingApprovals > 0 ? (
         <div className="rounded-xl border border-amber-400/30 bg-amber-500/5 p-5 flex items-center justify-between gap-4">

@@ -213,7 +213,7 @@ function ApprovalCard({ approval }: { approval: PaperclipApproval }) {
             size="sm"
             onClick={handleApprove}
             disabled={isLoading}
-            className="min-h-[44px] sm:min-h-0 bg-amber-500 hover:bg-amber-400 text-black font-semibold"
+            className="min-h-[44px] sm:min-h-0 shimmer-btn"
           >
             <Check className="h-3.5 w-3.5 mr-1.5" />
             Approve

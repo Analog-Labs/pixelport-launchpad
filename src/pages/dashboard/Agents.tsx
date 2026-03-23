@@ -11,28 +11,7 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { resolveAgentDisplayName } from '@/lib/agent-display';
-
-function AgentPulseDot({ status }: { status: PaperclipAgent['status'] }) {
-  const color =
-    status === 'online'
-      ? 'bg-emerald-500'
-      : status === 'running'
-        ? 'bg-amber-500'
-        : 'bg-red-500';
-  const pulse = status === 'online' || status === 'running';
-  return (
-    <span className="relative inline-flex h-2.5 w-2.5 shrink-0">
-      <span
-        className={cn(
-          'absolute inline-flex h-full w-full rounded-full opacity-75',
-          color,
-          pulse && 'animate-ping',
-        )}
-      />
-      <span className={cn('relative inline-flex h-2.5 w-2.5 rounded-full', color)} />
-    </span>
-  );
-}
+import { AgentPulseDot } from '@/components/dashboard/AgentPulseDot';
 
 function RunTimelineEntry({ run }: { run: HeartbeatRun }) {
   const success = run.result === 'success';
@@ -50,7 +29,7 @@ function RunTimelineEntry({ run }: { run: HeartbeatRun }) {
       {run.costCents != null && (
         <span className="shrink-0">{formatCostCents(run.costCents)}</span>
       )}
-      <span className="shrink-0 text-zinc-600">
+      <span className="shrink-0 text-muted-foreground/60">
         {(() => { const d = parseISO(run.startedAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
       </span>
     </div>
@@ -72,7 +51,7 @@ function AgentActivityTimeline({ agentId }: { agentId: string }) {
 
   if (!query.data?.runs?.length) {
     return (
-      <p className="font-mono text-[11px] text-zinc-600">No activity yet</p>
+      <p className="font-mono text-[11px] text-muted-foreground/60">No activity yet</p>
     );
   }
 
@@ -123,7 +102,7 @@ function AgentCard({
             type="button"
             onClick={onOpenChief}
             disabled={opening}
-            className="font-satoshi font-bold text-base text-foreground hover:text-amber-300 transition-colors disabled:opacity-60"
+            className="font-satoshi font-bold text-base text-foreground hover:text-amber-300 transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 rounded"
             title="Open Chief workspace"
           >
             {displayName}
@@ -138,12 +117,12 @@ function AgentCard({
       {agent.currentTask ? (
         <p className="text-sm text-muted-foreground truncate">"{agent.currentTask}"</p>
       ) : (
-        <p className="text-sm text-zinc-600 italic">Idle</p>
+        <p className="text-sm text-muted-foreground/60 italic">Idle</p>
       )}
 
       {/* Activity timeline */}
       <div>
-        <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 mb-1.5">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-1.5">
           Recent Activity
         </p>
         <AgentActivityTimeline agentId={agent.id} />

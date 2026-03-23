@@ -118,13 +118,13 @@ function KanbanColumn({
     >
       <h3 className="font-mono text-xs uppercase tracking-widest text-muted-foreground font-semibold">
         {label}
-        <span className="ml-2 text-zinc-600">{tasks.length}</span>
+        <span className="ml-2 text-muted-foreground/60">{tasks.length}</span>
       </h3>
       {tasks.map((task) => (
         <DraggableTaskCard key={task.id} task={task} onClick={onCardClick} />
       ))}
       {!tasks.length && (
-        <p className="text-xs text-zinc-600 text-center pt-6">No tasks</p>
+        <p className="text-xs text-muted-foreground/60 text-center pt-6">No tasks</p>
       )}
     </div>
   );
@@ -215,7 +215,7 @@ function TaskDetailPanel({
 
             {/* Comments */}
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-zinc-600 mb-2">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-2">
                 Comments
               </p>
               {commentsQuery.isLoading ? (
@@ -226,7 +226,7 @@ function TaskDetailPanel({
                     <div key={c.id} className="text-sm">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="font-medium text-foreground">{c.author ?? 'Agent'}</span>
-                        <span className="font-mono text-[10px] text-zinc-600">
+                        <span className="font-mono text-[10px] text-muted-foreground/60">
                           {(() => { const d = parseISO(c.createdAt); return isValid(d) ? formatDistanceToNow(d, { addSuffix: true }) : ''; })()}
                         </span>
                       </div>
@@ -235,7 +235,7 @@ function TaskDetailPanel({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-zinc-600">No comments yet.</p>
+                <p className="text-xs text-muted-foreground/60">No comments yet.</p>
               )}
 
               <div className="mt-3 space-y-2">
@@ -384,7 +384,7 @@ export default function Tasks() {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
             onClick={() => setSelectedTaskId(null)}
             aria-hidden="true"
           />
