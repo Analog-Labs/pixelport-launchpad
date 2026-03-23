@@ -24,16 +24,21 @@
 - [x] Created allowlist at `api/lib/paperclip-proxy-allowlist.ts`
 - [x] Merged PR #29 (`15cc13d`)
 
-## T3 — Dashboard V1 Core Views (In Progress)
+## T3 — Dashboard V1 Core Views ✅
 
 - [x] CEO plan reviewed and merged: `docs/designs/t3-dashboard-core.md` (PR #30, `b285590`)
 - [x] gstack artifacts: design doc, CEO plan, eng test plan all in `~/.gstack/projects/`
-- [ ] Implementation: Conductor workspace `chennai` attempted (PR #31 open) — not production-ready, to be redone in Codex
-- [ ] Views to build: Home, Agent Status, Task Board, Run History, Approval Queue, Sidebar Badges
-- [ ] Architecture: TanStack Query hooks (`usePaperclip*`), shared cache, client-side polling
-- [ ] `/review` pass
-- [ ] `/qa` pass
-- [ ] `/ship`
+- [x] Implementation: 5 dashboard views built via Codex + Claude Code (PR #48, `d0fcfd7`)
+  - Home (approval banner, agent cards, weekly cost, intelligence brief)
+  - Agents (live status, activity timeline, budget bar, Chief workspace launch)
+  - Approvals (inline edit, approve/reject, DOMPurify XSS sanitization, Clerk Bearer auth)
+  - Run History (expandable detail, cost coloring, event timeline)
+  - Tasks (kanban drag-and-drop, mobile snap-scroll, slide-out detail + comments)
+- [x] Architecture: TanStack Query hooks (`usePaperclip*`), shared cache, client-side polling
+- [x] Tenant proxy enhanced with board-handoff + agent-key fallback
+- [x] `/review` pass (eng review + Codex code review + adversarial challenge)
+- [x] Design review: 6 DESIGN.md violations fixed (a11y, shimmer CTA, heading hierarchy)
+- [x] `/ship` — v0.19.2.0
 
 ## T4 — Real-time & Polish (Planned)
 

@@ -5,25 +5,19 @@ All notable changes to PixelPort are documented here.
 ## [0.19.2.0] - 2026-03-23
 
 ### Added
-- Dashboard Home page with approval banner, agent cards, weekly cost summary, and intelligence brief placeholder
-- Agents page with live status, activity timeline, budget tracking, and Chief workspace launch
-- Approval queue with inline editing, draft save, approve/reject flow, and DOMPurify XSS sanitization
-- Run History page with expandable detail panels, cost coloring, and event timeline
-- Tasks kanban board with drag-and-drop status updates, mobile snap-scroll, and slide-out detail panel with comments
-- Tenant proxy board-handoff with agent-key fallback for resilient API routing
-- Shared AgentPulseDot component with animated status indicators
-- Agent display name resolver with preferred Chief name support
-- Runtime launch helper for opening Chief workspaces from dashboard
+- **Dashboard Home** — see pending approvals, agent status, weekly cost, and intelligence brief at a glance
+- **Agents page** — live agent status with pulse indicators, activity timeline, budget tracking, and one-click Chief workspace launch
+- **Approval queue** — review, edit inline, save drafts, approve or reject your Chief's work before it goes live
+- **Run History** — expandable run details with cost coloring, duration, and event timeline
+- **Tasks board** — drag-and-drop kanban with mobile snap-scroll, slide-out detail panels, and inline comments
+- Resilient API routing — tenant proxy now falls back to agent-key auth if board handoff fails
 
 ### Fixed
-- XSS protection via DOMPurify sanitization on approval content rendering
-- Null-safe chaining in Paperclip normalizer prevents crashes on malformed API data
-- Focus-visible rings on all custom interactive buttons for keyboard accessibility
-- Task detail panel backdrop now visible (bg-black/50 + backdrop-blur)
-- Empty state text colors aligned with DESIGN.md muted-foreground palette
-- Approve CTA uses shimmer-btn pattern per DESIGN.md
-- Home page heading hierarchy restored (h1 greeting added)
+- Approval content is now sanitized (DOMPurify) to prevent XSS from agent-generated HTML
+- All custom buttons now have visible focus rings for keyboard navigation
+- Task detail panel has a proper backdrop overlay so you can tell a panel is open
+- Empty states use consistent text colors per the design system
+- Approve button now uses the signature shimmer animation
 
 ### Changed
-- Approval mutations now use Clerk session token auth (Bearer header) instead of agent key
-- Tenant proxy falls back gracefully to agent-key proxy when board handoff fails
+- Approval actions now authenticate with your session token instead of the agent key — more secure and consistent with other dashboard requests
