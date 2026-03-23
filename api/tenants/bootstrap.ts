@@ -3,6 +3,7 @@ import { authenticateRequest, errorResponse } from '../lib/auth';
 import { repairBootstrapHooksOnDroplet } from '../lib/bootstrap-hooks-repair';
 import { loadBootstrapSnapshot, reconcileBootstrapState, transitionBootstrapState } from '../lib/bootstrap-state';
 import { buildOnboardingBootstrapMessage } from '../lib/onboarding-bootstrap';
+import { approveGatewayPairingViaSsh } from '../lib/openclaw-pairing-ssh';
 import {
   classifyGatewayFailure,
   dispatchBootstrapWithPairingRecovery,
@@ -107,6 +108,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           tenantName: tenant.name,
           onboardingData,
         }),
+        fallbackPairingApproval: async ({ diagnostics }) => {
+          return await approveGatewayPairingViaSsh({
+            host: tenant.droplet_ip!,
+            gatewayToken: tenant.gateway_token!,
+            requestId: diagnostics.requestId,
+          });
+        },
       });
     };
 

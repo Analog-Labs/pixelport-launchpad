@@ -18,7 +18,9 @@ import {
   classifyGatewayFailure,
   dispatchBootstrapWithPairingRecovery,
   formatGatewayDiagnostic,
+  isPairingRecoveryEligible,
 } from '../../lib/openclaw-bootstrap-guard';
+import { approveGatewayPairingViaSsh } from '../../lib/openclaw-pairing-ssh';
 
 // Inline client creation — importing from a local file that re-exports inngest
 // crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
@@ -1929,7 +1931,7 @@ export const provisionTenant = inngest.createFunction(
 
         let shouldRetryRun = false;
 
-        if (diagnostics.tag === 'pairing_required' && retryRunsUsed < maxRetryRuns) {
+        if (isPairingRecoveryEligible(diagnostics) && retryRunsUsed < maxRetryRuns) {
           const pairingApproval = await step.run(`approve-chief-pairing-${i}`, async () => {
             return await autoApproveGatewayPairing({
               gatewayWsUrl: controlPlaneGatewayWsUrl,
@@ -1942,7 +1944,29 @@ export const provisionTenant = inngest.createFunction(
           if (pairingApproval.ok) {
             shouldRetryRun = true;
           } else {
-            lastReadinessFailure = `${lastReadinessFailure} | autoPair=${pairingApproval.reason}`;
+            const shouldTrySshPairingFallback =
+              diagnostics.missingScope === 'operator.pairing'
+              || pairingApproval.reason.toLowerCase().includes('missing scope: operator.pairing');
+
+            if (shouldTrySshPairingFallback) {
+              const sshPairingApproval = await step.run(`approve-chief-pairing-ssh-${i}`, async () => {
+                return await approveGatewayPairingViaSsh({
+                  host: dropletIp,
+                  gatewayToken: droplet.gatewayToken,
+                  requestId: diagnostics.requestId,
+                  expectedDeviceId,
+                });
+              });
+
+              if (sshPairingApproval.ok) {
+                shouldRetryRun = true;
+              } else {
+                lastReadinessFailure =
+                  `${lastReadinessFailure} | autoPair=${pairingApproval.reason} sshPair=${sshPairingApproval.reason}`;
+              }
+            } else {
+              lastReadinessFailure = `${lastReadinessFailure} | autoPair=${pairingApproval.reason}`;
+            }
           }
         } else if (diagnostics.retryable && retryRunsUsed < maxRetryRuns) {
           shouldRetryRun = true;
@@ -1989,6 +2013,14 @@ export const provisionTenant = inngest.createFunction(
           tenantName: tenant.name,
           onboardingData,
         }),
+        fallbackPairingApproval: async ({ diagnostics }) => {
+          return await approveGatewayPairingViaSsh({
+            host: dropletIp,
+            gatewayToken: droplet.gatewayToken,
+            requestId: diagnostics.requestId,
+            expectedDeviceId,
+          });
+        },
       });
     });
 
