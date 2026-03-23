@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, randomUUID } from 'crypto';
 import { isIP } from 'net';
 import { createClient } from '@supabase/supabase-js';
 import { Inngest } from 'inngest';
@@ -98,7 +98,7 @@ const DEFAULT_PROVISIONING_DROPLET_REGION = 'nyc1';
 const RUNTIME_SSLIP_TEMPLATE_TOKEN = '__PUBLIC_IPV4_DASH__';
 const DEFAULT_ENABLE_RUNTIME_SSLIP_FALLBACK = true;
 const DEFAULT_DISABLE_CONTROL_UI_DEVICE_AUTH = true;
-const DEFAULT_DISABLE_OPENCLAW_GATEWAY_DEVICE_AUTH = true;
+const DEFAULT_DISABLE_OPENCLAW_GATEWAY_DEVICE_AUTH = false;
 const DO_REGION_FALLBACK_ORDER = ['nyc1', 'nyc3', 'sfo3', 'tor1', 'ams3', 'lon1', 'fra1', 'sgp1'];
 
 type DigitalOceanApiErrorBody = {
@@ -177,6 +177,64 @@ const OPENCLAW_GATEWAY_SCOPES = [
   'operator.approvals',
   'operator.pairing',
 ] as const;
+const ED25519_SPKI_PREFIX = Buffer.from('302a300506032b6570032100', 'hex');
+
+function readTrimmedString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function deriveDeviceIdFromPrivateKeyPem(privateKeyPem: string): string | null {
+  try {
+    const privateKey = createPrivateKey(privateKeyPem);
+    const publicKey = createPublicKey(privateKey);
+    const exported = publicKey.export({ type: 'spki', format: 'der' });
+    const der = Buffer.isBuffer(exported) ? exported : Buffer.from(exported);
+
+    if (
+      der.length <= ED25519_SPKI_PREFIX.length ||
+      !der.subarray(0, ED25519_SPKI_PREFIX.length).equals(ED25519_SPKI_PREFIX)
+    ) {
+      return null;
+    }
+
+    const rawPublicKey = der.subarray(ED25519_SPKI_PREFIX.length);
+    return createHash('sha256').update(rawPublicKey).digest('hex');
+  } catch {
+    return null;
+  }
+}
+
+function resolveGatewayDeviceIdentity(
+  adapterConfig: Record<string, unknown> | null | undefined,
+): { deviceId: string; devicePrivateKeyPem: string } {
+  const existingPrivateKey = readTrimmedString(adapterConfig?.devicePrivateKeyPem);
+  if (existingPrivateKey) {
+    const derivedDeviceId = deriveDeviceIdFromPrivateKeyPem(existingPrivateKey);
+    if (derivedDeviceId) {
+      return {
+        deviceId: derivedDeviceId,
+        devicePrivateKeyPem: existingPrivateKey,
+      };
+    }
+  }
+
+  const generated = generateKeyPairSync('ed25519');
+  const devicePrivateKeyPem = generated.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+  const deviceId = deriveDeviceIdFromPrivateKeyPem(devicePrivateKeyPem);
+  if (!deviceId) {
+    throw new Error('Failed to derive OpenClaw device identity for gateway adapter');
+  }
+
+  return {
+    deviceId,
+    devicePrivateKeyPem,
+  };
+}
 
 function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
   for (const value of values) {
@@ -713,8 +771,11 @@ function buildOpenClawGatewayWsUrlFromDropletIp(dropletIp: string): string {
 function buildOpenClawGatewayAdapterConfig(params: {
   gatewayWsUrl: string;
   gatewayToken: string;
+  existingAdapterConfig?: Record<string, unknown> | null;
 }): Record<string, unknown> {
-  return {
+  const disableDeviceAuth = isOpenClawGatewayDeviceAuthDisabled();
+
+  const adapterConfig: Record<string, unknown> = {
     url: params.gatewayWsUrl,
     headers: {
       'x-openclaw-token': params.gatewayToken,
@@ -723,8 +784,16 @@ function buildOpenClawGatewayAdapterConfig(params: {
     scopes: [...OPENCLAW_GATEWAY_SCOPES],
     sessionKeyStrategy: OPENCLAW_GATEWAY_SESSION_KEY_STRATEGY,
     waitTimeoutMs: OPENCLAW_GATEWAY_WAIT_TIMEOUT_MS,
-    disableDeviceAuth: isOpenClawGatewayDeviceAuthDisabled(),
+    disableDeviceAuth,
   };
+
+  if (!disableDeviceAuth) {
+    const deviceIdentity = resolveGatewayDeviceIdentity(params.existingAdapterConfig);
+    adapterConfig.deviceId = deviceIdentity.deviceId;
+    adapterConfig.devicePrivateKeyPem = deviceIdentity.devicePrivateKeyPem;
+  }
+
+  return adapterConfig;
 }
 
 function normalizeStringArray(value: unknown): string[] {
@@ -777,6 +846,7 @@ function readChiefGatewayState(chiefAgent: PaperclipAgentRecord): {
   gatewayWsUrl: string | null;
   gatewayToken: string | null;
   disableDeviceAuth: boolean | null;
+  devicePrivateKeyPem: string | null;
   expectedDeviceId: string | null;
 } {
   const adapterType =
@@ -796,11 +866,11 @@ function readChiefGatewayState(chiefAgent: PaperclipAgentRecord): {
   const disableDeviceAuth = typeof adapterConfig?.disableDeviceAuth === 'boolean'
     ? adapterConfig.disableDeviceAuth
     : null;
-  const expectedDeviceId = typeof adapterConfig?.deviceId === 'string'
-    ? adapterConfig.deviceId.trim()
-    : typeof adapterConfig?.device_id === 'string'
-      ? adapterConfig.device_id.trim()
-      : null;
+  const devicePrivateKeyPem = readTrimmedString(adapterConfig?.devicePrivateKeyPem);
+  const expectedDeviceIdFromConfig = readTrimmedString(adapterConfig?.deviceId)
+    ?? readTrimmedString(adapterConfig?.device_id);
+  const expectedDeviceId = expectedDeviceIdFromConfig
+    ?? (devicePrivateKeyPem ? deriveDeviceIdFromPrivateKeyPem(devicePrivateKeyPem) : null);
 
   return {
     adapterType,
@@ -810,6 +880,7 @@ function readChiefGatewayState(chiefAgent: PaperclipAgentRecord): {
     gatewayWsUrl,
     gatewayToken,
     disableDeviceAuth,
+    devicePrivateKeyPem,
     expectedDeviceId,
   };
 }
@@ -835,12 +906,16 @@ async function ensureChiefOpenClawGatewayAdapter(params: {
   const gatewayWsUrl = typeof params.gatewayWsUrl === 'string' ? params.gatewayWsUrl.trim() : '';
   const gatewayToken = typeof params.gatewayToken === 'string' ? params.gatewayToken.trim() : '';
   const existingState = readChiefGatewayState(params.chiefAgent);
+  const desiredDisableDeviceAuth = isOpenClawGatewayDeviceAuthDisabled();
+  const requiresDeviceIdentityRepair =
+    !desiredDisableDeviceAuth && (!existingState.devicePrivateKeyPem || !existingState.expectedDeviceId);
 
   const requiresPatch =
     existingState.adapterType !== OPENCLAW_GATEWAY_ADAPTER_TYPE ||
     existingState.role !== OPENCLAW_GATEWAY_ROLE ||
     existingState.missingScopes.length > 0 ||
-    existingState.disableDeviceAuth !== isOpenClawGatewayDeviceAuthDisabled() ||
+    existingState.disableDeviceAuth !== desiredDisableDeviceAuth ||
+    requiresDeviceIdentityRepair ||
     (gatewayWsUrl && existingState.gatewayWsUrl !== gatewayWsUrl) ||
     (gatewayToken && existingState.gatewayToken !== gatewayToken);
 
@@ -854,15 +929,21 @@ async function ensureChiefOpenClawGatewayAdapter(params: {
     );
   }
 
+  const patchedAdapterConfig = buildOpenClawGatewayAdapterConfig({
+    gatewayWsUrl,
+    gatewayToken,
+    existingAdapterConfig:
+      params.chiefAgent.adapterConfig && typeof params.chiefAgent.adapterConfig === 'object'
+        ? params.chiefAgent.adapterConfig as Record<string, unknown>
+        : null,
+  });
+
   const patchResponse = await fetch(`${params.paperclipUrl}/api/agents/${params.chiefAgent.id}`, {
     method: 'PATCH',
     headers: getPaperclipAgentHeaders(params.paperclipApiKey),
     body: JSON.stringify({
       adapterType: OPENCLAW_GATEWAY_ADAPTER_TYPE,
-      adapterConfig: buildOpenClawGatewayAdapterConfig({
-        gatewayWsUrl,
-        gatewayToken,
-      }),
+      adapterConfig: patchedAdapterConfig,
     }),
   });
 
@@ -875,12 +956,22 @@ async function ensureChiefOpenClawGatewayAdapter(params: {
   }
 
   const patchedAgent = (await patchResponse.json()) as PaperclipAgentRecord;
+  const patchedAgentAdapterConfig =
+    patchedAgent.adapterConfig && typeof patchedAgent.adapterConfig === 'object'
+      ? patchedAgent.adapterConfig as Record<string, unknown>
+      : null;
+  const effectiveAdapterConfig =
+    patchedAgentAdapterConfig && Object.keys(patchedAgentAdapterConfig).length > 0
+      ? patchedAgentAdapterConfig
+      : patchedAdapterConfig;
+
   return {
     ...params.chiefAgent,
     ...patchedAgent,
     adapterType: typeof patchedAgent.adapterType === 'string'
       ? patchedAgent.adapterType
       : OPENCLAW_GATEWAY_ADAPTER_TYPE,
+    adapterConfig: effectiveAdapterConfig,
   };
 }
 
@@ -1707,7 +1798,8 @@ export const provisionTenant = inngest.createFunction(
       });
     };
 
-    const gatewayWsUrl = buildOpenClawGatewayWsUrlFromDropletIp(dropletIp);
+    const controlPlaneGatewayWsUrl = buildOpenClawGatewayWsUrlFromDropletIp(dropletIp);
+    const chiefGatewayWsUrl = `ws://${OPENCLAW_GATEWAY_DOCKER_HOST_ALIAS}:${OPENCLAW_GATEWAY_DEFAULT_WS_PORT}`;
 
     const kickoffSeed = await step.run('seed-paperclip-kickoff-artifacts', async () => {
       try {
@@ -1717,7 +1809,7 @@ export const provisionTenant = inngest.createFunction(
           paperclipApiKey: resolvedPaperclipApiKey,
           tenantName: tenant.name,
           onboardingData,
-          gatewayWsUrl,
+          gatewayWsUrl: chiefGatewayWsUrl,
           gatewayToken: droplet.gatewayToken,
         });
 
@@ -1770,7 +1862,7 @@ export const provisionTenant = inngest.createFunction(
           paperclipUrl,
           paperclipApiKey: resolvedPaperclipApiKey,
           chiefAgent,
-          gatewayWsUrl,
+          gatewayWsUrl: chiefGatewayWsUrl,
           gatewayToken: droplet.gatewayToken,
         });
 
@@ -1840,7 +1932,7 @@ export const provisionTenant = inngest.createFunction(
         if (diagnostics.tag === 'pairing_required' && retryRunsUsed < maxRetryRuns) {
           const pairingApproval = await step.run(`approve-chief-pairing-${i}`, async () => {
             return await autoApproveGatewayPairing({
-              gatewayWsUrl,
+              gatewayWsUrl: controlPlaneGatewayWsUrl,
               gatewayToken: droplet.gatewayToken,
               requestId: diagnostics.requestId,
               expectedDeviceId,
@@ -1890,7 +1982,7 @@ export const provisionTenant = inngest.createFunction(
     const bootstrapResult = await step.run('trigger-initial-bootstrap', async () => {
       return await dispatchBootstrapWithPairingRecovery({
         gatewayHttpUrl: gatewayUrl,
-        gatewayWsUrl,
+        gatewayWsUrl: controlPlaneGatewayWsUrl,
         gatewayToken: droplet.gatewayToken,
         expectedDeviceId,
         message: buildOnboardingBootstrapMessage({
