@@ -8,6 +8,11 @@ const errorResponse = vi.fn((res: MockResponse, error: unknown) =>
   })
 );
 const reconcileBootstrapState = vi.fn();
+const tryRecoverProvisioningTenant = vi.fn(async (tenant: unknown) => ({
+  tenant,
+  recovered: false,
+  reason: "test-bypass",
+}));
 
 vi.mock("../../api/lib/auth", () => ({
   authenticateRequest,
@@ -16,6 +21,10 @@ vi.mock("../../api/lib/auth", () => ({
 
 vi.mock("../../api/lib/bootstrap-state", () => ({
   reconcileBootstrapState,
+}));
+
+vi.mock("../../api/lib/provisioning-recovery", () => ({
+  tryRecoverProvisioningTenant,
 }));
 
 type MockResponse = {

@@ -6,10 +6,19 @@ const errorResponse = vi.fn((res: MockResponse, error: unknown) =>
     error: error instanceof Error ? error.message : "Internal server error",
   }),
 );
+const tryRecoverProvisioningTenant = vi.fn(async (tenant: unknown) => ({
+  tenant,
+  recovered: false,
+  reason: "test-bypass",
+}));
 
 vi.mock("../../api/lib/auth", () => ({
   authenticateRequest,
   errorResponse,
+}));
+
+vi.mock("../../api/lib/provisioning-recovery", () => ({
+  tryRecoverProvisioningTenant,
 }));
 
 type MockResponse = {
