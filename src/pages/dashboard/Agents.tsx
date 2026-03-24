@@ -1,8 +1,12 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { usePaperclipAgents, usePaperclipAgentRuns, usePaperclipLiveRuns } from '@/hooks/usePaperclipAgents';
+import { useWakeAgent } from '@/hooks/usePaperclipAgentDetail';
 import { ProxyQueryWrapper } from '@/components/dashboard/ProxyQueryWrapper';
+import { AgentInvokeButton } from '@/components/dashboard/AgentInvokeButton';
 import { AgentCardSkeleton } from '@/components/dashboard/DashboardSkeleton';
+import { Button } from '@/components/ui/button';
 import { formatCostCents, formatDurationMs } from '@/lib/costColoring';
 import { useAuth } from '@/contexts/AuthContext';
 import { launchChiefWorkspace } from '@/lib/runtime-launch';
@@ -68,12 +72,16 @@ function AgentCard({
   agent,
   displayName,
   onOpenChief,
+  onRunNow,
   opening,
+  runPending,
 }: {
   agent: PaperclipAgent;
   displayName: string;
   onOpenChief: () => void;
+  onRunNow: () => void;
   opening: boolean;
+  runPending: boolean;
 }) {
   const budgetPct =
     agent.budgetLimitCents && agent.budgetLimitCents > 0
@@ -98,15 +106,13 @@ function AgentCard({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <AgentPulseDot status={agent.status} />
-          <button
-            type="button"
-            onClick={onOpenChief}
-            disabled={opening}
-            className="font-satoshi font-bold text-base text-foreground hover:text-amber-300 transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 rounded"
-            title="Open Chief workspace"
+          <Link
+            to={`/dashboard/agents/${agent.id}`}
+            className="rounded font-satoshi text-base font-bold text-foreground transition-colors hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
+            title="Open agent detail"
           >
             {displayName}
-          </button>
+          </Link>
         </div>
         <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
           {statusLabel}
@@ -145,6 +151,19 @@ function AgentCard({
           </div>
         </div>
       ) : null}
+
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onOpenChief}
+          disabled={opening}
+          className="min-h-[40px] sm:min-h-0"
+        >
+          {opening ? 'Opening...' : 'Open Workspace'}
+        </Button>
+        <AgentInvokeButton label="Run Now" onClick={onRunNow} pending={runPending} />
+      </div>
     </div>
   );
 }
@@ -153,6 +172,7 @@ export default function Agents() {
   const { tenant, session } = useAuth();
   const agentsQuery = usePaperclipAgents();
   const liveRunsQuery = usePaperclipLiveRuns();
+  const wakeAgent = useWakeAgent();
   const [openingAgentId, setOpeningAgentId] = useState<string | null>(null);
 
   const activeRunByAgentId = useMemo(() => {
@@ -182,6 +202,18 @@ export default function Agents() {
     } finally {
       setOpeningAgentId(null);
     }
+  };
+
+  const handleRunNow = (agentId: string) => {
+    wakeAgent.mutate(
+      { agentId },
+      {
+        onSuccess: () => toast.success('Agent nudged — check runs'),
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : 'Failed to wake agent');
+        },
+      },
+    );
   };
 
   return (
@@ -218,7 +250,9 @@ export default function Agents() {
                     agent={{ ...agent, status, currentTask }}
                     displayName={resolveAgentDisplayName(agent, preferredChiefName)}
                     onOpenChief={() => handleOpenChief(agent.id)}
+                    onRunNow={() => handleRunNow(agent.id)}
                     opening={openingAgentId === agent.id}
+                    runPending={wakeAgent.isPending && wakeAgent.variables?.agentId === agent.id}
                   />
                 );
               })}

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   normalizeAgentListResponse,
+  normalizeAgentCostsResponse,
+  normalizeActivityResponse,
   normalizeApprovalsResponse,
   normalizeDashboardSummary,
   normalizeHeartbeatRunsResponse,
@@ -32,16 +34,17 @@ describe('paperclip normalizers', () => {
 
   it('normalizes dashboard summary nested cost and agent values', () => {
     const normalized = normalizeDashboardSummary({
-      agents: { active: 3 },
-      costs: { monthSpendCents: 450 },
+      agents: { active: 3, running: 1, paused: 1, error: 1 },
+      tasks: { open: 4, inProgress: 2, blocked: 1, done: 8 },
+      costs: { monthSpendCents: 450, monthBudgetCents: 1000, monthUtilizationPercent: 45 },
       pendingApprovals: 2,
     });
 
     expect(normalized).toEqual({
-      activeAgents: 3,
-      weekCostCents: 450,
+      agents: { active: 3, running: 1, paused: 1, error: 1 },
+      tasks: { open: 4, inProgress: 2, blocked: 1, done: 8 },
+      costs: { monthSpendCents: 450, monthBudgetCents: 1000, monthUtilizationPercent: 45 },
       pendingApprovals: 2,
-      currentTask: undefined,
     });
   });
 
@@ -109,9 +112,67 @@ describe('paperclip normalizers', () => {
 
     expect(normalized).toEqual({
       approvals: 4,
-      tasks: 7,
+      inbox: 7,
+      failedRuns: 2,
+      tasks: undefined,
       competitors: undefined,
-      chat: 2,
+      chat: undefined,
     });
+  });
+
+  it('normalizes activity entries from wrapped payload', () => {
+    const normalized = normalizeActivityResponse({
+      activity: [
+        {
+          id: 1,
+          actorType: 'agent',
+          actorId: 'agent-1',
+          action: 'completed issue',
+          entityType: 'issue',
+          entityId: 'issue-1',
+          createdAt: '2026-03-20T00:00:00Z',
+        },
+      ],
+    });
+
+    expect(normalized.entries).toEqual([
+      {
+        id: '1',
+        actorType: 'agent',
+        actorId: 'agent-1',
+        action: 'completed issue',
+        entityType: 'issue',
+        entityId: 'issue-1',
+        agentId: undefined,
+        details: undefined,
+        createdAt: '2026-03-20T00:00:00Z',
+      },
+    ]);
+  });
+
+  it('normalizes agent cost rows from costs payload', () => {
+    const normalized = normalizeAgentCostsResponse({
+      costs: [
+        {
+          agentId: 'agent-1',
+          agentName: 'Chief',
+          agentStatus: 'running',
+          costCents: 1234,
+          inputTokens: 50,
+          outputTokens: 75,
+        },
+      ],
+    });
+
+    expect(normalized.agents).toEqual([
+      {
+        agentId: 'agent-1',
+        agentName: 'Chief',
+        agentStatus: 'running',
+        costCents: 1234,
+        inputTokens: 50,
+        outputTokens: 75,
+      },
+    ]);
   });
 });

@@ -14,8 +14,11 @@ import Dashboard from "./pages/Dashboard";
 import Home from "./pages/dashboard/Home";
 import Connections from "./pages/dashboard/Connections";
 import Agents from "./pages/dashboard/Agents";
+import AgentDetail from "./pages/dashboard/AgentDetail";
 import Tasks from "./pages/dashboard/Tasks";
 import Approvals from "./pages/dashboard/Approvals";
+import Inbox from "./pages/dashboard/Inbox";
+import Costs from "./pages/dashboard/Costs";
 import RunHistory from "./pages/dashboard/RunHistory";
 
 const queryClient = new QueryClient();
@@ -41,10 +44,13 @@ const App = () => (
               }
             >
               <Route index element={<Home />} />
+              <Route path="inbox" element={<Inbox />} />
               <Route path="agents" element={<Agents />} />
+              <Route path="agents/:agentId" element={<AgentDetail />} />
               <Route path="tasks" element={<Tasks />} />
               <Route path="approvals" element={<Approvals />} />
               <Route path="runs" element={<RunHistory />} />
+              <Route path="costs" element={<Costs />} />
               <Route path="connections" element={<Connections />} />
             </Route>
             <Route path="*" element={<NotFound />} />

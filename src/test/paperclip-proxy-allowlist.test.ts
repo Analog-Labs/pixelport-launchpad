@@ -10,6 +10,10 @@ describe('PROXY_ALLOWLIST', () => {
   it('has entries for all expected route groups', () => {
     const patterns = PROXY_ALLOWLIST.map((e) => e.proxyPattern);
     expect(patterns).toContain('companies/dashboard');
+    expect(patterns).toContain('companies/activity');
+    expect(patterns).toContain('companies/costs/by-agent');
+    expect(patterns).toContain('agents/:id');
+    expect(patterns).toContain('agents/:id/wakeup');
     expect(patterns).toContain('issues/:id');
     expect(patterns).toContain('heartbeat-runs/:runId');
     expect(patterns).toContain('approvals/:id');
@@ -45,6 +49,20 @@ describe('matchProxyRoute — company-scoped routes', () => {
     });
   });
 
+  it('matches POST companies/issues', () => {
+    const result = matchProxyRoute('POST', 'companies/issues', COMPANY_ID);
+    expect(result).toEqual({
+      targetPath: `/api/companies/${COMPANY_ID}/issues`,
+    });
+  });
+
+  it('matches GET companies/activity', () => {
+    const result = matchProxyRoute('GET', 'companies/activity', COMPANY_ID);
+    expect(result).toEqual({
+      targetPath: `/api/companies/${COMPANY_ID}/activity`,
+    });
+  });
+
   it('matches GET companies/heartbeat-runs', () => {
     const result = matchProxyRoute('GET', 'companies/heartbeat-runs', COMPANY_ID);
     expect(result).toEqual({
@@ -73,6 +91,13 @@ describe('matchProxyRoute — company-scoped routes', () => {
     });
   });
 
+  it('matches GET companies/costs/by-agent', () => {
+    const result = matchProxyRoute('GET', 'companies/costs/by-agent', COMPANY_ID);
+    expect(result).toEqual({
+      targetPath: `/api/companies/${COMPANY_ID}/costs/by-agent`,
+    });
+  });
+
   it('rejects POST on GET-only company-scoped routes', () => {
     expect(matchProxyRoute('POST', 'companies/dashboard', COMPANY_ID)).toBeNull();
     expect(matchProxyRoute('POST', 'companies/agents', COMPANY_ID)).toBeNull();
@@ -80,6 +105,16 @@ describe('matchProxyRoute — company-scoped routes', () => {
 });
 
 describe('matchProxyRoute — issue routes', () => {
+  it('matches GET agents/:id', () => {
+    const result = matchProxyRoute('GET', 'agents/agent-42', COMPANY_ID);
+    expect(result).toEqual({ targetPath: '/api/agents/agent-42' });
+  });
+
+  it('matches POST agents/:id/wakeup', () => {
+    const result = matchProxyRoute('POST', 'agents/agent-42/wakeup', COMPANY_ID);
+    expect(result).toEqual({ targetPath: '/api/agents/agent-42/wakeup' });
+  });
+
   it('matches GET issues/:id', () => {
     const result = matchProxyRoute('GET', 'issues/issue-42', COMPANY_ID);
     expect(result).toEqual({ targetPath: '/api/issues/issue-42' });

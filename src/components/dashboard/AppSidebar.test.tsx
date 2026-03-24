@@ -55,6 +55,12 @@ describe('AppSidebar badge rendering', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
   });
 
+  it('shows inbox badge count when inbox > 0', () => {
+    useSidebarBadgesMock.mockReturnValue({ data: { approvals: 0, inbox: 3 } });
+    renderSidebar();
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
   it('does NOT show badge when approvals = 0', () => {
     useSidebarBadgesMock.mockReturnValue({ data: { approvals: 0 } });
     renderSidebar();
@@ -66,6 +72,7 @@ describe('AppSidebar badge rendering', () => {
     renderSidebar();
     // Nav items should still render
     expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Inbox')).toBeInTheDocument();
     expect(screen.getByText('Approvals')).toBeInTheDocument();
   });
 

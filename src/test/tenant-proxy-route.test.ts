@@ -347,6 +347,36 @@ describe('GET/POST /api/tenant-proxy/[...path]', () => {
     expect(proxyToPaperclip).not.toHaveBeenCalled();
   });
 
+  it('uses board session proxy for unread inbox query with unreadForUserId=me', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/companies/company-abc/issues' });
+    proxyToPaperclipAsBoard.mockResolvedValue(
+      mockFetchResponse(200, '{"issues":[]}'),
+    );
+
+    const req = {
+      method: 'GET',
+      query: { path: ['companies', 'issues'], unreadForUserId: 'me' },
+      url: '/api/tenant-proxy/companies/issues?unreadForUserId=me',
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(proxyToPaperclipAsBoard).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-1',
+      '/api/companies/company-abc/issues?unreadForUserId=me',
+      { method: 'GET', body: undefined },
+    );
+    expect(proxyToPaperclip).not.toHaveBeenCalled();
+  });
+
   it('preserves query string in forwarded request', async () => {
     const { default: handler } = await import('../../api/tenant-proxy/[...path]');
     authenticateRequest.mockResolvedValue({

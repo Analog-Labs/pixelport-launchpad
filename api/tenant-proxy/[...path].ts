@@ -37,8 +37,31 @@ function resolveForwardedQueryString(req: VercelRequest): string {
   return query ? `?${query}` : '';
 }
 
-function requiresBoardSession(method: string, proxyPath: string): boolean {
+function queryParam(
+  req: VercelRequest,
+  key: string,
+): string | undefined {
+  const queryValue = req.query[key];
+  if (Array.isArray(queryValue)) {
+    return queryValue[0];
+  }
+  if (typeof queryValue === 'string') {
+    return queryValue;
+  }
+  const rawUrl = req.url ?? '/';
+  const parsed = new URL(rawUrl, 'https://pixelport.local');
+  return parsed.searchParams.get(key) ?? undefined;
+}
+
+function requiresBoardSession(req: VercelRequest, method: string, proxyPath: string): boolean {
   if (method.toUpperCase() !== 'POST') {
+    const normalizedPath = proxyPath.replace(/^\/+|\/+$/g, '');
+    if (normalizedPath === 'companies/issues') {
+      const unreadForUserId = queryParam(req, 'unreadForUserId')?.toLowerCase();
+      if (unreadForUserId === 'me') {
+        return true;
+      }
+    }
     return false;
   }
 
@@ -99,7 +122,7 @@ export default async function handler(
     };
     let response: Response;
 
-    if (requiresBoardSession(method, proxyPath)) {
+    if (requiresBoardSession(req, method, proxyPath)) {
       try {
         response = await proxyToPaperclipAsBoard(tenant, userId, targetPath, requestOptions);
       } catch (error) {

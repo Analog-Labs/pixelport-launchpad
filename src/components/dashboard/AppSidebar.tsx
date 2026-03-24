@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   LayoutDashboard,
+  Inbox,
   CheckSquare,
   ListTodo,
   Bot,
   Clock,
+  DollarSign,
   Plug,
   LogOut,
 } from 'lucide-react';
@@ -23,10 +25,12 @@ import { cn } from '@/lib/utils';
 /** DD-1: nav order — action items first, monitoring second, settings last */
 const primaryNav = [
   { title: 'Home', url: '/dashboard', icon: LayoutDashboard, end: true, badge: null },
+  { title: 'Inbox', url: '/dashboard/inbox', icon: Inbox, badge: 'inbox' as const },
   { title: 'Approvals', url: '/dashboard/approvals', icon: CheckSquare, badge: 'approvals' as const },
   { title: 'Tasks', url: '/dashboard/tasks', icon: ListTodo, badge: null },
   { title: 'Agents', url: '/dashboard/agents', icon: Bot, badge: null },
   { title: 'Runs', url: '/dashboard/runs', icon: Clock, badge: null },
+  { title: 'Costs', url: '/dashboard/costs', icon: DollarSign, badge: null },
   { title: 'Connections', url: '/dashboard/connections', icon: Plug, badge: null },
 ];
 
@@ -92,7 +96,7 @@ export function AppSidebar() {
     navigate('/login');
   };
 
-  const getBadgeCount = (key: 'approvals' | null): number | null => {
+  const getBadgeCount = (key: 'approvals' | 'inbox' | null): number | null => {
     if (!key || !badgesQuery.data) return null;
     const count = badgesQuery.data[key];
     return count && count > 0 ? count : null;

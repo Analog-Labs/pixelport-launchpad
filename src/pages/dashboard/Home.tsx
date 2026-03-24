@@ -1,212 +1,156 @@
-import { Link } from 'react-router-dom';
-import { CheckSquare, ListTodo, BrainCircuit } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { CheckSquare, ListTodo } from 'lucide-react';
 import { useSidebarBadges } from '@/hooks/useSidebarBadges';
+import { usePaperclipActivity } from '@/hooks/usePaperclipActivity';
 import { usePaperclipAgents } from '@/hooks/usePaperclipAgents';
 import { usePaperclipDashboard } from '@/hooks/usePaperclipDashboard';
+import { usePaperclipTasks } from '@/hooks/usePaperclipTasks';
 import { ProxyQueryWrapper } from '@/components/dashboard/ProxyQueryWrapper';
-import { AgentCardSkeleton, HomeSkeleton } from '@/components/dashboard/DashboardSkeleton';
+import { ActivityTimeline } from '@/components/dashboard/ActivityTimeline';
+import { CreateTaskPanel } from '@/components/dashboard/CreateTaskPanel';
+import { HomeSkeleton } from '@/components/dashboard/DashboardSkeleton';
+import { StatCard } from '@/components/dashboard/StatCard';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { formatCostCents } from '@/lib/costColoring';
-import { launchChiefWorkspace } from '@/lib/runtime-launch';
-import type { PaperclipAgent } from '@/lib/paperclip-types';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
-import { useState } from 'react';
-import { resolveAgentDisplayName } from '@/lib/agent-display';
-import { AgentPulseDot } from '@/components/dashboard/AgentPulseDot';
+import { parseISO } from 'date-fns';
 
-function AgentSummaryCard({
-  agent,
-  displayName,
-  onOpenChief,
-  opening,
-}: {
-  agent: PaperclipAgent;
-  displayName: string;
-  onOpenChief: () => void;
-  opening: boolean;
-}) {
-  const budgetPct =
-    agent.budgetLimitCents && agent.budgetLimitCents > 0
-      ? Math.min(100, ((agent.budgetUsedCents ?? 0) / agent.budgetLimitCents) * 100)
-      : 0;
-
-  const budgetColor =
-    budgetPct >= 80 ? 'bg-red-500' : budgetPct >= 50 ? 'bg-amber-500' : 'bg-emerald-500';
-
-  return (
-    <div className="rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:border-amber-400/40 hover:shadow-[0_0_20px_rgba(212,168,83,0.08)]">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <AgentPulseDot status={agent.status} />
-          <button
-            type="button"
-            onClick={onOpenChief}
-            disabled={opening}
-            className="font-satoshi font-bold text-base text-foreground hover:text-amber-300 transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 rounded"
-            title="Open Chief workspace"
-          >
-            {displayName}
-          </button>
-        </div>
-        <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          {agent.status}
-        </span>
-      </div>
-      {agent.currentTask && (
-        <p className="text-sm text-muted-foreground truncate mb-3">{agent.currentTask}</p>
-      )}
-      {agent.budgetLimitCents ? (
-        <div className="space-y-1">
-          <div className="h-1.5 w-full rounded-full bg-zinc-800 overflow-hidden">
-            <div
-              className={cn('h-full rounded-full transition-all', budgetColor)}
-              style={{ width: `${budgetPct}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
-            <span>{formatCostCents(agent.budgetUsedCents ?? 0)}</span>
-            <span>{formatCostCents(agent.budgetLimitCents)}</span>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
+function byUpdatedAtDesc(a?: string, b?: string): number {
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+  return parseISO(b).getTime() - parseISO(a).getTime();
 }
 
 export default function Home() {
-  const { tenant, session } = useAuth();
-  const [openingAgentId, setOpeningAgentId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const [createPanelOpen, setCreatePanelOpen] = useState(false);
   const badgesQuery = useSidebarBadges();
-  const agentsQuery = usePaperclipAgents();
   const dashboardQuery = usePaperclipDashboard();
+  const tasksQuery = usePaperclipTasks();
+  const activityQuery = usePaperclipActivity(8);
+  const agentsQuery = usePaperclipAgents();
 
-  const companyName = String(tenant?.onboarding_data?.company_name || tenant?.name || 'your company');
-  const preferredChiefName =
-    typeof tenant?.onboarding_data?.agent_name === 'string'
-      ? tenant.onboarding_data.agent_name
-      : undefined;
-  const accessToken = session?.access_token ?? '';
+  const pendingApprovals = badgesQuery.data?.approvals ?? dashboardQuery.data?.pendingApprovals ?? 0;
 
-  const handleOpenChief = async (agentId: string) => {
-    if (!accessToken) {
-      toast.error('Session expired. Please sign in again.');
-      return;
-    }
+  const recentTasks = useMemo(() => {
+    return [...(tasksQuery.data?.issues ?? [])]
+      .sort((left, right) => byUpdatedAtDesc(left.updatedAt, right.updatedAt))
+      .slice(0, 5);
+  }, [tasksQuery.data?.issues]);
 
-    try {
-      setOpeningAgentId(agentId);
-      await launchChiefWorkspace(accessToken, 'dashboard_home_agent_card');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open Chief workspace');
-    } finally {
-      setOpeningAgentId(null);
-    }
-  };
-
-  // Show full skeleton while either query is loading on first load
-  if (badgesQuery.isLoading || agentsQuery.isLoading || dashboardQuery.isLoading) {
+  if (dashboardQuery.isLoading && badgesQuery.isLoading) {
     return <HomeSkeleton />;
   }
 
-  // Only read approval count once badges have settled (data or error)
-  const pendingApprovals = badgesQuery.data?.approvals ?? 0;
-  const badgesResolved = !badgesQuery.isLoading;
-
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <h1 className="text-2xl font-satoshi font-bold text-foreground">
         Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}
       </h1>
 
-      {/* Approval banner — action-first. Only render once badges query has resolved. */}
-      {badgesResolved && pendingApprovals > 0 ? (
-        <div className="rounded-xl border border-amber-400/30 bg-amber-500/5 p-5 flex items-center justify-between gap-4">
+      {pendingApprovals > 0 ? (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-400/30 bg-amber-500/5 p-5">
           <div>
             <p className="text-lg font-bold text-foreground">
               {pendingApprovals} item{pendingApprovals !== 1 ? 's' : ''} need your approval
             </p>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Review and approve your Chief's work before it goes live.
-            </p>
+            <p className="text-sm text-muted-foreground">Review and approve before content goes live.</p>
           </div>
-          <Button asChild className="shrink-0">
+          <Button asChild className="shrink-0 min-h-[44px] sm:min-h-0 shimmer-btn">
             <Link to="/dashboard/approvals">Review Approvals</Link>
           </Button>
         </div>
-      ) : badgesResolved ? (
-        <div className="rounded-xl border border-border bg-card p-5 flex items-center gap-3 text-muted-foreground">
+      ) : (
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-5 text-muted-foreground">
           <CheckSquare className="h-5 w-5 text-emerald-400" />
           <span className="text-sm">Inbox zero — your Chief handled everything</span>
         </div>
-      ) : null}
+      )}
 
-      {/* Quick actions */}
-      <div className="flex gap-3">
-        <Button asChild variant="outline" size="sm">
-          <Link to="/dashboard/approvals">
-            <CheckSquare className="h-4 w-4 mr-2" />
-            Review Approvals
-          </Link>
-        </Button>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/dashboard/tasks">
-            <ListTodo className="h-4 w-4 mr-2" />
-            View Tasks
-          </Link>
-        </Button>
-      </div>
-
-      {/* Summary from /dashboard (count consistency still comes from sidebar badges) */}
-      <section className="rounded-xl border border-border bg-card p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-foreground">Weekly cost</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {formatCostCents(dashboardQuery.data?.weekCostCents ?? 0)}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-foreground">Current focus</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {dashboardQuery.data?.currentTask || 'No active focus right now'}
-            </p>
-          </div>
-        </div>
+      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard
+          value={String(dashboardQuery.data?.agents.active ?? 0)}
+          label="Agents Enabled"
+          subtitle={`${dashboardQuery.data?.agents.running ?? 0} running · ${dashboardQuery.data?.agents.paused ?? 0} paused · ${dashboardQuery.data?.agents.error ?? 0} errors`}
+          onClick={() => navigate('/dashboard/agents')}
+        />
+        <StatCard
+          value={String(dashboardQuery.data?.tasks.inProgress ?? 0)}
+          label="Tasks In Progress"
+          subtitle={`${dashboardQuery.data?.tasks.open ?? 0} open · ${dashboardQuery.data?.tasks.blocked ?? 0} blocked`}
+          onClick={() => navigate('/dashboard/tasks')}
+        />
+        <StatCard
+          value={formatCostCents(dashboardQuery.data?.costs.monthSpendCents ?? 0)}
+          label="Month Spend"
+          subtitle={
+            (dashboardQuery.data?.costs.monthBudgetCents ?? 0) > 0
+              ? `${Math.round(dashboardQuery.data?.costs.monthUtilizationPercent ?? 0)}% of budget`
+              : 'Unlimited budget'
+          }
+          onClick={() => navigate('/dashboard/costs')}
+        />
+        <StatCard
+          value={String(pendingApprovals)}
+          label="Pending Approvals"
+          subtitle="Awaiting review"
+          onClick={() => navigate('/dashboard/approvals')}
+        />
       </section>
 
-      {/* Agent status cards */}
-      <section>
-        <h2 className="text-sm font-mono uppercase tracking-widest text-muted-foreground mb-3">
-          Agents · {companyName}
-        </h2>
+      <section className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="font-satoshi text-lg font-bold text-foreground">Recent Tasks</p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCreatePanelOpen(true)}
+              className="min-h-[40px] sm:min-h-0"
+            >
+              New Task
+            </Button>
+            <Link to="/dashboard/tasks" className="text-sm text-amber-400 hover:text-amber-300">
+              See all
+            </Link>
+          </div>
+        </div>
+
         <ProxyQueryWrapper
-          query={agentsQuery}
+          query={tasksQuery}
           skeleton={
-            <div className="grid sm:grid-cols-2 gap-4">
-              <AgentCardSkeleton />
-              <AgentCardSkeleton />
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div key={index} className="h-12 animate-pulse rounded bg-amber-500/5" />
+              ))}
             </div>
           }
-          errorLabel="agent status"
+          errorLabel="recent tasks"
         >
-          {(data) => {
-            if (!data.agents.length) {
-              return (
-                <p className="text-sm text-muted-foreground">No agents provisioned.</p>
-              );
+          {() => {
+            if (!recentTasks.length) {
+              return <p className="text-sm text-muted-foreground">No tasks yet — create your first.</p>;
             }
             return (
-              <div className="grid sm:grid-cols-2 gap-4">
-                {data.agents.map((agent) => (
-                  <AgentSummaryCard
-                    key={agent.id}
-                    agent={agent}
-                    displayName={resolveAgentDisplayName(agent, preferredChiefName)}
-                    onOpenChief={() => handleOpenChief(agent.id)}
-                    opening={openingAgentId === agent.id}
-                  />
+              <div className="space-y-2">
+                {recentTasks.map((task) => (
+                  <Link
+                    key={task.id}
+                    to="/dashboard/tasks"
+                    className={cn(
+                      'grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg border border-border px-3 py-2',
+                      'transition-all hover:border-amber-400/40 hover:shadow-[0_0_20px_rgba(212,168,83,0.08)]',
+                    )}
+                  >
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                      {task.identifier ?? (task.number ? `#${task.number}` : task.id.slice(0, 6))}
+                    </span>
+                    <p className="truncate text-sm text-foreground">{task.title}</p>
+                    <StatusBadge status={task.status} />
+                  </Link>
                 ))}
               </div>
             );
@@ -214,16 +158,71 @@ export default function Home() {
         </ProxyQueryWrapper>
       </section>
 
-      {/* Intelligence brief placeholder — RC-3: static, no fetch */}
       <section className="rounded-xl border border-border bg-card p-5">
-        <div className="flex items-center gap-2 mb-2">
-          <BrainCircuit className="h-4 w-4 text-amber-400" />
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="font-satoshi text-lg font-bold text-foreground">Recent Activity</p>
+          <Link to="/dashboard/inbox" className="text-sm text-amber-400 hover:text-amber-300">
+            Open Inbox
+          </Link>
+        </div>
+        <ProxyQueryWrapper
+          query={activityQuery}
+          skeleton={
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="h-12 animate-pulse rounded bg-amber-500/5" />
+              ))}
+            </div>
+          }
+          errorLabel="activity feed"
+        >
+          {(data) => (
+            <ActivityTimeline
+              entries={data.entries}
+              emptyLabel="No activity yet — your Chief will start soon."
+            />
+          )}
+        </ProxyQueryWrapper>
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="font-satoshi text-lg font-bold text-foreground">Agents</p>
+          <Link to="/dashboard/agents" className="text-sm text-amber-400 hover:text-amber-300">
+            Open agents
+          </Link>
+        </div>
+        {agentsQuery.data?.agents?.length ? (
+          <div className="flex flex-wrap gap-2">
+            {agentsQuery.data.agents.map((agent) => (
+              <Link
+                key={agent.id}
+                to={`/dashboard/agents/${agent.id}`}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-zinc-900/60 px-3 py-1.5 text-sm text-foreground hover:border-amber-400/40"
+              >
+                <span className={cn('h-1.5 w-1.5 rounded-full', agent.status === 'running' ? 'bg-amber-500' : agent.status === 'online' ? 'bg-emerald-500' : 'bg-zinc-500')} />
+                <span>{agent.name}</span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">No agents provisioned.</p>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-border bg-card p-5">
+        <div className="mb-2 flex items-center gap-2">
+          <ListTodo className="h-4 w-4 text-amber-400" />
           <span className="text-sm font-semibold text-foreground">Intelligence Brief</span>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Your Chief is analyzing — check back soon.
-        </p>
+        <p className="text-sm text-muted-foreground">Your Chief is analyzing — check back soon.</p>
       </section>
+
+      <CreateTaskPanel
+        open={createPanelOpen}
+        onClose={() => setCreatePanelOpen(false)}
+        agents={agentsQuery.data?.agents ?? []}
+      />
     </div>
   );
 }
