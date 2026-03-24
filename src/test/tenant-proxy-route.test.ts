@@ -29,6 +29,18 @@ const proxyToPaperclipAsBoard = vi.fn();
 vi.mock('../../api/lib/gateway', () => ({
   proxyToPaperclip,
   proxyToPaperclipAsBoard,
+  BoardSessionProxyError: class BoardSessionProxyError extends Error {
+    code: string;
+    status: number | null;
+    details: string | null;
+    constructor(code: string, message: string, options?: { status?: number | null; details?: string | null }) {
+      super(message);
+      this.name = 'BoardSessionProxyError';
+      this.code = code;
+      this.status = options?.status ?? null;
+      this.details = options?.details ?? null;
+    }
+  },
   ProxyTimeoutError: class ProxyTimeoutError extends Error {
     constructor(target: string) {
       super(`Proxy timeout to ${target}`);
@@ -287,14 +299,19 @@ describe('GET/POST /api/tenant-proxy/[...path]', () => {
 
   it('falls back to agent key proxy when board handoff throws', async () => {
     const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    const { BoardSessionProxyError } = await import('../../api/lib/gateway');
     authenticateRequest.mockResolvedValue({
       tenant: buildTenant(),
       userId: 'user-1',
     });
     matchProxyRoute.mockReturnValue({ targetPath: '/api/approvals/ap-1/reject' });
-    proxyToPaperclipAsBoard.mockRejectedValue(new Error('Handoff timeout'));
+    proxyToPaperclipAsBoard.mockRejectedValue(
+      new BoardSessionProxyError('handoff_not_configured', 'Board handoff is not configured', {
+        status: null,
+      }),
+    );
     proxyToPaperclip.mockResolvedValue(
-      mockFetchResponse(403, '{"error":"Forbidden"}'),
+      mockFetchResponse(403, '{"error":"Board access required"}'),
     );
 
     const req = {
@@ -312,8 +329,24 @@ describe('GET/POST /api/tenant-proxy/[...path]', () => {
     expect(res.statusCode).toBe(403);
     expect(proxyToPaperclipAsBoard).toHaveBeenCalled();
     expect(proxyToPaperclip).toHaveBeenCalled();
-    const body = res.body as { error: string };
+    const body = res.body as {
+      error: string;
+      code: string;
+      board_auth: {
+        attempted: boolean;
+        fallback_used: boolean;
+        handoff_code: string | null;
+        upstream_status: number;
+        upstream_reason: string | null;
+      };
+    };
     expect(body.error).toContain('not authorized');
+    expect(body.code).toBe('board_action_forbidden');
+    expect(body.board_auth.attempted).toBe(true);
+    expect(body.board_auth.fallback_used).toBe(true);
+    expect(body.board_auth.handoff_code).toBe('handoff_not_configured');
+    expect(body.board_auth.upstream_status).toBe(403);
+    expect(body.board_auth.upstream_reason).toBe('Board access required');
   });
 
   it('uses board session proxy for issue comment writes', async () => {
@@ -345,6 +378,39 @@ describe('GET/POST /api/tenant-proxy/[...path]', () => {
       { method: 'POST', body: { body: 'test' } },
     );
     expect(proxyToPaperclip).not.toHaveBeenCalled();
+  });
+
+  it('returns structured diagnostics when board session proxy itself returns 403', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/approvals/ap-1/approve' });
+    proxyToPaperclipAsBoard.mockResolvedValue(
+      mockFetchResponse(403, '{"error":"Board access required"}'),
+    );
+
+    const req = {
+      method: 'POST',
+      query: { path: ['approvals', 'ap-1', 'approve'] },
+      url: '/api/tenant-proxy/approvals/ap-1/approve',
+      body: {},
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(403);
+    expect(proxyToPaperclipAsBoard).toHaveBeenCalled();
+    expect(proxyToPaperclip).not.toHaveBeenCalled();
+    const body = res.body as {
+      code: string;
+      board_auth: { fallback_used: boolean; upstream_reason: string | null };
+    };
+    expect(body.code).toBe('board_action_forbidden');
+    expect(body.board_auth.fallback_used).toBe(false);
+    expect(body.board_auth.upstream_reason).toBe('Board access required');
   });
 
   it('uses board session proxy for unread inbox query with unreadForUserId=me', async () => {

@@ -8,7 +8,12 @@ import {
   buildOpenClawMemorySearchConfig,
   resolveTenantMemoryProvisioningPlan,
 } from '../../lib/tenant-memory-settings';
-import { buildWorkspaceScaffold } from '../../lib/workspace-contract';
+import {
+  WORKSPACE_CONTRACT_VERSION,
+  WORKSPACE_MEMORY_CONTRACT_VERSION,
+  WORKSPACE_ROOT_PROMPT_FILES,
+  buildWorkspaceScaffold,
+} from '../../lib/workspace-contract';
 import {
   buildBootstrapHooksConfig,
   buildOnboardingBootstrapMessage,
@@ -728,19 +733,65 @@ function normalizeGoalList(value: unknown): string[] {
     .slice(0, 5);
 }
 
-function buildOnboardingKickoffIssueDescription(params: {
+function countOnboardingAgentSuggestions(value: unknown): number {
+  if (!Array.isArray(value)) {
+    return 0;
+  }
+
+  return value
+    .filter((entry) => entry && typeof entry === 'object' && !Array.isArray(entry))
+    .length;
+}
+
+export function buildBootstrapSeedEvidence(params: {
+  onboardingData: Json | null | undefined;
+  issueId: string | null;
+  approvalId: string | null;
+  wakeRunId: string | null;
+  chiefAgentId: string | null;
+  expectedDeviceId: string | null;
+  at?: string;
+}): Json {
+  const onboardingData = params.onboardingData ?? {};
+  const starterTask =
+    typeof onboardingData.starter_task === 'string' && onboardingData.starter_task.trim().length > 0
+      ? onboardingData.starter_task.trim()
+      : null;
+
+  return {
+    version: '2026-03-24.bootstrap-seed.v1',
+    recorded_at: params.at ?? new Date().toISOString(),
+    kickoff_issue_id: params.issueId,
+    kickoff_approval_id: params.approvalId,
+    wake_run_id: params.wakeRunId,
+    chief_agent_id: params.chiefAgentId,
+    expected_device_id: params.expectedDeviceId,
+    starter_task: starterTask,
+    onboarding_goals: normalizeGoalList(onboardingData.goals),
+    agent_suggestions_count: countOnboardingAgentSuggestions(onboardingData.agent_suggestions),
+    workspace_contract: {
+      version: WORKSPACE_CONTRACT_VERSION,
+      root_prompt_files: [...WORKSPACE_ROOT_PROMPT_FILES],
+      memory_contract: WORKSPACE_MEMORY_CONTRACT_VERSION,
+    },
+  };
+}
+
+export function buildOnboardingKickoffIssueDescription(params: {
   tenantName: string;
   onboardingData: Json | null | undefined;
 }): string {
   const onboardingData = params.onboardingData ?? {};
   const companyUrl = typeof onboardingData.company_url === 'string' ? onboardingData.company_url.trim() : '';
   const missionGoals = typeof onboardingData.mission_goals === 'string' ? onboardingData.mission_goals.trim() : '';
+  const starterTask = typeof onboardingData.starter_task === 'string' ? onboardingData.starter_task.trim() : '';
   const goals = normalizeGoalList(onboardingData.goals);
 
   const lines = [
     `Create the first-week execution plan for ${params.tenantName}.`,
     companyUrl ? `Company URL: ${companyUrl}` : 'Company URL: not provided',
     missionGoals ? `Mission goals: ${missionGoals}` : 'Mission goals: not provided',
+    starterTask ? `Starter task: ${starterTask}` : 'Starter task: not provided',
     '',
     'Deliverables:',
     '- Draft a concrete 7-day marketing plan.',
@@ -887,6 +938,72 @@ function readChiefGatewayState(chiefAgent: PaperclipAgentRecord): {
   };
 }
 
+export function validateChiefGatewayState(
+  state: ReturnType<typeof readChiefGatewayState>,
+  params: {
+    expectedGatewayWsUrl: string;
+    expectedGatewayToken: string;
+    expectedDisableDeviceAuth: boolean;
+  },
+): string[] {
+  const problems: string[] = [];
+
+  if (state.adapterType !== OPENCLAW_GATEWAY_ADAPTER_TYPE) {
+    problems.push(`adapterType=${state.adapterType || 'missing'}`);
+  }
+
+  if (state.role !== OPENCLAW_GATEWAY_ROLE) {
+    problems.push(`role=${state.role || 'missing'}`);
+  }
+
+  if (state.missingScopes.length > 0) {
+    problems.push(`missing_scopes=${state.missingScopes.join(',')}`);
+  }
+
+  if (state.gatewayWsUrl !== params.expectedGatewayWsUrl) {
+    problems.push(`gateway_ws_url=${state.gatewayWsUrl || 'missing'}`);
+  }
+
+  if (state.gatewayToken !== params.expectedGatewayToken) {
+    problems.push('gateway_token=missing_or_mismatched');
+  }
+
+  if (state.disableDeviceAuth !== params.expectedDisableDeviceAuth) {
+    problems.push(`disable_device_auth=${String(state.disableDeviceAuth)}`);
+  }
+
+  if (!params.expectedDisableDeviceAuth) {
+    if (!state.devicePrivateKeyPem) {
+      problems.push('device_private_key=missing');
+    }
+    if (!state.expectedDeviceId) {
+      problems.push('device_id=missing');
+    }
+  }
+
+  return problems;
+}
+
+async function loadPaperclipAgentById(params: {
+  paperclipUrl: string;
+  paperclipApiKey: string;
+  agentId: string;
+}): Promise<PaperclipAgentRecord> {
+  const response = await fetch(`${params.paperclipUrl}/api/agents/${params.agentId}`, {
+    headers: getPaperclipAgentHeaders(params.paperclipApiKey),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(
+      `Failed to fetch Chief agent after adapter patch (HTTP ${response.status}): ` +
+      `${summarizeDigitalOceanErrorBody(errorBody)}`,
+    );
+  }
+
+  return (await response.json()) as PaperclipAgentRecord;
+}
+
 function buildChiefAgentCreatePayload(params: {
   gatewayWsUrl: string;
   gatewayToken: string;
@@ -958,22 +1075,32 @@ async function ensureChiefOpenClawGatewayAdapter(params: {
   }
 
   const patchedAgent = (await patchResponse.json()) as PaperclipAgentRecord;
-  const patchedAgentAdapterConfig =
-    patchedAgent.adapterConfig && typeof patchedAgent.adapterConfig === 'object'
-      ? patchedAgent.adapterConfig as Record<string, unknown>
-      : null;
-  const effectiveAdapterConfig =
-    patchedAgentAdapterConfig && Object.keys(patchedAgentAdapterConfig).length > 0
-      ? patchedAgentAdapterConfig
-      : patchedAdapterConfig;
+  const verifiedAgent = await loadPaperclipAgentById({
+    paperclipUrl: params.paperclipUrl,
+    paperclipApiKey: params.paperclipApiKey,
+    agentId: params.chiefAgent.id,
+  });
+  const verifiedState = readChiefGatewayState({
+    ...params.chiefAgent,
+    ...patchedAgent,
+    ...verifiedAgent,
+  });
+  const verificationIssues = validateChiefGatewayState(verifiedState, {
+    expectedGatewayWsUrl: gatewayWsUrl,
+    expectedGatewayToken: gatewayToken,
+    expectedDisableDeviceAuth: desiredDisableDeviceAuth,
+  });
+
+  if (verificationIssues.length > 0) {
+    throw new Error(
+      `Chief adapter patch did not persist required OpenClaw gateway config: ${verificationIssues.join(' | ')}`,
+    );
+  }
 
   return {
     ...params.chiefAgent,
     ...patchedAgent,
-    adapterType: typeof patchedAgent.adapterType === 'string'
-      ? patchedAgent.adapterType
-      : OPENCLAW_GATEWAY_ADAPTER_TYPE,
-    adapterConfig: effectiveAdapterConfig,
+    ...verifiedAgent,
   };
 }
 
@@ -2003,6 +2130,33 @@ export const provisionTenant = inngest.createFunction(
       throw new Error(timeoutMessage);
     }
 
+    onboardingData = await step.run('persist-bootstrap-seed-evidence', async (): Promise<Json> => {
+      const nextOnboardingData = {
+        ...onboardingData,
+        bootstrap_seed: buildBootstrapSeedEvidence({
+          onboardingData,
+          issueId: kickoffSeed.issueId,
+          approvalId: kickoffSeed.approvalId,
+          wakeRunId: readinessRunId,
+          chiefAgentId,
+          expectedDeviceId,
+        }),
+      };
+
+      const { data, error } = await supabase
+        .from('tenants')
+        .update({ onboarding_data: nextOnboardingData })
+        .eq('id', tenantId)
+        .select('onboarding_data')
+        .single();
+
+      if (error) {
+        throw new Error(`Failed to persist bootstrap seed evidence: ${error.message}`);
+      }
+
+      return (data?.onboarding_data as Json | null) ?? nextOnboardingData;
+    });
+
     const bootstrapResult = await step.run('trigger-initial-bootstrap', async () => {
       return await dispatchBootstrapWithPairingRecovery({
         gatewayHttpUrl: gatewayUrl,
@@ -2451,18 +2605,6 @@ if [ -z "$API_TOKEN" ]; then
   exit 1
 fi
 
-# Persist the generated Paperclip refs before switching to authenticated mode.
-SUPABASE_PAYLOAD="$(printf '{"paperclip_company_id":"%s","paperclip_api_key":"%s"}' "$COMPANY_ID" "$API_TOKEN")"
-curl -sf -X PATCH "${params.supabaseUrl}/rest/v1/tenants?id=eq.${params.tenantId}" \\
-  -H "apikey: ${params.supabaseServiceRoleKey}" \\
-  -H "Authorization: Bearer ${params.supabaseServiceRoleKey}" \\
-  -H 'Content-Type: application/json' \\
-  -H 'Prefer: return=minimal' \\
-  -d "$SUPABASE_PAYLOAD" >/dev/null || {
-  echo "Failed to persist Paperclip refs in Supabase" >&2
-  exit 1
-}
-
 if [ -n "$PAPERCLIP_PUBLIC_IP" ]; then
   BETTER_AUTH_URL="http://$PAPERCLIP_PUBLIC_IP:3100"
 else
@@ -2488,11 +2630,74 @@ docker run -d --name paperclip \\
   -v /opt/paperclip:/opt/paperclip \\
   ${params.paperclipImage}
 
-# Keep OpenClaw env aligned with the generated Paperclip API key.
-if [ -f /opt/openclaw/.env ]; then
-  sed -i.bak "s/^PAPERCLIP_API_KEY=.*/PAPERCLIP_API_KEY=$API_TOKEN/" /opt/openclaw/.env || true
-  docker restart openclaw-gateway >/dev/null 2>&1 || true
+# Ensure authenticated Paperclip is healthy before publishing refs to control plane.
+for i in $(seq 1 30); do
+  if curl -sf http://127.0.0.1:3100/api/health >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
+
+if ! curl -sf http://127.0.0.1:3100/api/health >/dev/null 2>&1; then
+  echo "Authenticated Paperclip did not become healthy within 60s" >&2
+  docker logs paperclip >&2 || true
+  exit 1
 fi
+
+# Keep OpenClaw env aligned with the generated Paperclip API key and write
+# every claimed-key path the runtime currently probes.
+persist_openclaw_claimed_api_keys() {
+  local attempts=0
+  local claimed_at
+  claimed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  while true; do
+    if docker exec -u 0 -e API_TOKEN="$API_TOKEN" -e CLAIMED_AT="$claimed_at" openclaw-gateway sh -lc '
+      set -e
+      mkdir -p /home/node/.openclaw /home/node/.openclaw/workspace /home/node/.openclaw/workspace-main
+      for target in \
+        /home/node/.openclaw/workspace-main-claimed-api-key.json \
+        /home/node/.openclaw/workspace[]-claimed-api-key.json \
+        /home/node/.openclaw/workspace/paperclip-claimed-api-key.json \
+        /home/node/.openclaw/workspace-main/paperclip-claimed-api-key.json
+      do
+        cat > "$target" <<JSON
+{"apiKey":"\${API_TOKEN}","claimedAt":"\${CLAIMED_AT}"}
+JSON
+        chown 1000:1000 "$target"
+        chmod 600 "$target"
+      done
+    '; then
+      return 0
+    fi
+
+    attempts=$((attempts + 1))
+    if [ "$attempts" -ge 10 ]; then
+      echo "Failed to persist OpenClaw claimed API key files" >&2
+      return 1
+    fi
+
+    sleep 2
+  done
+}
+
+if [ -f /opt/openclaw/.env ]; then
+  sed -i.bak "s/^PAPERCLIP_API_KEY=.*/PAPERCLIP_API_KEY=$API_TOKEN/" /opt/openclaw/.env
+  docker restart openclaw-gateway >/dev/null
+  persist_openclaw_claimed_api_keys
+fi
+
+# Publish Paperclip refs only after runtime + claimed key artifacts are ready.
+SUPABASE_PAYLOAD="$(printf '{"paperclip_company_id":"%s","paperclip_api_key":"%s"}' "$COMPANY_ID" "$API_TOKEN")"
+curl -sf -X PATCH "${params.supabaseUrl}/rest/v1/tenants?id=eq.${params.tenantId}" \\
+  -H "apikey: ${params.supabaseServiceRoleKey}" \\
+  -H "Authorization: Bearer ${params.supabaseServiceRoleKey}" \\
+  -H 'Content-Type: application/json' \\
+  -H 'Prefer: return=minimal' \\
+  -d "$SUPABASE_PAYLOAD" >/dev/null || {
+  echo "Failed to persist Paperclip refs in Supabase" >&2
+  exit 1
+}
 
 echo "PixelPort provisioning complete for ${params.tenantSlug}"
 `;

@@ -90,5 +90,9 @@ describe("workspace contract", () => {
     const status = JSON.parse(scaffold.files["pixelport/runtime/snapshots/workspace-contract.json"]);
     expect(status.contract_version).toBe(WORKSPACE_CONTRACT_VERSION);
     expect(status.root_prompt_files).toEqual(WORKSPACE_ROOT_PROMPT_FILES);
+    expect(status.required_directories).toEqual(
+      expect.arrayContaining(["memory", "life/projects", "plans", "pixelport/runtime/snapshots"]),
+    );
+    expect(status.memory_contract).toBe("memory-para-v1");
   });
 });

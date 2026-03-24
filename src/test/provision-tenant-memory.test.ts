@@ -497,7 +497,12 @@ describe("provision tenant memory config", () => {
     expect(script).toContain('"devicePrivateKeyPem":"-----BEGIN PRIVATE KEY-----\\n');
     expect(script).toContain("--add-host host.docker.internal:host-gateway");
     expect(script).toContain("PAPERCLIP_DEPLOYMENT_MODE=authenticated");
-    expect(script).toContain("sed -i.bak \"s/^PAPERCLIP_API_KEY=.*/PAPERCLIP_API_KEY=$API_TOKEN/\" /opt/openclaw/.env || true");
+    expect(script).toContain("sed -i.bak \"s/^PAPERCLIP_API_KEY=.*/PAPERCLIP_API_KEY=$API_TOKEN/\" /opt/openclaw/.env");
+    expect(script).toContain("persist_openclaw_claimed_api_keys()");
+    expect(script).toContain("/home/node/.openclaw/workspace-main-claimed-api-key.json");
+    expect(script).toContain("/home/node/.openclaw/workspace[]-claimed-api-key.json");
+    expect(script).toContain("/home/node/.openclaw/workspace/paperclip-claimed-api-key.json");
+    expect(script).toContain("/home/node/.openclaw/workspace-main/paperclip-claimed-api-key.json");
     expect(script).toContain(
       "mkdir -p /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices",
     );
@@ -509,5 +514,97 @@ describe("provision tenant memory config", () => {
     );
     expect(script).toContain("apt-get install -y caddy");
     expect(script).toContain("reverse_proxy 127.0.0.1:18789");
+  });
+
+  it("includes onboarding starter task in the kickoff issue description", async () => {
+    const { buildOnboardingKickoffIssueDescription } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const description = buildOnboardingKickoffIssueDescription({
+      tenantName: "PixelPort QA",
+      onboardingData: {
+        company_url: "https://pixelport.test",
+        mission_goals: "Grow pipeline quality",
+        starter_task: "Draft a 7-day launch plan",
+        goals: ["Improve conversion", "Increase velocity"],
+      },
+    });
+
+    expect(description).toContain("Starter task: Draft a 7-day launch plan");
+    expect(description).toContain("Onboarding goals:");
+    expect(description).toContain("- Improve conversion");
+  });
+
+  it("builds bootstrap seed evidence with workspace/memory contract metadata", async () => {
+    const { buildBootstrapSeedEvidence } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const evidence = buildBootstrapSeedEvidence({
+      onboardingData: {
+        starter_task: "Ship a retention campaign",
+        goals: ["Retention"],
+        agent_suggestions: [
+          { id: "a1", role: "Chief" },
+          { id: "a2", role: "Growth" },
+        ],
+      },
+      issueId: "issue-1",
+      approvalId: "approval-1",
+      wakeRunId: "run-1",
+      chiefAgentId: "agent-1",
+      expectedDeviceId: "device-1",
+      at: "2026-03-24T00:00:00.000Z",
+    });
+
+    expect(evidence).toMatchObject({
+      kickoff_issue_id: "issue-1",
+      kickoff_approval_id: "approval-1",
+      wake_run_id: "run-1",
+      chief_agent_id: "agent-1",
+      expected_device_id: "device-1",
+      starter_task: "Ship a retention campaign",
+      onboarding_goals: ["Retention"],
+      agent_suggestions_count: 2,
+      workspace_contract: {
+        version: "2026-03-19.paperclip-default-chief.v1",
+        memory_contract: "memory-para-v1",
+      },
+    });
+  });
+
+  it("validates chief gateway adapter state for persisted config completeness", async () => {
+    const { validateChiefGatewayState } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const issues = validateChiefGatewayState(
+      {
+        adapterType: "openclaw_gateway",
+        role: "operator",
+        scopes: ["operator.read"],
+        missingScopes: ["operator.write", "operator.admin"],
+        gatewayWsUrl: "ws://host.docker.internal:18789",
+        gatewayToken: null,
+        disableDeviceAuth: false,
+        devicePrivateKeyPem: null,
+        expectedDeviceId: null,
+      },
+      {
+        expectedGatewayWsUrl: "ws://host.docker.internal:18789",
+        expectedGatewayToken: "gw-token",
+        expectedDisableDeviceAuth: false,
+      },
+    );
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        "missing_scopes=operator.write,operator.admin",
+        "gateway_token=missing_or_mismatched",
+        "device_private_key=missing",
+        "device_id=missing",
+      ]),
+    );
   });
 });

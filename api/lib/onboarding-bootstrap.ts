@@ -83,6 +83,7 @@ export function buildOnboardingBootstrapMessage(params: {
   const companyUrl = normalizeText(onboardingData.company_url);
   const goals = normalizeGoals(onboardingData.goals);
   const agentName = normalizeText(onboardingData.agent_name) || 'Luna';
+  const starterTask = normalizeText(onboardingData.starter_task);
   const scanSummary = summarizeScanResults(onboardingData.scan_results);
 
   const lines = [
@@ -90,6 +91,7 @@ export function buildOnboardingBootstrapMessage(params: {
     'Start the post-onboarding research sequence immediately.',
     companyUrl ? `Company website: ${companyUrl}` : 'Company website: not provided.',
     goals.length > 0 ? `Goals: ${goals.join(' | ')}` : 'Goals: none provided during onboarding.',
+    starterTask ? `Starter task from onboarding: ${starterTask}` : 'Starter task from onboarding: not provided.',
     scanSummary ? `Website scan summary: ${scanSummary}` : 'Website scan summary: use SOUL.md and the live website for the missing details.',
     '',
     'Execution requirements:',
@@ -97,7 +99,7 @@ export function buildOnboardingBootstrapMessage(params: {
     '2. Use the workspace contract files at the root plus the `pixelport/` namespace for durable runtime artifacts.',
     '3. Write concrete findings into canonical workspace artifacts under `pixelport/` (vault snapshots, runtime snapshots, and deliverables).',
     '4. Keep output evidence-backed and avoid placeholder content.',
-    '5. After you materially update canonical truth, refresh the relevant native memory artifact in `MEMORY.md` or `memory/` during the same work cycle.',
+    '5. After you materially update canonical truth, write the memory update into today\'s `memory/YYYY-MM-DD.md` note (PARA workspace memory contract).',
     '6. If any information is missing, record what you learned and what you still need from the human instead of waiting silently.',
     '',
     'Keep your final reply short. The important part is writing durable workspace truth.',

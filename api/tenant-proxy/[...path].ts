@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import {
+  BoardSessionProxyError,
   proxyToPaperclip,
   proxyToPaperclipAsBoard,
   ProxyTimeoutError,
@@ -93,6 +94,26 @@ function isUnreadInboxQuery(req: VercelRequest, method: string, proxyPath: strin
   return queryParam(req, 'unreadForUserId')?.toLowerCase() === 'me';
 }
 
+function summarizeUpstreamErrorBody(body: string): string | null {
+  const trimmed = body.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    const candidate = [parsed.error, parsed.message]
+      .find((value) => typeof value === 'string' && value.trim().length > 0) as string | undefined;
+    if (candidate) {
+      return candidate.trim().slice(0, 240);
+    }
+  } catch {
+    // Not JSON; fall through.
+  }
+
+  return trimmed.slice(0, 240);
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
@@ -139,25 +160,56 @@ export default async function handler(
     let response: Response;
 
     if (requiresBoardSession(req, method, proxyPath)) {
+      let boardHandoffError: string | null = null;
+      let boardHandoffCode: string | null = null;
+      let boardHandoffStatus: number | null = null;
+      let fallbackUsed = false;
+
       try {
         response = await proxyToPaperclipAsBoard(tenant, userId, targetPath, requestOptions);
       } catch (error) {
+        if (error instanceof BoardSessionProxyError) {
+          boardHandoffError = error.message;
+          boardHandoffCode = error.code;
+          boardHandoffStatus = error.status;
+        } else if (error instanceof Error) {
+          boardHandoffError = error.message;
+        } else {
+          boardHandoffError = String(error);
+        }
+
         console.error(
           '[tenant-proxy] Board handoff failed, falling back to agent key proxy:',
           error,
         );
+        fallbackUsed = true;
         response = await proxyToPaperclip(tenant, targetPath, requestOptions);
       }
+
       // If the response is 401/403, the auth method lacks approval permissions.
-      // Return a clear error instead of the raw Paperclip response.
+      // Return explicit diagnostics instead of the raw upstream response.
       if (response.status === 401 || response.status === 403) {
         if (isUnreadInboxQuery(req, method, proxyPath)) {
           const fallbackTargetPath = match.targetPath + resolveForwardedQueryStringWithoutUnread(req);
+          fallbackUsed = true;
           response = await proxyToPaperclip(tenant, fallbackTargetPath, requestOptions);
         }
         if (response.status === 401 || response.status === 403) {
+          const upstreamBody = await response.text();
           return res.status(403).json({
-            error: 'Approval action not authorized. The workspace may need to be re-provisioned.',
+            error: 'Approval action not authorized. Board session is unavailable or rejected.',
+            code: 'board_action_forbidden',
+            board_auth: {
+              attempted: true,
+              fallback_used: fallbackUsed,
+              handoff_code: boardHandoffCode,
+              handoff_status: boardHandoffStatus,
+              handoff_error: boardHandoffError,
+              upstream_status: response.status,
+              upstream_reason: summarizeUpstreamErrorBody(upstreamBody),
+            },
+            remediation:
+              'Verify PAPERCLIP_HANDOFF_SECRET, rerun onboarding bootstrap if needed, and confirm your board session can approve/reject.',
           });
         }
       }

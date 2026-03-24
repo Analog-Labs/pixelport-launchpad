@@ -40,6 +40,7 @@ describe("buildOnboardingBootstrapMessage", () => {
       onboardingData: {
         agent_name: "Luna",
         goals: ["Grow pipeline"],
+        starter_task: "Ship weekly growth report",
       },
     });
 
@@ -48,8 +49,9 @@ describe("buildOnboardingBootstrapMessage", () => {
       "3. Write concrete findings into canonical workspace artifacts under `pixelport/` (vault snapshots, runtime snapshots, and deliverables).",
     );
     expect(message).toContain(
-      '5. After you materially update canonical truth, refresh the relevant native memory artifact in `MEMORY.md` or `memory/` during the same work cycle.',
+      "5. After you materially update canonical truth, write the memory update into today's `memory/YYYY-MM-DD.md` note (PARA workspace memory contract).",
     );
+    expect(message).toContain("Starter task from onboarding: Ship weekly growth report");
     expect(message).not.toContain("/api/agent/");
   });
 });
