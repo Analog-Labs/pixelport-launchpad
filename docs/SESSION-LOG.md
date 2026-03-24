@@ -7,6 +7,20 @@
 
 ## Last Session
 
+- **Date:** 2026-03-24 (session 122)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Shipped bootstrap and proxy reliability hardening on branch `codex/bootstrap-paperclip-foundation-fixes` (PR #49 merged).
+  - Hardened Chief adapter patch flow with a required read-back verification step so empty/incomplete gateway config can no longer pass silently.
+  - Updated bootstrap durability contract: onboarding seed evidence is now persisted (`kickoff_issue_id`, `kickoff_approval_id`, run IDs, workspace contract metadata), and completion truth uses durable signals instead of task/competitor-only counts.
+  - Strengthened board-session proxy behavior for dashboard mutations: explicit structured diagnostics now return on 401/403 (`board_action_forbidden`) with handoff status, fallback status, and upstream reason.
+  - Hardened provisioning ordering so Paperclip refs are published only after authenticated Paperclip health checks and claimed-key artifacts are written to required OpenClaw runtime paths.
+  - Verified fresh-tenant canary end-to-end (Duolingo onboarding to dashboard): tenant reached `active` + `bootstrap_status=completed`, approvals/actions worked, task comments worked, agents and run history rendered.
+- **What's next:**
+  - Run one more release smoke after next merge to confirm no regressions in onboarding bootstrap latency.
+  - Continue T4 planning once bootstrap reliability remains stable across additional fresh-tenant canaries.
+- **Blockers:** None.
+
 - **Date:** 2026-03-22 (session 121)
 - **Who worked:** Founder + Claude Code
 - **What was done:**

@@ -1,73 +1,52 @@
-# Welcome to your Lovable project
+# PixelPort Launchpad
 
-## Project info
+PixelPort is an AI Chief of Staff SaaS for startup teams (initial focus: marketing).
+This repository contains the main app and provisioning bridge that powers onboarding,
+dashboard, tenant runtime handoff, and integrations.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## What this repo includes
 
-## How can I edit this code?
+- Vercel app and API routes (`src/`, `api/`)
+- Onboarding + tenant provisioning flow
+- Dashboard UI (Home, Approvals, Tasks, Agents, Runs, Connections)
+- Tenant runtime bridge to Paperclip + OpenClaw on DigitalOcean droplets
+- Test coverage for proxying, bootstrap state, provisioning, and dashboard contracts
 
-There are several ways of editing your application.
+## Stack
 
-**Use Lovable**
+- TypeScript
+- React + Vite
+- Tailwind + shadcn/ui
+- Supabase (auth + tenant metadata)
+- Vercel (app + API)
+- Per-tenant runtime: Paperclip + OpenClaw + Postgres on DigitalOcean
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Local development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Verification commands
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+npx tsc --noEmit
+npm test
+npx vitest run
+```
 
-**Use GitHub Codespaces**
+## Key project docs
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- Active plan: `docs/ACTIVE-PLAN.md`
+- Session history: `docs/SESSION-LOG.md`
+- Project status: `docs/pixelport-project-status.md`
+- Design system: `DESIGN.md`
+- V1 dashboard design: `docs/designs/v1-full-wedge.md`
+- Dashboard API contract: `docs/paperclip-api-contract.md`
 
-## What technologies are used for this project?
+## Workflow notes
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- Source of truth is GitHub. If it is not committed, it does not exist.
+- Use explicit pinned image tags in provisioning and runtime config (never `:latest`).
+- For medium/high-risk changes, run review and QA before merge.

@@ -39,6 +39,11 @@
 - [x] `/review` pass (eng review + Codex code review + adversarial challenge)
 - [x] Design review: 6 DESIGN.md violations fixed (a11y, shimmer CTA, heading hierarchy)
 - [x] `/ship` — v0.19.2.0
+- [x] Post-T3 foundation reliability hardening merged (PR #49; commits `a2edbc8`, `a8eac07`)
+  - Chief adapter patch now requires config read-back verification before bootstrap proceeds
+  - Bootstrap truth contract now includes durable seed evidence and workspace contract metadata
+  - Tenant proxy now returns explicit board-session diagnostics for approval/comment auth failures
+  - Provisioning now waits for claimed-key artifact writes before publishing Paperclip refs
 
 ## T4 — Real-time & Polish (Planned)
 

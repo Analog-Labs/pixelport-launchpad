@@ -2,7 +2,7 @@
 
 ## Project
 PixelPort is an AI Chief of Staff SaaS for startup teams, initial focus is on marketing. Tryclam.com is example.
-Stack: TypeScript, React, Vite, Tailwind, Supabase, Clerk auth, Vercel.
+Stack: TypeScript, React, Vite, Tailwind, Supabase auth, Vercel.
 Tenant runtime: Paperclip + OpenClaw + Postgres on DigitalOcean droplets.
 
 ## Your Role: CTO Agent

@@ -2,6 +2,22 @@
 
 All notable changes to PixelPort are documented here.
 
+## [Unreleased]
+
+### Added
+- Bootstrap seed evidence is now persisted in tenant onboarding data, including kickoff issue/approval IDs, wake run ID, and workspace contract metadata.
+- Workspace contract metadata now declares the PARA memory contract and required workspace directories.
+
+### Changed
+- Chief adapter patching now performs a hard read-back verification before bootstrap continues.
+- Provisioning now delays publishing Paperclip refs until authenticated Paperclip is healthy and OpenClaw claimed-key artifacts are written.
+- Bootstrap completion truth now uses durable seed signals plus vault readiness, instead of relying only on generated task/competitor counts.
+- Onboarding bootstrap guidance now includes starter task context and points memory updates to `memory/YYYY-MM-DD.md`.
+
+### Fixed
+- Approval/comment mutation auth failures now return structured board-session diagnostics (handoff code/status, upstream reason, remediation hint).
+- Board-session cookie parsing now handles combined `Set-Cookie` headers correctly and retries once with a fresh handoff cookie on 401/403 responses.
+
 ## [0.19.2.0] - 2026-03-23
 
 ### Added
