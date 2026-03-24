@@ -497,9 +497,12 @@ describe("provision tenant memory config", () => {
     expect(script).toContain('"devicePrivateKeyPem":"-----BEGIN PRIVATE KEY-----\\n');
     expect(script).toContain("--add-host host.docker.internal:host-gateway");
     expect(script).toContain("PAPERCLIP_DEPLOYMENT_MODE=authenticated");
-    expect(script).toContain("sed -i.bak \"s/^PAPERCLIP_API_KEY=.*/PAPERCLIP_API_KEY=$API_TOKEN/\" /opt/openclaw/.env || true");
+    expect(script).toContain("sed -i.bak \"s/^PAPERCLIP_API_KEY=.*/PAPERCLIP_API_KEY=$API_TOKEN/\" /opt/openclaw/.env");
+    expect(script).toContain("persist_openclaw_claimed_api_keys()");
     expect(script).toContain("/home/node/.openclaw/workspace-main-claimed-api-key.json");
     expect(script).toContain("/home/node/.openclaw/workspace[]-claimed-api-key.json");
+    expect(script).toContain("/home/node/.openclaw/workspace/paperclip-claimed-api-key.json");
+    expect(script).toContain("/home/node/.openclaw/workspace-main/paperclip-claimed-api-key.json");
     expect(script).toContain(
       "mkdir -p /home/node/.openclaw /home/node/.openclaw/identity /home/node/.openclaw/devices",
     );

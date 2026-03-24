@@ -2605,18 +2605,6 @@ if [ -z "$API_TOKEN" ]; then
   exit 1
 fi
 
-# Persist the generated Paperclip refs before switching to authenticated mode.
-SUPABASE_PAYLOAD="$(printf '{"paperclip_company_id":"%s","paperclip_api_key":"%s"}' "$COMPANY_ID" "$API_TOKEN")"
-curl -sf -X PATCH "${params.supabaseUrl}/rest/v1/tenants?id=eq.${params.tenantId}" \\
-  -H "apikey: ${params.supabaseServiceRoleKey}" \\
-  -H "Authorization: Bearer ${params.supabaseServiceRoleKey}" \\
-  -H 'Content-Type: application/json' \\
-  -H 'Prefer: return=minimal' \\
-  -d "$SUPABASE_PAYLOAD" >/dev/null || {
-  echo "Failed to persist Paperclip refs in Supabase" >&2
-  exit 1
-}
-
 if [ -n "$PAPERCLIP_PUBLIC_IP" ]; then
   BETTER_AUTH_URL="http://$PAPERCLIP_PUBLIC_IP:3100"
 else
@@ -2642,24 +2630,74 @@ docker run -d --name paperclip \\
   -v /opt/paperclip:/opt/paperclip \\
   ${params.paperclipImage}
 
-# Keep OpenClaw env aligned with the generated Paperclip API key.
-if [ -f /opt/openclaw/.env ]; then
-  sed -i.bak "s/^PAPERCLIP_API_KEY=.*/PAPERCLIP_API_KEY=$API_TOKEN/" /opt/openclaw/.env || true
-  docker restart openclaw-gateway >/dev/null 2>&1 || true
+# Ensure authenticated Paperclip is healthy before publishing refs to control plane.
+for i in $(seq 1 30); do
+  if curl -sf http://127.0.0.1:3100/api/health >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
 
-  # Persist claimed API key files expected by cloud-adapter runs.
-  docker exec -u 0 openclaw-gateway sh -lc "
-    set -e
-    mkdir -p /home/node/.openclaw
-    for target in /home/node/.openclaw/workspace-main-claimed-api-key.json '/home/node/.openclaw/workspace[]-claimed-api-key.json'; do
-      cat > \"\$target\" <<JSON
-{\"apiKey\":\"$API_TOKEN\",\"claimedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}
-JSON
-      chown 1000:1000 \"\$target\"
-      chmod 600 \"\$target\"
-    done
-  " || true
+if ! curl -sf http://127.0.0.1:3100/api/health >/dev/null 2>&1; then
+  echo "Authenticated Paperclip did not become healthy within 60s" >&2
+  docker logs paperclip >&2 || true
+  exit 1
 fi
+
+# Keep OpenClaw env aligned with the generated Paperclip API key and write
+# every claimed-key path the runtime currently probes.
+persist_openclaw_claimed_api_keys() {
+  local attempts=0
+  local claimed_at
+  claimed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  while true; do
+    if docker exec -u 0 -e API_TOKEN="$API_TOKEN" -e CLAIMED_AT="$claimed_at" openclaw-gateway sh -lc '
+      set -e
+      mkdir -p /home/node/.openclaw /home/node/.openclaw/workspace /home/node/.openclaw/workspace-main
+      for target in \
+        /home/node/.openclaw/workspace-main-claimed-api-key.json \
+        /home/node/.openclaw/workspace[]-claimed-api-key.json \
+        /home/node/.openclaw/workspace/paperclip-claimed-api-key.json \
+        /home/node/.openclaw/workspace-main/paperclip-claimed-api-key.json
+      do
+        cat > "$target" <<JSON
+{"apiKey":"\${API_TOKEN}","claimedAt":"\${CLAIMED_AT}"}
+JSON
+        chown 1000:1000 "$target"
+        chmod 600 "$target"
+      done
+    '; then
+      return 0
+    fi
+
+    attempts=$((attempts + 1))
+    if [ "$attempts" -ge 10 ]; then
+      echo "Failed to persist OpenClaw claimed API key files" >&2
+      return 1
+    fi
+
+    sleep 2
+  done
+}
+
+if [ -f /opt/openclaw/.env ]; then
+  sed -i.bak "s/^PAPERCLIP_API_KEY=.*/PAPERCLIP_API_KEY=$API_TOKEN/" /opt/openclaw/.env
+  docker restart openclaw-gateway >/dev/null
+  persist_openclaw_claimed_api_keys
+fi
+
+# Publish Paperclip refs only after runtime + claimed key artifacts are ready.
+SUPABASE_PAYLOAD="$(printf '{"paperclip_company_id":"%s","paperclip_api_key":"%s"}' "$COMPANY_ID" "$API_TOKEN")"
+curl -sf -X PATCH "${params.supabaseUrl}/rest/v1/tenants?id=eq.${params.tenantId}" \\
+  -H "apikey: ${params.supabaseServiceRoleKey}" \\
+  -H "Authorization: Bearer ${params.supabaseServiceRoleKey}" \\
+  -H 'Content-Type: application/json' \\
+  -H 'Prefer: return=minimal' \\
+  -d "$SUPABASE_PAYLOAD" >/dev/null || {
+  echo "Failed to persist Paperclip refs in Supabase" >&2
+  exit 1
+}
 
 echo "PixelPort provisioning complete for ${params.tenantSlug}"
 `;
