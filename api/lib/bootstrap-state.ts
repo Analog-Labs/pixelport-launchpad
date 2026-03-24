@@ -30,6 +30,9 @@ export type BootstrapDurableProgress = {
   totalVaultSectionCount: number;
   readyVaultSectionCount: number;
   agentUpdatedVaultCount: number;
+  kickoffIssueSeeded: boolean;
+  kickoffApprovalSeeded: boolean;
+  workspaceContractSeeded: boolean;
   latestAgentActivityAt: string | null;
   hasAgentOutput: boolean;
   durableComplete: boolean;
@@ -279,6 +282,31 @@ function latestTimestamp(values: Array<string | null | undefined>): string | nul
   return latestValue;
 }
 
+function readBootstrapSeedSignals(onboardingData: JsonRecord | null | undefined): {
+  kickoffIssueSeeded: boolean;
+  kickoffApprovalSeeded: boolean;
+  workspaceContractSeeded: boolean;
+} {
+  const root = cloneOnboardingData(onboardingData);
+  const bootstrapSeed = isJsonRecord(root.bootstrap_seed) ? root.bootstrap_seed : {};
+  const workspaceContract = isJsonRecord(bootstrapSeed.workspace_contract)
+    ? bootstrapSeed.workspace_contract
+    : {};
+
+  const kickoffIssueSeeded =
+    typeof bootstrapSeed.kickoff_issue_id === 'string' && bootstrapSeed.kickoff_issue_id.trim().length > 0;
+  const kickoffApprovalSeeded =
+    typeof bootstrapSeed.kickoff_approval_id === 'string' && bootstrapSeed.kickoff_approval_id.trim().length > 0;
+  const workspaceContractSeeded =
+    typeof workspaceContract.version === 'string' && workspaceContract.version.trim().length > 0;
+
+  return {
+    kickoffIssueSeeded,
+    kickoffApprovalSeeded,
+    workspaceContractSeeded,
+  };
+}
+
 async function countRows(
   table: 'agent_tasks' | 'competitors' | 'vault_sections',
   tenantId: string,
@@ -331,7 +359,9 @@ async function getLatestUpdatedAt(
 
 export async function inspectBootstrapDurableProgress(params: {
   tenantId: string;
+  onboardingData?: JsonRecord | null | undefined;
 }): Promise<BootstrapDurableProgress> {
+  const seedSignals = readBootstrapSeedSignals(params.onboardingData);
   const [taskCount, competitorCount, totalVaultSectionCount, readyVaultSectionCount, agentUpdatedVaultCount, latestTaskAt, latestCompetitorAt, latestVaultAt] =
     await Promise.all([
       countRows('agent_tasks', params.tenantId),
@@ -345,12 +375,19 @@ export async function inspectBootstrapDurableProgress(params: {
     ]);
 
   const latestAgentActivityAt = latestTimestamp([latestTaskAt, latestCompetitorAt, latestVaultAt]);
-  const hasAgentOutput = taskCount > 0 || competitorCount > 0 || agentUpdatedVaultCount > 0;
+  const hasAgentOutput =
+    taskCount > 0 ||
+    competitorCount > 0 ||
+    agentUpdatedVaultCount > 0 ||
+    readyVaultSectionCount > 0 ||
+    seedSignals.kickoffIssueSeeded ||
+    seedSignals.kickoffApprovalSeeded;
+  const hasDurableBootstrapSeed =
+    seedSignals.kickoffIssueSeeded && seedSignals.kickoffApprovalSeeded && seedSignals.workspaceContractSeeded;
   const durableComplete =
-    taskCount >= 1 &&
-    competitorCount >= 1 &&
     totalVaultSectionCount >= VAULT_SECTION_KEYS.length &&
-    readyVaultSectionCount >= VAULT_SECTION_KEYS.length;
+    hasAgentOutput &&
+    (readyVaultSectionCount > 0 || hasDurableBootstrapSeed);
 
   return {
     taskCount,
@@ -358,6 +395,9 @@ export async function inspectBootstrapDurableProgress(params: {
     totalVaultSectionCount,
     readyVaultSectionCount,
     agentUpdatedVaultCount,
+    kickoffIssueSeeded: seedSignals.kickoffIssueSeeded,
+    kickoffApprovalSeeded: seedSignals.kickoffApprovalSeeded,
+    workspaceContractSeeded: seedSignals.workspaceContractSeeded,
     latestAgentActivityAt,
     hasAgentOutput,
     durableComplete,
@@ -443,6 +483,7 @@ export async function reconcileBootstrapState(params: {
   });
   const progress = await inspectBootstrapDurableProgress({
     tenantId: params.tenantId,
+    onboardingData: snapshot.onboardingData,
   });
   const effectiveState = deriveBootstrapState({
     state: snapshot.state,
@@ -514,6 +555,7 @@ export async function syncBootstrapStateAfterAgentWrite(params: {
 
   const progress = await inspectBootstrapDurableProgress({
     tenantId: params.tenantId,
+    onboardingData: snapshot.onboardingData,
   });
 
   if (!progress.durableComplete) {

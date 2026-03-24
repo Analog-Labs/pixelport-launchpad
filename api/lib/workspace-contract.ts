@@ -15,6 +15,7 @@ type JsonValue =
 type JsonRecord = Record<string, JsonValue>;
 
 export const WORKSPACE_CONTRACT_VERSION = '2026-03-19.paperclip-default-chief.v1';
+export const WORKSPACE_MEMORY_CONTRACT_VERSION = 'memory-para-v1';
 
 export const WORKSPACE_ROOT_PROMPT_FILES = [
   'SOUL.md',
@@ -185,6 +186,11 @@ export function buildWorkspaceScaffold(params: {
           source: PAPERCLIP_DEFAULT_CEO_SOURCE,
           applied_at: new Date().toISOString(),
           root_prompt_files: WORKSPACE_ROOT_PROMPT_FILES,
+          required_directories: [
+            ...PAPERCLIP_MEMORY_DIRECTORIES,
+            ...PIXELPORT_RUNTIME_DIRECTORIES,
+          ],
+          memory_contract: WORKSPACE_MEMORY_CONTRACT_VERSION,
           tenant_slug: params.tenantSlug,
         },
         null,
