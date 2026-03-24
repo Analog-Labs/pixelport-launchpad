@@ -37,6 +37,15 @@ function resolveForwardedQueryString(req: VercelRequest): string {
   return query ? `?${query}` : '';
 }
 
+function resolveForwardedQueryStringWithoutUnread(req: VercelRequest): string {
+  const rawUrl = req.url ?? '/';
+  const parsed = new URL(rawUrl, 'https://pixelport.local');
+  parsed.searchParams.delete('path');
+  parsed.searchParams.delete('unreadForUserId');
+  const query = parsed.searchParams.toString();
+  return query ? `?${query}` : '';
+}
+
 function queryParam(
   req: VercelRequest,
   key: string,
@@ -75,6 +84,13 @@ function requiresBoardSession(req: VercelRequest, method: string, proxyPath: str
     return true;
   }
   return false;
+}
+
+function isUnreadInboxQuery(req: VercelRequest, method: string, proxyPath: string): boolean {
+  if (method.toUpperCase() !== 'GET') return false;
+  const normalizedPath = proxyPath.replace(/^\/+|\/+$/g, '');
+  if (normalizedPath !== 'companies/issues') return false;
+  return queryParam(req, 'unreadForUserId')?.toLowerCase() === 'me';
 }
 
 export default async function handler(
@@ -135,9 +151,15 @@ export default async function handler(
       // If the response is 401/403, the auth method lacks approval permissions.
       // Return a clear error instead of the raw Paperclip response.
       if (response.status === 401 || response.status === 403) {
-        return res.status(403).json({
-          error: 'Approval action not authorized. The workspace may need to be re-provisioned.',
-        });
+        if (isUnreadInboxQuery(req, method, proxyPath)) {
+          const fallbackTargetPath = match.targetPath + resolveForwardedQueryStringWithoutUnread(req);
+          response = await proxyToPaperclip(tenant, fallbackTargetPath, requestOptions);
+        }
+        if (response.status === 401 || response.status === 403) {
+          return res.status(403).json({
+            error: 'Approval action not authorized. The workspace may need to be re-provisioned.',
+          });
+        }
       }
     } else {
       response = await proxyToPaperclip(tenant, targetPath, requestOptions);

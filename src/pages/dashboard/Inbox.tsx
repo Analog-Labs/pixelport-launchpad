@@ -26,7 +26,10 @@ function lastActionLabel(issue: PaperclipIssue): string {
 export default function Inbox() {
   const [activeTab, setActiveTab] = useState<InboxTab>('recent');
   const recentQuery = usePaperclipTasks();
-  const unreadQuery = usePaperclipTasks({ unreadForUserId: 'me' });
+  const unreadQuery = usePaperclipTasks({
+    unreadForUserId: 'me',
+    enabled: activeTab === 'unread',
+  });
 
   const activeQuery = activeTab === 'unread' ? unreadQuery : recentQuery;
 

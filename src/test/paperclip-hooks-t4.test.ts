@@ -5,12 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   useAssignTask,
   useCreateTask,
+  usePaperclipTasks,
   useUpdateTaskPriority,
 } from '@/hooks/usePaperclipTasks';
 import { usePaperclipAgentRuns } from '@/hooks/usePaperclipAgents';
 import { usePaperclipActivity } from '@/hooks/usePaperclipActivity';
 import { usePaperclipCostsByAgent } from '@/hooks/usePaperclipCosts';
-import { usePaperclipAgentIssues, useWakeAgent } from '@/hooks/usePaperclipAgentDetail';
+import { usePaperclipAgentDetail, usePaperclipAgentIssues, useWakeAgent } from '@/hooks/usePaperclipAgentDetail';
 import type { IssuesResponse } from '@/lib/paperclip-types';
 
 const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }));
@@ -165,6 +166,17 @@ describe('T4 paperclip hooks', () => {
     expect(result.current.data?.entries).toEqual([]);
   });
 
+  it('usePaperclipActivity falls back to empty list on 404', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(makeResponse({ error: 'Route not found' }, 404));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => usePaperclipActivity(), { wrapper: wrapper(client) });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.entries).toEqual([]);
+  });
+
   it('usePaperclipCostsByAgent normalizes empty list', async () => {
     const fetchMock = vi.fn().mockResolvedValue(makeResponse({ costs: [] }));
     vi.stubGlobal('fetch', fetchMock);
@@ -174,6 +186,68 @@ describe('T4 paperclip hooks', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.agents).toEqual([]);
+  });
+
+  it('usePaperclipCostsByAgent falls back to empty list on 404', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(makeResponse({ error: 'Route not found' }, 404));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => usePaperclipCostsByAgent(), { wrapper: wrapper(client) });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.agents).toEqual([]);
+  });
+
+  it('usePaperclipAgentDetail falls back to placeholder on 404', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(makeResponse({ error: 'Route not found' }, 404));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => usePaperclipAgentDetail('agent-404'), { wrapper: wrapper(client) });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toMatchObject({
+      id: 'agent-404',
+      name: 'Agent',
+      status: 'offline',
+    });
+  });
+
+  it('usePaperclipTasks falls back when unreadForUserId=me is rejected', async () => {
+    const fetchMock = vi.fn((url: string) => {
+      if (String(url).includes('unreadForUserId=me')) {
+        return Promise.resolve(makeResponse({ error: 'requires board auth' }, 403));
+      }
+      if (String(url).includes('/api/tenant-proxy/companies/issues')) {
+        return Promise.resolve(
+          makeResponse({
+            issues: [{ id: 'issue-7', title: 'Fallback task', status: 'todo' }],
+          }),
+        );
+      }
+      return Promise.resolve(makeResponse({ issues: [] }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => usePaperclipTasks({ unreadForUserId: 'me' }), { wrapper: wrapper(client) });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.issues.map((issue) => issue.id)).toEqual(['issue-7']);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('unreadForUserId=me'))).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/api/tenant-proxy/companies/issues'))).toBe(true);
+  });
+
+  it('usePaperclipTasks respects enabled=false', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(makeResponse({ issues: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => usePaperclipTasks({ enabled: false }), { wrapper: wrapper(client) });
+
+    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('usePaperclipAgentRuns isolates cache by limit in query key', async () => {

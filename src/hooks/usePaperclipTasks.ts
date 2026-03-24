@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { paperclipFetch } from '@/lib/paperclipFetch';
+import { PaperclipFetchError, paperclipFetch } from '@/lib/paperclipFetch';
 import {
   normalizeCommentsResponse,
   normalizeIssue,
@@ -23,6 +23,7 @@ const issueDetailQueryKey = (issueId: string) => ['paperclip', 'issue', issueId]
 export interface UsePaperclipTasksOptions {
   assigneeAgentId?: string;
   unreadForUserId?: string;
+  enabled?: boolean;
 }
 
 function buildIssuesPath(options: UsePaperclipTasksOptions = {}): string {
@@ -45,9 +46,25 @@ export function usePaperclipTasks(options: UsePaperclipTasksOptions = {}) {
 
   return useQuery<IssuesResponse>({
     queryKey: [...ISSUE_QUERY_PREFIX, options],
-    queryFn: async () =>
-      normalizeIssuesResponse(await paperclipFetch<unknown>(path, {}, token)),
-    enabled: !!token,
+    queryFn: async () => {
+      try {
+        return normalizeIssuesResponse(await paperclipFetch<unknown>(path, {}, token));
+      } catch (error) {
+        if (
+          error instanceof PaperclipFetchError
+          && options.unreadForUserId
+          && (error.status === 403 || error.status === 404)
+        ) {
+          const fallbackPath = buildIssuesPath({
+            ...options,
+            unreadForUserId: undefined,
+          });
+          return normalizeIssuesResponse(await paperclipFetch<unknown>(fallbackPath, {}, token));
+        }
+        throw error;
+      }
+    },
+    enabled: !!token && (options.enabled ?? true),
     refetchOnWindowFocus: false,
   });
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { paperclipFetch } from '@/lib/paperclipFetch';
+import { PaperclipFetchError, paperclipFetch } from '@/lib/paperclipFetch';
 import { normalizeAgentDetail, normalizeIssuesResponse } from '@/lib/paperclip-normalize';
 import type { IssuesResponse, PaperclipAgentDetail } from '@/lib/paperclip-types';
 
@@ -10,13 +10,25 @@ export function usePaperclipAgentDetail(agentId: string) {
 
   return useQuery<PaperclipAgentDetail>({
     queryKey: ['paperclip', 'agent-detail', agentId],
-    queryFn: async () =>
-      normalizeAgentDetail(await paperclipFetch<unknown>(`agents/${agentId}`, {}, token))
-      ?? {
-        id: agentId,
-        name: 'Agent',
-        status: 'offline',
-      },
+    queryFn: async () => {
+      try {
+        return normalizeAgentDetail(await paperclipFetch<unknown>(`agents/${agentId}`, {}, token))
+        ?? {
+          id: agentId,
+          name: 'Agent',
+          status: 'offline',
+        };
+      } catch (error) {
+        if (error instanceof PaperclipFetchError && (error.status === 403 || error.status === 404)) {
+          return {
+            id: agentId,
+            name: 'Agent',
+            status: 'offline',
+          };
+        }
+        throw error;
+      }
+    },
     enabled: !!token && !!agentId,
     refetchOnWindowFocus: false,
   });
