@@ -64,18 +64,28 @@ function queryParam(
 }
 
 function requiresBoardSession(req: VercelRequest, method: string, proxyPath: string): boolean {
-  if (method.toUpperCase() !== 'POST') {
-    const normalizedPath = proxyPath.replace(/^\/+|\/+$/g, '');
-    if (normalizedPath === 'companies/issues') {
-      const unreadForUserId = queryParam(req, 'unreadForUserId')?.toLowerCase();
-      if (unreadForUserId === 'me') {
-        return true;
-      }
+  const upperMethod = method.toUpperCase();
+  const normalizedPath = proxyPath.replace(/^\/+|\/+$/g, '');
+
+  if (upperMethod === 'GET' && normalizedPath === 'companies/issues') {
+    const unreadForUserId = queryParam(req, 'unreadForUserId')?.toLowerCase();
+    if (unreadForUserId === 'me') {
+      return true;
     }
+  }
+
+  // Task create/assign/status writes must honor board permissions.
+  if (upperMethod === 'POST' && normalizedPath === 'companies/issues') {
+    return true;
+  }
+  if (upperMethod === 'PATCH' && /^issues\/[^/]+$/.test(normalizedPath)) {
+    return true;
+  }
+
+  if (upperMethod !== 'POST') {
     return false;
   }
 
-  const normalizedPath = proxyPath.replace(/^\/+|\/+$/g, '');
   // Approval decision mutations require board auth
   if (/^approvals\/[^/]+\/(approve|reject|request-revision|resubmit)$/.test(normalizedPath)) {
     return true;
@@ -186,7 +196,7 @@ export default async function handler(
         response = await proxyToPaperclip(tenant, targetPath, requestOptions);
       }
 
-      // If the response is 401/403, the auth method lacks approval permissions.
+      // If the response is 401/403, the auth method lacks required board permissions.
       // Return explicit diagnostics instead of the raw upstream response.
       if (response.status === 401 || response.status === 403) {
         if (isUnreadInboxQuery(req, method, proxyPath)) {
@@ -197,7 +207,7 @@ export default async function handler(
         if (response.status === 401 || response.status === 403) {
           const upstreamBody = await response.text();
           return res.status(403).json({
-            error: 'Approval action not authorized. Board session is unavailable or rejected.',
+            error: 'Board-authenticated action not authorized. Board session is unavailable or rejected.',
             code: 'board_action_forbidden',
             board_auth: {
               attempted: true,
@@ -209,7 +219,7 @@ export default async function handler(
               upstream_reason: summarizeUpstreamErrorBody(upstreamBody),
             },
             remediation:
-              'Verify PAPERCLIP_HANDOFF_SECRET, rerun onboarding bootstrap if needed, and confirm your board session can approve/reject.',
+              'Verify PAPERCLIP_HANDOFF_SECRET, rerun onboarding bootstrap if needed, and confirm your board session has the required task/approval permissions.',
           });
         }
       }

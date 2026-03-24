@@ -380,6 +380,68 @@ describe('GET/POST /api/tenant-proxy/[...path]', () => {
     expect(proxyToPaperclip).not.toHaveBeenCalled();
   });
 
+  it('uses board session proxy for task create writes', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/companies/company-abc/issues' });
+    proxyToPaperclipAsBoard.mockResolvedValue(
+      mockFetchResponse(201, '{"id":"issue-1"}'),
+    );
+
+    const req = {
+      method: 'POST',
+      query: { path: ['companies', 'issues'] },
+      url: '/api/tenant-proxy/companies/issues',
+      body: { title: 'Task 1', priority: 'high' },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(201);
+    expect(proxyToPaperclipAsBoard).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-1',
+      '/api/companies/company-abc/issues',
+      { method: 'POST', body: { title: 'Task 1', priority: 'high' } },
+    );
+    expect(proxyToPaperclip).not.toHaveBeenCalled();
+  });
+
+  it('uses board session proxy for task patch writes', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/issues/issue-1' });
+    proxyToPaperclipAsBoard.mockResolvedValue(
+      mockFetchResponse(200, '{"id":"issue-1","status":"in_progress"}'),
+    );
+
+    const req = {
+      method: 'PATCH',
+      query: { path: ['issues', 'issue-1'] },
+      url: '/api/tenant-proxy/issues/issue-1',
+      body: { status: 'in_progress' },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(proxyToPaperclipAsBoard).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-1',
+      '/api/issues/issue-1',
+      { method: 'PATCH', body: { status: 'in_progress' } },
+    );
+    expect(proxyToPaperclip).not.toHaveBeenCalled();
+  });
+
   it('returns structured diagnostics when board session proxy itself returns 403', async () => {
     const { default: handler } = await import('../../api/tenant-proxy/[...path]');
     authenticateRequest.mockResolvedValue({
