@@ -413,6 +413,73 @@ describe('GET/POST /api/tenant-proxy/[...path]', () => {
     expect(body.board_auth.upstream_reason).toBe('Board access required');
   });
 
+  it('uses board session proxy for unread inbox query with unreadForUserId=me', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/companies/company-abc/issues' });
+    proxyToPaperclipAsBoard.mockResolvedValue(
+      mockFetchResponse(200, '{"issues":[]}'),
+    );
+
+    const req = {
+      method: 'GET',
+      query: { path: ['companies', 'issues'], unreadForUserId: 'me' },
+      url: '/api/tenant-proxy/companies/issues?unreadForUserId=me',
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(proxyToPaperclipAsBoard).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-1',
+      '/api/companies/company-abc/issues?unreadForUserId=me',
+      { method: 'GET', body: undefined },
+    );
+    expect(proxyToPaperclip).not.toHaveBeenCalled();
+  });
+
+  it('falls back to agent key query without unread filter when unread board auth is rejected', async () => {
+    const { default: handler } = await import('../../api/tenant-proxy/[...path]');
+    authenticateRequest.mockResolvedValue({
+      tenant: buildTenant(),
+      userId: 'user-1',
+    });
+    matchProxyRoute.mockReturnValue({ targetPath: '/api/companies/company-abc/issues' });
+    proxyToPaperclipAsBoard.mockResolvedValue(
+      mockFetchResponse(403, '{"error":"Forbidden"}'),
+    );
+    proxyToPaperclip.mockResolvedValue(
+      mockFetchResponse(200, '{"issues":[{"id":"issue-1"}]}'),
+    );
+
+    const req = {
+      method: 'GET',
+      query: { path: ['companies', 'issues'], unreadForUserId: 'me', status: 'in_progress' },
+      url: '/api/tenant-proxy/companies/issues?unreadForUserId=me&status=in_progress',
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(proxyToPaperclipAsBoard).toHaveBeenCalledWith(
+      expect.anything(),
+      'user-1',
+      '/api/companies/company-abc/issues?unreadForUserId=me&status=in_progress',
+      { method: 'GET', body: undefined },
+    );
+    expect(proxyToPaperclip).toHaveBeenCalledWith(
+      expect.anything(),
+      '/api/companies/company-abc/issues?status=in_progress',
+      { method: 'GET', body: undefined },
+    );
+  });
+
   it('preserves query string in forwarded request', async () => {
     const { default: handler } = await import('../../api/tenant-proxy/[...path]');
     authenticateRequest.mockResolvedValue({

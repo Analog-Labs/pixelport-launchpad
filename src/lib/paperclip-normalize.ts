@@ -1,4 +1,8 @@
 import type {
+  ActivityEntry,
+  ActivityResponse,
+  AgentCost,
+  AgentCostsResponse,
   AgentListResponse,
   ApprovalsResponse,
   DashboardSummary,
@@ -6,11 +10,13 @@ import type {
   HeartbeatRunEvent,
   HeartbeatRunsResponse,
   IssueComment,
+  IssuePriority,
   IssueStatus,
   IssuesResponse,
   LiveRun,
   LiveRunsResponse,
   PaperclipAgent,
+  PaperclipAgentDetail,
   PaperclipApproval,
   PaperclipIssue,
   SidebarBadges,
@@ -111,11 +117,27 @@ function normalizeIssueStatus(value: unknown): IssueStatus {
   return 'todo';
 }
 
+function normalizeIssuePriority(value: unknown): IssuePriority | undefined {
+  const raw = readString(value)?.toLowerCase();
+  if (raw === 'critical' || raw === 'high' || raw === 'medium' || raw === 'low') {
+    return raw;
+  }
+  return undefined;
+}
+
 function normalizeApprovalStatus(value: unknown): PaperclipApproval['status'] {
   const raw = readString(value)?.toLowerCase();
   if (raw === 'approved') return 'approved';
   if (raw === 'rejected') return 'rejected';
   return 'pending';
+}
+
+function normalizeActorType(value: unknown): ActivityEntry['actorType'] {
+  const raw = readString(value)?.toLowerCase();
+  if (raw === 'user' || raw === 'agent' || raw === 'system') {
+    return raw;
+  }
+  return 'system';
 }
 
 function normalizeAgent(raw: unknown): PaperclipAgent | null {
@@ -134,6 +156,20 @@ function normalizeAgent(raw: unknown): PaperclipAgent | null {
       ?? readString(raw.task),
     budgetUsedCents: readNumber(raw.budgetUsedCents) ?? readNumber(raw.spentMonthlyCents),
     budgetLimitCents: readNumber(raw.budgetLimitCents) ?? readNumber(raw.budgetMonthlyCents),
+  };
+}
+
+function normalizeAgentDetailRecord(raw: unknown): PaperclipAgentDetail | null {
+  const agent = normalizeAgent(raw);
+  if (!agent || !isRecord(raw)) return agent;
+
+  return {
+    ...agent,
+    role: readString(raw.role) ?? readString(raw.title),
+    description: readString(raw.description),
+    model: readString(raw.model),
+    createdAt: readString(raw.createdAt) ?? readString(raw.created_at),
+    updatedAt: readString(raw.updatedAt) ?? readString(raw.updated_at),
   };
 }
 
@@ -231,6 +267,7 @@ function normalizeIssueRecord(raw: unknown): PaperclipIssue | null {
     title: readString(raw.title) ?? 'Untitled task',
     description: readString(raw.description),
     status: normalizeIssueStatus(raw.status),
+    priority: normalizeIssuePriority(raw.priority),
     assignee: assigneeRecord
       ? {
         id: readString(assigneeRecord.id) ?? 'unknown',
@@ -238,7 +275,12 @@ function normalizeIssueRecord(raw: unknown): PaperclipIssue | null {
         status: normalizeAgentStatus(assigneeRecord.status),
       }
       : undefined,
+    assigneeAgentId: readString(raw.assigneeAgentId) ?? readString(raw.assignee_agent_id),
     number: readNumber(raw.number) ?? readNumber(raw.issueNumber),
+    identifier: readString(raw.identifier),
+    projectId: readString(raw.projectId) ?? readString(raw.project_id),
+    createdByUserId: readString(raw.createdByUserId) ?? readString(raw.created_by_user_id),
+    createdByAgentId: readString(raw.createdByAgentId) ?? readString(raw.created_by_agent_id),
     createdAt: readString(raw.createdAt) ?? readString(raw.created_at),
     updatedAt: readString(raw.updatedAt) ?? readString(raw.updated_at),
   };
@@ -314,19 +356,61 @@ function normalizeRunEvent(raw: unknown): HeartbeatRunEvent | null {
 }
 
 export function normalizeDashboardSummary(raw: unknown): DashboardSummary {
-  if (!isRecord(raw)) return {};
+  if (!isRecord(raw)) {
+    return {
+      agents: { active: 0, running: 0, paused: 0, error: 0 },
+      tasks: { open: 0, inProgress: 0, blocked: 0, done: 0 },
+      costs: { monthSpendCents: 0, monthBudgetCents: 0, monthUtilizationPercent: 0 },
+      pendingApprovals: 0,
+    };
+  }
 
   const agents = isRecord(raw.agents) ? raw.agents : {};
+  const tasks = isRecord(raw.tasks) ? raw.tasks : {};
   const costs = isRecord(raw.costs) ? raw.costs : {};
 
+  const monthSpendCents =
+    readNumber(costs.monthSpendCents)
+    ?? readNumber(raw.monthSpendCents)
+    ?? readNumber(raw.weekCostCents)
+    ?? 0;
+  const monthBudgetCents =
+    readNumber(costs.monthBudgetCents)
+    ?? readNumber(raw.monthBudgetCents)
+    ?? 0;
+  const monthUtilizationPercent =
+    readNumber(costs.monthUtilizationPercent)
+    ?? (
+      monthBudgetCents > 0
+        ? Math.min(100, (monthSpendCents / monthBudgetCents) * 100)
+        : 0
+    );
+
   return {
-    pendingApprovals: readNumber(raw.pendingApprovals),
-    activeAgents: readNumber(raw.activeAgents) ?? readNumber(agents.active),
-    weekCostCents:
-      readNumber(raw.weekCostCents)
-      ?? readNumber(costs.weekSpendCents)
-      ?? readNumber(costs.monthSpendCents),
-    currentTask: readString(raw.currentTask),
+    agents: {
+      active: readNumber(agents.active) ?? readNumber(raw.activeAgents) ?? 0,
+      running: readNumber(agents.running) ?? 0,
+      paused: readNumber(agents.paused) ?? readNumber(agents.offline) ?? 0,
+      error: readNumber(agents.error) ?? 0,
+    },
+    tasks: {
+      open: readNumber(tasks.open) ?? readNumber(tasks.todo) ?? readNumber(tasks.backlog) ?? 0,
+      inProgress:
+        readNumber(tasks.inProgress)
+        ?? readNumber(tasks.in_progress)
+        ?? 0,
+      blocked: readNumber(tasks.blocked) ?? 0,
+      done: readNumber(tasks.done) ?? 0,
+    },
+    costs: {
+      monthSpendCents,
+      monthBudgetCents,
+      monthUtilizationPercent,
+    },
+    pendingApprovals:
+      readNumber(raw.pendingApprovals)
+      ?? readNumber(raw.pending_approvals)
+      ?? 0,
   };
 }
 
@@ -335,9 +419,11 @@ export function normalizeSidebarBadges(raw: unknown): SidebarBadges {
 
   return {
     approvals: readNumber(raw.approvals) ?? 0,
-    tasks: readNumber(raw.tasks) ?? readNumber(raw.inbox),
+    inbox: readNumber(raw.inbox),
+    failedRuns: readNumber(raw.failedRuns) ?? readNumber(raw.failed_runs),
+    tasks: readNumber(raw.tasks),
     competitors: readNumber(raw.competitors),
-    chat: readNumber(raw.chat) ?? readNumber(raw.failedRuns),
+    chat: readNumber(raw.chat),
   };
 }
 
@@ -346,6 +432,13 @@ export function normalizeAgentListResponse(raw: unknown): AgentListResponse {
   return {
     agents: source.map(normalizeAgent).filter((agent): agent is PaperclipAgent => agent !== null),
   };
+}
+
+export function normalizeAgentDetail(raw: unknown): PaperclipAgentDetail | null {
+  if (isRecord(raw) && isRecord(raw.agent)) {
+    return normalizeAgentDetailRecord(raw.agent);
+  }
+  return normalizeAgentDetailRecord(raw);
 }
 
 export function normalizeLiveRunsResponse(raw: unknown): LiveRunsResponse {
@@ -409,5 +502,65 @@ export function normalizeRunEventsResponse(raw: unknown): { events: HeartbeatRun
     events: source
       .map(normalizeRunEvent)
       .filter((event): event is HeartbeatRunEvent => event !== null),
+  };
+}
+
+function normalizeActivityEntry(raw: unknown): ActivityEntry | null {
+  if (!isRecord(raw)) return null;
+  const id = readId(raw.id);
+  if (!id) return null;
+
+  const details = isRecord(raw.details) ? raw.details : undefined;
+  return {
+    id,
+    actorType: normalizeActorType(readString(raw.actorType) ?? readString(raw.actor_type)),
+    actorId: readString(raw.actorId) ?? readString(raw.actor_id) ?? 'unknown',
+    action: readString(raw.action) ?? 'updated',
+    entityType: readString(raw.entityType) ?? readString(raw.entity_type) ?? 'issue',
+    entityId: readString(raw.entityId) ?? readString(raw.entity_id) ?? 'unknown',
+    agentId: readString(raw.agentId) ?? readString(raw.agent_id),
+    details,
+    createdAt: readString(raw.createdAt) ?? readString(raw.created_at) ?? new Date().toISOString(),
+  };
+}
+
+function normalizeAgentCost(raw: unknown): AgentCost | null {
+  if (!isRecord(raw)) return null;
+  const agentId = readString(raw.agentId) ?? readString(raw.agent_id);
+  if (!agentId) return null;
+
+  return {
+    agentId,
+    agentName:
+      readString(raw.agentName)
+      ?? readString(raw.agent_name)
+      ?? readString(raw.name)
+      ?? 'Agent',
+    agentStatus:
+      readString(raw.agentStatus)
+      ?? readString(raw.agent_status)
+      ?? readString(raw.status)
+      ?? 'unknown',
+    costCents: readNumber(raw.costCents) ?? readNumber(raw.cost_cents) ?? 0,
+    inputTokens: readNumber(raw.inputTokens) ?? readNumber(raw.input_tokens) ?? 0,
+    outputTokens: readNumber(raw.outputTokens) ?? readNumber(raw.output_tokens) ?? 0,
+  };
+}
+
+export function normalizeActivityResponse(raw: unknown): ActivityResponse {
+  const source = isRecord(raw) ? asArray(raw.activity ?? raw.entries) : asArray(raw);
+  return {
+    entries: source
+      .map(normalizeActivityEntry)
+      .filter((entry): entry is ActivityEntry => entry !== null),
+  };
+}
+
+export function normalizeAgentCostsResponse(raw: unknown): AgentCostsResponse {
+  const source = isRecord(raw) ? asArray(raw.costs ?? raw.agents) : asArray(raw);
+  return {
+    agents: source
+      .map(normalizeAgentCost)
+      .filter((cost): cost is AgentCost => cost !== null),
   };
 }

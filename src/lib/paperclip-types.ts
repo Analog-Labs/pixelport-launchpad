@@ -13,6 +13,14 @@ export interface PaperclipAgent {
   budgetLimitCents?: number;
 }
 
+export interface PaperclipAgentDetail extends PaperclipAgent {
+  role?: string;
+  description?: string;
+  model?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface LiveRun {
   id: string;
   agentId: string;
@@ -43,6 +51,7 @@ export interface HeartbeatRunEvent {
 }
 
 export type IssueStatus = 'todo' | 'in_progress' | 'in_review' | 'done';
+export type IssuePriority = 'critical' | 'high' | 'medium' | 'low';
 
 export interface IssueAssignee {
   id: string;
@@ -55,8 +64,14 @@ export interface PaperclipIssue {
   title: string;
   description?: string;
   status: IssueStatus;
+  priority?: IssuePriority;
   assignee?: IssueAssignee;
+  assigneeAgentId?: string;
   number?: number;
+  identifier?: string;
+  projectId?: string;
+  createdByUserId?: string;
+  createdByAgentId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -88,16 +103,68 @@ export interface PaperclipApproval {
 
 export interface SidebarBadges {
   approvals: number;
+  inbox?: number;
+  failedRuns?: number;
   tasks?: number;
   competitors?: number;
   chat?: number;
 }
 
 export interface DashboardSummary {
-  pendingApprovals?: number;
-  activeAgents?: number;
-  weekCostCents?: number;
-  currentTask?: string;
+  agents: {
+    active: number;
+    running: number;
+    paused: number;
+    error: number;
+  };
+  tasks: {
+    open: number;
+    inProgress: number;
+    blocked: number;
+    done: number;
+  };
+  costs: {
+    monthSpendCents: number;
+    monthBudgetCents: number;
+    monthUtilizationPercent: number;
+  };
+  pendingApprovals: number;
+}
+
+export interface ActivityEntry {
+  id: string;
+  actorType: 'user' | 'agent' | 'system';
+  actorId: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  agentId?: string;
+  details?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface ActivityResponse {
+  entries: ActivityEntry[];
+}
+
+export interface AgentCost {
+  agentId: string;
+  agentName: string;
+  agentStatus: string;
+  costCents: number;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export interface AgentCostsResponse {
+  agents: AgentCost[];
+}
+
+export interface CreateTaskRequest {
+  title: string;
+  description?: string;
+  priority?: IssuePriority;
+  assigneeAgentId?: string;
 }
 
 export interface AgentListResponse {

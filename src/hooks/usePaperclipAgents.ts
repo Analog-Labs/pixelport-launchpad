@@ -44,7 +44,7 @@ export function usePaperclipAgentRuns(agentId: string, limit = 3) {
   const token = session?.access_token ?? '';
 
   return useQuery<HeartbeatRunsResponse>({
-    queryKey: ['paperclip', 'agent-runs', agentId],
+    queryKey: ['paperclip', 'agent-runs', agentId, limit],
     queryFn: async () =>
       normalizeHeartbeatRunsResponse(
         await paperclipFetch<unknown>(

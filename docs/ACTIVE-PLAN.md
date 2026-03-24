@@ -40,9 +40,18 @@
 - [x] Design review: 6 DESIGN.md violations fixed (a11y, shimmer CTA, heading hierarchy)
 - [x] `/ship` — v0.19.2.0
 
-## T4 — Real-time & Polish (Planned)
+## T4 — Functional Dashboard: Actionability + Visibility + Polish
 
-- [ ] Not yet planned via gstack
+- [ ] Proxy allowlist expansion (POST issues, agent wakeup, activity, costs)
+- [ ] Home page: 4-card stats row, recent tasks, activity feed
+- [ ] Create Task panel (title, description, priority, assign to agent)
+- [ ] Task Detail: properties panel, agent invoke button, activity tab
+- [ ] Agent Detail page (profile, latest run, recent issues, costs)
+- [ ] Inbox page (Recent/Unread/All with badges)
+- [ ] Costs page (spend by agent, tokens)
+- [ ] Sidebar: add Inbox + Costs nav items
+- [ ] Tests for new hooks + proxy allowlist
+- [ ] Polish: loading states, empty states, mobile, a11y
 
 ## T5 — Settings & Billing (Planned)
 

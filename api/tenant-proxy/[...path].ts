@@ -38,8 +38,40 @@ function resolveForwardedQueryString(req: VercelRequest): string {
   return query ? `?${query}` : '';
 }
 
-function requiresBoardSession(method: string, proxyPath: string): boolean {
+function resolveForwardedQueryStringWithoutUnread(req: VercelRequest): string {
+  const rawUrl = req.url ?? '/';
+  const parsed = new URL(rawUrl, 'https://pixelport.local');
+  parsed.searchParams.delete('path');
+  parsed.searchParams.delete('unreadForUserId');
+  const query = parsed.searchParams.toString();
+  return query ? `?${query}` : '';
+}
+
+function queryParam(
+  req: VercelRequest,
+  key: string,
+): string | undefined {
+  const queryValue = req.query[key];
+  if (Array.isArray(queryValue)) {
+    return queryValue[0];
+  }
+  if (typeof queryValue === 'string') {
+    return queryValue;
+  }
+  const rawUrl = req.url ?? '/';
+  const parsed = new URL(rawUrl, 'https://pixelport.local');
+  return parsed.searchParams.get(key) ?? undefined;
+}
+
+function requiresBoardSession(req: VercelRequest, method: string, proxyPath: string): boolean {
   if (method.toUpperCase() !== 'POST') {
+    const normalizedPath = proxyPath.replace(/^\/+|\/+$/g, '');
+    if (normalizedPath === 'companies/issues') {
+      const unreadForUserId = queryParam(req, 'unreadForUserId')?.toLowerCase();
+      if (unreadForUserId === 'me') {
+        return true;
+      }
+    }
     return false;
   }
 
@@ -53,6 +85,13 @@ function requiresBoardSession(method: string, proxyPath: string): boolean {
     return true;
   }
   return false;
+}
+
+function isUnreadInboxQuery(req: VercelRequest, method: string, proxyPath: string): boolean {
+  if (method.toUpperCase() !== 'GET') return false;
+  const normalizedPath = proxyPath.replace(/^\/+|\/+$/g, '');
+  if (normalizedPath !== 'companies/issues') return false;
+  return queryParam(req, 'unreadForUserId')?.toLowerCase() === 'me';
 }
 
 function summarizeUpstreamErrorBody(body: string): string | null {
@@ -120,7 +159,7 @@ export default async function handler(
     };
     let response: Response;
 
-    if (requiresBoardSession(method, proxyPath)) {
+    if (requiresBoardSession(req, method, proxyPath)) {
       let boardHandoffError: string | null = null;
       let boardHandoffCode: string | null = null;
       let boardHandoffStatus: number | null = null;
@@ -150,22 +189,29 @@ export default async function handler(
       // If the response is 401/403, the auth method lacks approval permissions.
       // Return explicit diagnostics instead of the raw upstream response.
       if (response.status === 401 || response.status === 403) {
-        const upstreamBody = await response.text();
-        return res.status(403).json({
-          error: 'Approval action not authorized. Board session is unavailable or rejected.',
-          code: 'board_action_forbidden',
-          board_auth: {
-            attempted: true,
-            fallback_used: fallbackUsed,
-            handoff_code: boardHandoffCode,
-            handoff_status: boardHandoffStatus,
-            handoff_error: boardHandoffError,
-            upstream_status: response.status,
-            upstream_reason: summarizeUpstreamErrorBody(upstreamBody),
-          },
-          remediation:
-            'Verify PAPERCLIP_HANDOFF_SECRET, rerun onboarding bootstrap if needed, and confirm your board session can approve/reject.',
-        });
+        if (isUnreadInboxQuery(req, method, proxyPath)) {
+          const fallbackTargetPath = match.targetPath + resolveForwardedQueryStringWithoutUnread(req);
+          fallbackUsed = true;
+          response = await proxyToPaperclip(tenant, fallbackTargetPath, requestOptions);
+        }
+        if (response.status === 401 || response.status === 403) {
+          const upstreamBody = await response.text();
+          return res.status(403).json({
+            error: 'Approval action not authorized. Board session is unavailable or rejected.',
+            code: 'board_action_forbidden',
+            board_auth: {
+              attempted: true,
+              fallback_used: fallbackUsed,
+              handoff_code: boardHandoffCode,
+              handoff_status: boardHandoffStatus,
+              handoff_error: boardHandoffError,
+              upstream_status: response.status,
+              upstream_reason: summarizeUpstreamErrorBody(upstreamBody),
+            },
+            remediation:
+              'Verify PAPERCLIP_HANDOFF_SECRET, rerun onboarding bootstrap if needed, and confirm your board session can approve/reject.',
+          });
+        }
       }
     } else {
       response = await proxyToPaperclip(tenant, targetPath, requestOptions);

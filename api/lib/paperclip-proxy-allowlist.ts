@@ -21,11 +21,17 @@ export const PROXY_ALLOWLIST: readonly AllowlistEntry[] = [
   { proxyPattern: 'companies/dashboard', methods: ['GET'], companyScoped: true },
   { proxyPattern: 'companies/sidebar-badges', methods: ['GET'], companyScoped: true },
   { proxyPattern: 'companies/agents', methods: ['GET'], companyScoped: true },
-  { proxyPattern: 'companies/issues', methods: ['GET'], companyScoped: true },
+  { proxyPattern: 'companies/issues', methods: ['GET', 'POST'], companyScoped: true },
+  { proxyPattern: 'companies/activity', methods: ['GET'], companyScoped: true },
   { proxyPattern: 'companies/heartbeat-runs', methods: ['GET'], companyScoped: true },
   { proxyPattern: 'companies/live-runs', methods: ['GET'], companyScoped: true },
   { proxyPattern: 'companies/approvals', methods: ['GET'], companyScoped: true },
   { proxyPattern: 'companies/costs/summary', methods: ['GET'], companyScoped: true },
+  { proxyPattern: 'companies/costs/by-agent', methods: ['GET'], companyScoped: true },
+
+  // ── Agent routes ──────────────────────────────────────────────────────
+  { proxyPattern: 'agents/:id', methods: ['GET'], companyScoped: false },
+  { proxyPattern: 'agents/:id/wakeup', methods: ['POST'], companyScoped: false },
 
   // ── Issue routes ──────────────────────────────────────────────────────
   { proxyPattern: 'issues/:id', methods: ['GET', 'PATCH'], companyScoped: false },
