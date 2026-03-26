@@ -14,6 +14,17 @@ export interface TenantStatusBridgePayload {
   contract_version: string;
   status: string | null;
   bootstrap_status: string | null;
+  provisioning_progress?: {
+    total_checks: number;
+    completed_checks: number;
+    current_check_key: string | null;
+    checks: Array<{
+      key: string;
+      label: string;
+      status: 'pending' | 'running' | 'completed' | 'failed';
+      detail?: string | null;
+    }>;
+  } | null;
   bootstrap_error?: {
     tag: string;
     retryable: boolean;

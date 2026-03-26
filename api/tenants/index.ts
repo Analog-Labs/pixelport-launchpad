@@ -91,13 +91,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    const { company_name, company_url, mission, mission_goals, goals, agent_name, scan_results } = (req.body || {}) as {
+    const {
+      company_name,
+      company_url,
+      mission,
+      mission_goals,
+      goals,
+      agent_name,
+      agent_tone,
+      agent_avatar_id,
+      starter_tasks,
+      approval_policy,
+      scan_results,
+    } = (req.body || {}) as {
       company_name?: string;
       company_url?: string;
       mission?: string | null;
       mission_goals?: string | null;
       goals?: string[];
       agent_name?: string;
+      agent_tone?: string;
+      agent_avatar_id?: string;
+      starter_tasks?: string[];
+      approval_policy?: Record<string, unknown>;
       scan_results?: Record<string, unknown> | null;
     };
 
@@ -115,6 +131,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     if (goals !== undefined && (!Array.isArray(goals) || goals.some((goal) => typeof goal !== 'string'))) {
       return res.status(400).json({ error: 'goals must be an array of strings' });
+    }
+
+    if (
+      starter_tasks !== undefined &&
+      (!Array.isArray(starter_tasks) || starter_tasks.some((task) => typeof task !== 'string'))
+    ) {
+      return res.status(400).json({ error: 'starter_tasks must be an array of strings' });
+    }
+
+    if (
+      approval_policy !== undefined &&
+      (typeof approval_policy !== 'object' || approval_policy === null || Array.isArray(approval_policy))
+    ) {
+      return res.status(400).json({ error: 'approval_policy must be an object' });
     }
 
     const normalizedCompanyName = company_name.trim();
@@ -137,7 +167,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       mission: missionPatchValue,
       mission_goals: missionPatchValue,
       goals: goals || [],
-      agent_name: typeof agent_name === 'string' && agent_name.trim() ? agent_name.trim() : 'Luna',
+      agent_name: typeof agent_name === 'string' && agent_name.trim() ? agent_name.trim() : 'Chief',
+      agent_tone: typeof agent_tone === 'string' && agent_tone.trim() ? agent_tone.trim().toLowerCase() : undefined,
+      agent_avatar_id: typeof agent_avatar_id === 'string' && agent_avatar_id.trim() ? agent_avatar_id.trim() : undefined,
+      starter_tasks: starter_tasks || undefined,
+      approval_policy: approval_policy || undefined,
       scan_results: scan_results && typeof scan_results === 'object' ? scan_results : null,
     });
 

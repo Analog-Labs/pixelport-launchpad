@@ -5,9 +5,18 @@ import PixelPortLogo from "@/components/PixelPortLogo";
 import StepIndicator from "@/components/onboarding/StepIndicator";
 import StepCompanyInfo from "@/components/onboarding/StepCompanyInfo";
 import StepStrategy from "@/components/onboarding/StepStrategy";
-import StepTaskSetup, { type AgentSuggestionInput } from "@/components/onboarding/StepTaskSetup";
-import StepConnectTools from "@/components/onboarding/StepConnectTools";
+import StepTaskSetup from "@/components/onboarding/StepTaskSetup";
+import StepConnectTools, { type ProvisioningProgressPayload } from "@/components/onboarding/StepConnectTools";
 import { getPostAuthRedirectPath } from "@/lib/dashboard-redirect";
+import {
+  AGENT_AVATAR_OPTIONS,
+  APPROVAL_MODE_OPTIONS,
+  AGENT_TONE_OPTIONS,
+  DEFAULT_APPROVAL_POLICY,
+  MAX_ONBOARDING_GOALS,
+  buildGoalMappedTasks,
+  type ApprovalPolicyInput,
+} from "@/lib/onboarding-presets";
 import {
   TENANT_STATUS,
   isTenantProvisioningComplete,
@@ -17,6 +26,7 @@ import {
 interface TenantStatusResponse {
   status?: string | null;
   bootstrap_status?: string | null;
+  provisioning_progress?: ProvisioningProgressPayload | null;
   error?: string;
 }
 
@@ -29,19 +39,21 @@ interface OnboardingFormData {
   company_name: string;
   company_url: string;
   agent_name: string;
-  mission_goals: string;
+  agent_tone: string;
+  agent_avatar_id: string;
+  goals: string[];
   products_services_text: string;
-  starter_task: string;
-  agent_suggestions: AgentSuggestionInput[];
+  starter_tasks: string[];
+  preset_task_count: number;
+  approval_policy: ApprovalPolicyInput;
   scan_results: Record<string, unknown> | null;
 }
 
-const DEFAULT_AGENT_NAME = "Luna";
+const DEFAULT_AGENT_NAME = "Chief";
+const DEFAULT_AGENT_TONE = AGENT_TONE_OPTIONS[0].id;
+const DEFAULT_AGENT_AVATAR_ID = AGENT_AVATAR_OPTIONS[0].id;
+const MAX_STARTER_TASKS = 12;
 const POLL_INTERVAL_MS = 5000;
-
-function createSuggestionId(): string {
-  return `agent-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -59,7 +71,7 @@ function readNullableString(value: unknown): string | null {
   return parsed.length > 0 ? parsed : null;
 }
 
-function normalizeStringArray(value: unknown): string[] {
+function normalizeStringArray(value: unknown, maxItems = 20): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -67,21 +79,20 @@ function normalizeStringArray(value: unknown): string[] {
   return value
     .filter((item): item is string => typeof item === "string")
     .map((item) => item.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, maxItems);
 }
 
-function toGoalsArray(missionGoals: string): string[] {
-  const trimmed = missionGoals.trim();
-  if (!trimmed) {
-    return [];
-  }
-
-  const tokens = trimmed
+function toGoalsArray(value: string): string[] {
+  return value
     .split(/\n|,/)
     .map((token) => token.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, MAX_ONBOARDING_GOALS);
+}
 
-  return tokens.slice(0, 8);
+function toMissionGoalsText(goals: string[]): string {
+  return goals.map((goal) => goal.trim()).filter(Boolean).slice(0, MAX_ONBOARDING_GOALS).join("\n");
 }
 
 function toProductsArray(productsServicesText: string): string[] {
@@ -94,6 +105,52 @@ function toProductsArray(productsServicesText: string): string[] {
 
 function productsTextFromArray(products: string[]): string {
   return products.join("\n");
+}
+
+function extractProductsFromScan(scanResults: Record<string, unknown> | null): string[] {
+  if (!scanResults) {
+    return [];
+  }
+
+  const keyProducts = normalizeStringArray(scanResults.key_products);
+  if (keyProducts.length > 0) {
+    return keyProducts;
+  }
+
+  return normalizeStringArray(scanResults.products_services);
+}
+
+function buildFallbackTask(companyName: string, goals: string[]): string {
+  const safeCompanyName = companyName.trim() || "the company";
+  const safeGoal = goals[0]?.trim() || "the top marketing priorities";
+  return `Create a focused 14-day execution plan for ${safeCompanyName} aligned to: ${safeGoal}.`;
+}
+
+function sanitizeStarterTasks(value: string[]): string[] {
+  return value
+    .map((task) => task.trim())
+    .filter(Boolean)
+    .slice(0, MAX_STARTER_TASKS);
+}
+
+function syncStarterTasksWithGoals(data: OnboardingFormData): OnboardingFormData {
+  const presetTasks = buildGoalMappedTasks(data.goals, data.company_name).slice(0, MAX_STARTER_TASKS);
+  const customTasks = data.starter_tasks.slice(data.preset_task_count);
+  const nextTasks = [...presetTasks, ...customTasks].slice(0, MAX_STARTER_TASKS);
+
+  if (nextTasks.length === 0) {
+    return {
+      ...data,
+      starter_tasks: [buildFallbackTask(data.company_name, data.goals)],
+      preset_task_count: 0,
+    };
+  }
+
+  return {
+    ...data,
+    starter_tasks: nextTasks,
+    preset_task_count: presetTasks.length,
+  };
 }
 
 function readBootstrapStatus(onboardingData: Record<string, unknown> | null | undefined): string | null {
@@ -135,48 +192,70 @@ function readLaunchCompleted(onboardingData: Record<string, unknown> | null | un
   return readNullableString(onboardingData.launch_completed_at);
 }
 
-function missionGoalsFromOnboarding(onboardingData: Record<string, unknown>): string {
-  const direct = readString(onboardingData.mission_goals).trim();
-  if (direct) {
-    return direct;
-  }
-
-  const legacyMission = readString(onboardingData.mission).trim();
-  if (legacyMission) {
-    return legacyMission;
+function readGoalsFromOnboarding(onboardingData: Record<string, unknown>): string[] {
+  const flatGoals = normalizeStringArray(onboardingData.goals, MAX_ONBOARDING_GOALS);
+  if (flatGoals.length > 0) {
+    return flatGoals;
   }
 
   if (isRecord(onboardingData.v2) && isRecord(onboardingData.v2.strategy)) {
-    const nested = readString(onboardingData.v2.strategy.mission_goals).trim();
-    if (nested) {
-      return nested;
+    const nestedGoals = normalizeStringArray(onboardingData.v2.strategy.goals, MAX_ONBOARDING_GOALS);
+    if (nestedGoals.length > 0) {
+      return nestedGoals;
+    }
+
+    const nestedMission = readString(onboardingData.v2.strategy.mission_goals).trim();
+    if (nestedMission) {
+      return toGoalsArray(nestedMission);
     }
   }
 
-  return "";
+  const missionGoals = readString(onboardingData.mission_goals).trim() || readString(onboardingData.mission).trim();
+  return toGoalsArray(missionGoals);
 }
 
-function extractProductsFromScan(scanResults: Record<string, unknown> | null): string[] {
-  if (!scanResults) {
-    return [];
+function readAgentToneFromOnboarding(onboardingData: Record<string, unknown>): string {
+  const flatTone = readString(onboardingData.agent_tone).trim().toLowerCase();
+  if (AGENT_TONE_OPTIONS.some((tone) => tone.id === flatTone)) {
+    return flatTone;
   }
 
-  const keyProducts = normalizeStringArray(scanResults.key_products);
-  if (keyProducts.length > 0) {
-    return keyProducts;
+  if (isRecord(onboardingData.v2) && isRecord(onboardingData.v2.company)) {
+    const nestedTone = readString(onboardingData.v2.company.tone).trim().toLowerCase();
+    if (AGENT_TONE_OPTIONS.some((tone) => tone.id === nestedTone)) {
+      return nestedTone;
+    }
   }
 
-  return normalizeStringArray(scanResults.products_services);
+  return DEFAULT_AGENT_TONE;
+}
+
+function readAgentAvatarFromOnboarding(onboardingData: Record<string, unknown>): string {
+  const flatAvatar =
+    readString(onboardingData.agent_avatar_id).trim() ||
+    readString(onboardingData.agent_avatar_url).trim();
+  if (AGENT_AVATAR_OPTIONS.some((avatar) => avatar.id === flatAvatar)) {
+    return flatAvatar;
+  }
+
+  if (isRecord(onboardingData.v2) && isRecord(onboardingData.v2.company)) {
+    const nestedAvatar = readString(onboardingData.v2.company.avatar_id).trim();
+    if (AGENT_AVATAR_OPTIONS.some((avatar) => avatar.id === nestedAvatar)) {
+      return nestedAvatar;
+    }
+  }
+
+  return DEFAULT_AGENT_AVATAR_ID;
 }
 
 function productsFromOnboarding(onboardingData: Record<string, unknown>): string[] {
-  const flatProducts = normalizeStringArray(onboardingData.products_services);
+  const flatProducts = normalizeStringArray(onboardingData.products_services, 20);
   if (flatProducts.length > 0) {
     return flatProducts;
   }
 
   if (isRecord(onboardingData.v2) && isRecord(onboardingData.v2.strategy)) {
-    const nestedProducts = normalizeStringArray(onboardingData.v2.strategy.products_services);
+    const nestedProducts = normalizeStringArray(onboardingData.v2.strategy.products_services, 20);
     if (nestedProducts.length > 0) {
       return nestedProducts;
     }
@@ -198,53 +277,67 @@ function scanResultsFromOnboarding(onboardingData: Record<string, unknown>): Rec
   return null;
 }
 
-function buildStarterTask(companyName: string, missionGoals: string): string {
-  const safeCompanyName = companyName.trim() || "the company";
-  const safeGoal = missionGoals.trim() || "the top marketing priorities";
-  return `Create a focused 14-day plan for ${safeCompanyName} aligned to: ${safeGoal}.`;
-}
-
-function buildDefaultAgentSuggestions(agentName: string): AgentSuggestionInput[] {
-  const baseName = agentName.trim() || DEFAULT_AGENT_NAME;
-
-  return [
-    {
-      id: createSuggestionId(),
-      role: "Chief of Staff",
-      name: baseName,
-      focus: "Own weekly priorities and coordinate execution across the team.",
-    },
-    {
-      id: createSuggestionId(),
-      role: "Content Specialist",
-      name: `${baseName} Content`,
-      focus: "Plan and draft high-leverage content for active campaigns.",
-    },
-    {
-      id: createSuggestionId(),
-      role: "Growth Specialist",
-      name: `${baseName} Growth`,
-      focus: "Identify growth experiments and convert wins into repeatable playbooks.",
-    },
-  ];
-}
-
-function normalizeAgentSuggestions(value: unknown, fallbackAgentName: string): AgentSuggestionInput[] {
-  if (!Array.isArray(value)) {
-    return [];
+function readStarterTasksFromOnboarding(onboardingData: Record<string, unknown>): string[] {
+  const flatTasks = normalizeStringArray(onboardingData.starter_tasks, MAX_STARTER_TASKS);
+  if (flatTasks.length > 0) {
+    return flatTasks;
   }
 
-  const parsed = value
-    .filter(isRecord)
-    .map((item) => ({
-      id: readString(item.id) || createSuggestionId(),
-      role: readString(item.role),
-      name: readString(item.name),
-      focus: readString(item.focus),
-    }))
-    .filter((item) => item.role.trim() || item.name.trim() || item.focus.trim());
+  if (isRecord(onboardingData.v2) && isRecord(onboardingData.v2.task)) {
+    const nestedTasks = normalizeStringArray(onboardingData.v2.task.starter_tasks, MAX_STARTER_TASKS);
+    if (nestedTasks.length > 0) {
+      return nestedTasks;
+    }
 
-  return parsed.length > 0 ? parsed : buildDefaultAgentSuggestions(fallbackAgentName);
+    const nestedStarterTask = readString(onboardingData.v2.task.starter_task).trim();
+    if (nestedStarterTask) {
+      return [nestedStarterTask];
+    }
+  }
+
+  const legacyStarterTask = readString(onboardingData.starter_task).trim();
+  return legacyStarterTask ? [legacyStarterTask] : [];
+}
+
+function readApprovalPolicyFromOnboarding(onboardingData: Record<string, unknown>): ApprovalPolicyInput {
+  const fallback = { ...DEFAULT_APPROVAL_POLICY, guardrails: { ...DEFAULT_APPROVAL_POLICY.guardrails } };
+
+  const candidates: unknown[] = [onboardingData.approval_policy];
+  if (isRecord(onboardingData.v2) && isRecord(onboardingData.v2.task)) {
+    candidates.push(onboardingData.v2.task.approval_policy);
+  }
+
+  for (const candidate of candidates) {
+    if (!isRecord(candidate)) {
+      continue;
+    }
+
+    const mode = readString(candidate.mode).toLowerCase();
+    if (!APPROVAL_MODE_IDS.has(mode)) {
+      continue;
+    }
+
+    const guardrails = isRecord(candidate.guardrails) ? candidate.guardrails : {};
+    const next: ApprovalPolicyInput = {
+      mode: mode as ApprovalPolicyInput["mode"],
+      guardrails: {
+        publish: typeof guardrails.publish === "boolean" ? guardrails.publish : fallback.guardrails.publish,
+        paid_spend: typeof guardrails.paid_spend === "boolean" ? guardrails.paid_spend : fallback.guardrails.paid_spend,
+        outbound_messages:
+          typeof guardrails.outbound_messages === "boolean"
+            ? guardrails.outbound_messages
+            : fallback.guardrails.outbound_messages,
+        major_strategy_changes:
+          typeof guardrails.major_strategy_changes === "boolean"
+            ? guardrails.major_strategy_changes
+            : fallback.guardrails.major_strategy_changes,
+      },
+    };
+
+    return next;
+  }
+
+  return fallback;
 }
 
 function hasCompanyData(onboardingData: Record<string, unknown>, fallbackCompanyName?: string): boolean {
@@ -264,7 +357,41 @@ function hasCompanyData(onboardingData: Record<string, unknown>, fallbackCompany
 }
 
 function isStrategyStepComplete(onboardingData: Record<string, unknown>): boolean {
-  return missionGoalsFromOnboarding(onboardingData).trim().length >= 3;
+  return readGoalsFromOnboarding(onboardingData).length > 0;
+}
+
+function isTaskStepComplete(onboardingData: Record<string, unknown>): boolean {
+  return readStarterTasksFromOnboarding(onboardingData).length > 0;
+}
+
+function hydrateStarterTasks(goals: string[], companyName: string, starterTasks: string[]): { tasks: string[]; presetTaskCount: number } {
+  const presetTasks = buildGoalMappedTasks(goals, companyName).slice(0, MAX_STARTER_TASKS);
+  const cleanStarterTasks = sanitizeStarterTasks(starterTasks);
+
+  if (cleanStarterTasks.length === 0) {
+    if (presetTasks.length > 0) {
+      return {
+        tasks: presetTasks,
+        presetTaskCount: presetTasks.length,
+      };
+    }
+
+    return {
+      tasks: [buildFallbackTask(companyName, goals)],
+      presetTaskCount: 0,
+    };
+  }
+
+  const minimumPresetCount = Math.min(presetTasks.length, cleanStarterTasks.length);
+  const padded = [...cleanStarterTasks];
+  if (presetTasks.length > padded.length) {
+    padded.push(...presetTasks.slice(padded.length));
+  }
+
+  return {
+    tasks: padded.slice(0, MAX_STARTER_TASKS),
+    presetTaskCount: minimumPresetCount,
+  };
 }
 
 function getInitialFormState(): OnboardingFormData {
@@ -272,32 +399,39 @@ function getInitialFormState(): OnboardingFormData {
     company_name: "",
     company_url: "",
     agent_name: DEFAULT_AGENT_NAME,
-    mission_goals: "",
+    agent_tone: DEFAULT_AGENT_TONE,
+    agent_avatar_id: DEFAULT_AGENT_AVATAR_ID,
+    goals: [],
     products_services_text: "",
-    starter_task: "",
-    agent_suggestions: [],
+    starter_tasks: [buildFallbackTask("", [])],
+    preset_task_count: 0,
+    approval_policy: { ...DEFAULT_APPROVAL_POLICY, guardrails: { ...DEFAULT_APPROVAL_POLICY.guardrails } },
     scan_results: null,
   };
 }
 
 function buildFormStateFromTenant(tenantName: string, onboardingData: Record<string, unknown>): OnboardingFormData {
   const companyName = readString(onboardingData.company_name).trim() || tenantName;
-  const missionGoals = missionGoalsFromOnboarding(onboardingData);
-  const agentName = readString(onboardingData.agent_name).trim() || DEFAULT_AGENT_NAME;
-  const starterTask = readString(onboardingData.starter_task).trim() || buildStarterTask(companyName, missionGoals);
-  const suggestions = normalizeAgentSuggestions(onboardingData.agent_suggestions, agentName);
+  const goals = readGoalsFromOnboarding(onboardingData);
+  const starterTasks = readStarterTasksFromOnboarding(onboardingData);
+  const hydratedTasks = hydrateStarterTasks(goals, companyName, starterTasks);
 
   return {
     company_name: companyName,
     company_url: readString(onboardingData.company_url),
-    agent_name: agentName,
-    mission_goals: missionGoals,
+    agent_name: readString(onboardingData.agent_name).trim() || DEFAULT_AGENT_NAME,
+    agent_tone: readAgentToneFromOnboarding(onboardingData),
+    agent_avatar_id: readAgentAvatarFromOnboarding(onboardingData),
+    goals,
     products_services_text: productsTextFromArray(productsFromOnboarding(onboardingData)),
-    starter_task: starterTask,
-    agent_suggestions: suggestions.length > 0 ? suggestions : buildDefaultAgentSuggestions(agentName),
+    starter_tasks: hydratedTasks.tasks,
+    preset_task_count: hydratedTasks.presetTaskCount,
+    approval_policy: readApprovalPolicyFromOnboarding(onboardingData),
     scan_results: scanResultsFromOnboarding(onboardingData),
   };
 }
+
+const APPROVAL_MODE_IDS = new Set(APPROVAL_MODE_OPTIONS.map((mode) => mode.id));
 
 const Onboarding = () => {
   const {
@@ -323,6 +457,7 @@ const Onboarding = () => {
 
   const [scanState, setScanState] = useState<"idle" | "scanning" | "done" | "failed">("idle");
   const [scanError, setScanError] = useState("");
+  const [goalError, setGoalError] = useState("");
 
   const [launching, setLaunching] = useState(false);
   const [launchStarted, setLaunchStarted] = useState(false);
@@ -330,6 +465,7 @@ const Onboarding = () => {
 
   const [provisionStatus, setProvisionStatus] = useState<string | null>(null);
   const [bootstrapStatus, setBootstrapStatus] = useState<string | null>(null);
+  const [provisionProgress, setProvisionProgress] = useState<ProvisioningProgressPayload | null>(null);
   const [provisionPolling, setProvisionPolling] = useState(false);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
 
@@ -340,6 +476,7 @@ const Onboarding = () => {
   const effectiveStatus = provisionStatus ?? tenant?.status ?? null;
   const provisioningComplete = isTenantProvisioningComplete(effectiveStatus);
   const tenantOnboardingData = isRecord(tenant?.onboarding_data) ? tenant.onboarding_data : null;
+  const scanSuggestions = extractProductsFromScan(data.scan_results);
 
   const changeStep = useCallback((next: number) => {
     setFadeIn(false);
@@ -436,18 +573,21 @@ const Onboarding = () => {
 
         const scanResults = payload.scan_results;
         const scannedProducts = extractProductsFromScan(scanResults);
+        let patchProducts: string[] | null = null;
 
-        let nextProductsText = data.products_services_text;
         setData((current) => {
-          const shouldPrefillProducts = current.products_services_text.trim().length === 0 && scannedProducts.length > 0;
-          if (shouldPrefillProducts) {
-            nextProductsText = productsTextFromArray(scannedProducts);
+          if (current.products_services_text.trim().length > 0 || scannedProducts.length === 0) {
+            return {
+              ...current,
+              scan_results: scanResults,
+            };
           }
 
+          patchProducts = scannedProducts;
           return {
             ...current,
             scan_results: scanResults,
-            products_services_text: shouldPrefillProducts ? nextProductsText : current.products_services_text,
+            products_services_text: productsTextFromArray(scannedProducts),
           };
         });
 
@@ -455,8 +595,8 @@ const Onboarding = () => {
           scan_results: scanResults,
         };
 
-        if (nextProductsText.trim().length > 0) {
-          patchPayload.products_services = toProductsArray(nextProductsText);
+        if (patchProducts && patchProducts.length > 0) {
+          patchPayload.products_services = patchProducts;
         }
 
         await saveOnboardingPatch(patchPayload, { silent: true });
@@ -466,35 +606,32 @@ const Onboarding = () => {
         setScanError(error instanceof Error ? error.message : "Website scan failed.");
       }
     },
-    [data.products_services_text, saveOnboardingPatch, session?.access_token]
+    [saveOnboardingPatch, session?.access_token]
   );
 
-  const buildStrategyPatch = useCallback(() => {
-    const missionGoals = data.mission_goals.trim();
+  const buildStrategyPatch = useCallback((formData: OnboardingFormData) => {
+    const safeGoals = formData.goals.slice(0, MAX_ONBOARDING_GOALS);
+    const missionGoals = toMissionGoalsText(safeGoals);
+
     return {
       mission_goals: missionGoals,
-      goals: toGoalsArray(missionGoals),
-      products_services: toProductsArray(data.products_services_text),
-      scan_results: data.scan_results,
+      mission: missionGoals,
+      goals: safeGoals,
+      products_services: toProductsArray(formData.products_services_text),
+      scan_results: formData.scan_results,
     };
-  }, [data.mission_goals, data.products_services_text, data.scan_results]);
+  }, []);
 
-  const buildTaskPatch = useCallback(() => {
-    const cleanSuggestions = data.agent_suggestions
-      .map((suggestion) => ({
-        id: suggestion.id,
-        role: suggestion.role.trim(),
-        name: suggestion.name.trim(),
-        focus: suggestion.focus.trim(),
-      }))
-      .filter((suggestion) => suggestion.role || suggestion.name || suggestion.focus);
+  const buildTaskPatch = useCallback((formData: OnboardingFormData) => {
+    const starterTasks = sanitizeStarterTasks(formData.starter_tasks);
+    const safeTasks = starterTasks.length > 0 ? starterTasks : [buildFallbackTask(formData.company_name, formData.goals)];
 
     return {
-      starter_task: data.starter_task.trim() || buildStarterTask(data.company_name, data.mission_goals),
-      agent_suggestions:
-        cleanSuggestions.length > 0 ? cleanSuggestions : buildDefaultAgentSuggestions(data.agent_name),
+      starter_tasks: safeTasks,
+      starter_task: safeTasks[0],
+      approval_policy: formData.approval_policy,
     };
-  }, [data.agent_name, data.agent_suggestions, data.company_name, data.mission_goals, data.starter_task]);
+  }, []);
 
   const pollProvisionStatus = useCallback(async () => {
     if (!session?.access_token || !tenant) {
@@ -520,6 +657,7 @@ const Onboarding = () => {
 
       setProvisionStatus(nextStatus);
       setBootstrapStatus(nextBootstrapStatus);
+      setProvisionProgress(payload.provisioning_progress ?? null);
       setLastCheckedAt(new Date().toISOString());
 
       if (isTenantProvisioningComplete(nextStatus)) {
@@ -560,6 +698,12 @@ const Onboarding = () => {
     const companyName = data.company_name.trim();
     const companyUrl = data.company_url.trim();
     const agentName = data.agent_name.trim() || DEFAULT_AGENT_NAME;
+    const agentTone = AGENT_TONE_OPTIONS.some((tone) => tone.id === data.agent_tone)
+      ? data.agent_tone
+      : DEFAULT_AGENT_TONE;
+    const agentAvatarId = AGENT_AVATAR_OPTIONS.some((avatar) => avatar.id === data.agent_avatar_id)
+      ? data.agent_avatar_id
+      : DEFAULT_AGENT_AVATAR_ID;
 
     setCompanySubmitting(true);
 
@@ -575,6 +719,8 @@ const Onboarding = () => {
             company_name: companyName,
             company_url: companyUrl || null,
             agent_name: agentName,
+            agent_tone: agentTone,
+            agent_avatar_id: agentAvatarId,
           }),
         });
 
@@ -591,6 +737,8 @@ const Onboarding = () => {
           company_name: companyName,
           company_url: companyUrl || null,
           agent_name: agentName,
+          agent_tone: agentTone,
+          agent_avatar_id: agentAvatarId,
         },
         { refreshTenantAfter: false }
       );
@@ -599,17 +747,16 @@ const Onboarding = () => {
         return;
       }
 
-      setData((current) => ({
-        ...current,
-        company_name: companyName,
-        company_url: companyUrl,
-        agent_name: agentName,
-        starter_task: current.starter_task.trim() || buildStarterTask(companyName, current.mission_goals),
-        agent_suggestions:
-          current.agent_suggestions.length > 0
-            ? current.agent_suggestions
-            : buildDefaultAgentSuggestions(agentName),
-      }));
+      setData((current) =>
+        syncStarterTasksWithGoals({
+          ...current,
+          company_name: companyName,
+          company_url: companyUrl,
+          agent_name: agentName,
+          agent_tone: agentTone,
+          agent_avatar_id: agentAvatarId,
+        })
+      );
 
       await refreshTenant();
       changeStep(2);
@@ -626,26 +773,30 @@ const Onboarding = () => {
 
   const handleStrategyNext = async () => {
     setLaunchError("");
-    const saved = await saveOnboardingPatch(buildStrategyPatch());
+    const synced = syncStarterTasksWithGoals(data);
+    setData(synced);
+    const saved = await saveOnboardingPatch(buildStrategyPatch(synced));
     if (saved) {
       changeStep(3);
     }
   };
 
   const handleStrategyBack = async () => {
-    await saveOnboardingPatch(buildStrategyPatch());
+    const synced = syncStarterTasksWithGoals(data);
+    setData(synced);
+    await saveOnboardingPatch(buildStrategyPatch(synced));
     changeStep(1);
   };
 
   const handleTaskNext = async () => {
-    const saved = await saveOnboardingPatch(buildTaskPatch());
+    const saved = await saveOnboardingPatch(buildTaskPatch(data));
     if (saved) {
       changeStep(4);
     }
   };
 
   const handleTaskBack = async () => {
-    await saveOnboardingPatch(buildTaskPatch());
+    await saveOnboardingPatch(buildTaskPatch(data));
     changeStep(2);
   };
 
@@ -745,7 +896,12 @@ const Onboarding = () => {
       return;
     }
 
-    setStep(3);
+    if (!isTaskStepComplete(onboardingData)) {
+      setStep(3);
+      return;
+    }
+
+    setStep(4);
   }, [tenant]);
 
   if (authLoading || tenantLoading) return null;
@@ -768,8 +924,8 @@ const Onboarding = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden px-4">
       <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(ellipse, hsla(38,60%,58%,0.08) 0%, transparent 70%)" }}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[640px] h-[420px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(ellipse, hsla(38,60%,58%,0.09) 0%, transparent 72%)" }}
       />
 
       <Link to="/" className="absolute top-6 left-6 flex items-center gap-2.5 z-10">
@@ -778,7 +934,7 @@ const Onboarding = () => {
       </Link>
 
       <div
-        className="w-full max-w-[760px] rounded-2xl border bg-card p-6 sm:p-10 relative z-10"
+        className="w-full max-w-[840px] rounded-2xl border bg-card p-6 sm:p-10 relative z-10"
         style={{ borderColor: "rgba(212,168,83,0.15)" }}
       >
         <div className="flex justify-end mb-4">
@@ -807,12 +963,74 @@ const Onboarding = () => {
 
           {step === 2 && (
             <StepStrategy
-              missionGoals={data.mission_goals}
+              goals={data.goals}
               productsServicesText={data.products_services_text}
               scanState={scanState}
               scanError={scanError}
-              onMissionGoalsChange={(value) => patch({ mission_goals: value })}
+              scanSuggestions={scanSuggestions}
+              goalError={goalError}
+              onToggleGoal={(goal) => {
+                const exists = data.goals.includes(goal);
+                if (!exists && data.goals.length >= MAX_ONBOARDING_GOALS) {
+                  setGoalError(`You can select up to ${MAX_ONBOARDING_GOALS} goals.`);
+                  return;
+                }
+
+                setGoalError("");
+                const nextGoals = exists ? data.goals.filter((entry) => entry !== goal) : [...data.goals, goal];
+                setData((current) => syncStarterTasksWithGoals({ ...current, goals: nextGoals }));
+              }}
+              onAddCustomGoal={(goal) => {
+                if (data.goals.length >= MAX_ONBOARDING_GOALS) {
+                  setGoalError(`You can select up to ${MAX_ONBOARDING_GOALS} goals.`);
+                  return;
+                }
+
+                const normalized = goal.trim();
+                if (!normalized) {
+                  return;
+                }
+
+                if (data.goals.includes(normalized)) {
+                  return;
+                }
+
+                setGoalError("");
+                setData((current) => syncStarterTasksWithGoals({ ...current, goals: [...current.goals, normalized] }));
+              }}
+              onRemoveGoal={(goal) => {
+                setGoalError("");
+                setData((current) =>
+                  syncStarterTasksWithGoals({
+                    ...current,
+                    goals: current.goals.filter((entry) => entry !== goal),
+                  })
+                );
+              }}
               onProductsServicesChange={(value) => patch({ products_services_text: value })}
+              onApplyScanSuggestions={() => {
+                if (scanSuggestions.length === 0) {
+                  return;
+                }
+
+                setData((current) => {
+                  const existing = toProductsArray(current.products_services_text);
+                  const merged = [...new Set([...existing, ...scanSuggestions])].slice(0, 20);
+                  return {
+                    ...current,
+                    products_services_text: productsTextFromArray(merged),
+                  };
+                });
+              }}
+              onRetryScan={() => {
+                if (!data.company_url.trim()) {
+                  setScanError("Add a company website URL in Company step before retrying scan.");
+                  setScanState("failed");
+                  return;
+                }
+
+                void runWebsiteScan(data.company_url);
+              }}
               onBack={handleStrategyBack}
               onNext={handleStrategyNext}
             />
@@ -821,35 +1039,56 @@ const Onboarding = () => {
           {step === 3 && (
             <StepTaskSetup
               companyName={data.company_name}
-              starterTask={data.starter_task}
-              suggestions={data.agent_suggestions}
-              onStarterTaskChange={(value) => patch({ starter_task: value })}
-              onSuggestionChange={(id, suggestionPatch) => {
+              goals={data.goals}
+              starterTasks={data.starter_tasks}
+              presetTaskCount={data.preset_task_count}
+              approvalPolicy={data.approval_policy}
+              onTaskChange={(index, value) => {
                 setData((current) => ({
                   ...current,
-                  agent_suggestions: current.agent_suggestions.map((item) => (
-                    item.id === id ? { ...item, ...suggestionPatch } : item
-                  )),
+                  starter_tasks: current.starter_tasks.map((task, taskIndex) =>
+                    taskIndex === index ? value : task
+                  ),
                 }));
               }}
-              onAddSuggestion={() => {
+              onAddCustomTask={() => {
                 setData((current) => ({
                   ...current,
-                  agent_suggestions: [
-                    ...current.agent_suggestions,
-                    {
-                      id: createSuggestionId(),
-                      role: "Specialist",
-                      name: `${(current.agent_name || DEFAULT_AGENT_NAME).trim()} Specialist`,
-                      focus: "Add a custom focus area.",
+                  starter_tasks: [...current.starter_tasks, ""].slice(0, MAX_STARTER_TASKS),
+                }));
+              }}
+              onRemoveCustomTask={(index) => {
+                setData((current) => {
+                  if (index < current.preset_task_count) {
+                    return current;
+                  }
+
+                  const nextTasks = current.starter_tasks.filter((_, rowIndex) => rowIndex !== index);
+                  return {
+                    ...current,
+                    starter_tasks: nextTasks.length > 0 ? nextTasks : [buildFallbackTask(current.company_name, current.goals)],
+                  };
+                });
+              }}
+              onApprovalModeChange={(mode) => {
+                setData((current) => ({
+                  ...current,
+                  approval_policy: {
+                    ...current.approval_policy,
+                    mode,
+                  },
+                }));
+              }}
+              onGuardrailChange={(key, value) => {
+                setData((current) => ({
+                  ...current,
+                  approval_policy: {
+                    ...current.approval_policy,
+                    guardrails: {
+                      ...current.approval_policy.guardrails,
+                      [key]: value,
                     },
-                  ],
-                }));
-              }}
-              onRemoveSuggestion={(id) => {
-                setData((current) => ({
-                  ...current,
-                  agent_suggestions: current.agent_suggestions.filter((item) => item.id !== id),
+                  },
                 }));
               }}
               onBack={handleTaskBack}
@@ -861,14 +1100,15 @@ const Onboarding = () => {
             <StepConnectTools
               companyName={data.company_name}
               agentName={data.agent_name}
-              missionGoals={data.mission_goals}
+              goals={data.goals}
               productsServicesText={data.products_services_text}
-              starterTask={data.starter_task}
-              suggestionCount={data.agent_suggestions.length}
+              starterTasks={data.starter_tasks}
+              approvalPolicy={data.approval_policy}
               launching={launching}
               launched={launchStarted}
               status={effectiveStatus}
               bootstrapStatus={bootstrapStatus}
+              progress={provisionProgress}
               ready={provisioningComplete}
               polling={provisionPolling}
               lastCheckedAt={lastCheckedAt}

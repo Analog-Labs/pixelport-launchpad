@@ -1817,8 +1817,8 @@ export const provisionTenant = inngest.createFunction(
     });
 
     await step.run('create-agent-records', async () => {
-      const agentName = (onboardingData.agent_name as string) || 'Luna';
-      const agentTone = (onboardingData.agent_tone as string) || 'professional';
+      const agentName = (onboardingData.agent_name as string) || 'Chief';
+      const agentTone = (onboardingData.agent_tone as string) || 'strategic';
 
       const { error: mainError } = await supabase.from('agents').insert({
         tenant_id: tenantId,
@@ -2285,7 +2285,7 @@ export function buildCloudInit(params: {
   paperclipApiKey: string;
   onboardingData: Json;
 }): string {
-  const agentName = (params.onboardingData.agent_name as string) || 'Luna';
+  const agentName = (params.onboardingData.agent_name as string) || 'Chief';
   const workspaceWriteCommands = buildWorkspaceWriteCommands({
     tenantName: params.tenantName,
     tenantSlug: params.tenantSlug,

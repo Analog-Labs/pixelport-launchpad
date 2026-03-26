@@ -99,7 +99,9 @@ describe("POST /api/tenants", () => {
       body: {
         company_name: "Acme Labs",
         company_url: "https://acme.test",
-        agent_name: "Luna",
+        agent_name: "Chief",
+        agent_tone: "strategic",
+        agent_avatar_id: "amber-command",
       },
     };
     const res = createMockResponse();
@@ -125,6 +127,9 @@ describe("POST /api/tenants", () => {
     expect(insertPayload.onboarding_data.render_version).toBe(1);
     expect(insertPayload.onboarding_data.v2).toBeTruthy();
     expect(insertPayload.onboarding_data.company_name).toBe("Acme Labs");
+    expect(insertPayload.onboarding_data.agent_name).toBe("Chief");
+    expect(insertPayload.onboarding_data.agent_tone).toBe("strategic");
+    expect(insertPayload.onboarding_data.agent_avatar_id).toBe("amber-command");
 
     // Draft creation should not instantiate or send any Inngest provisioning client/event.
     expect(inngestCtorMock).not.toHaveBeenCalled();

@@ -48,7 +48,7 @@ const StepProvisioning = ({
         <div>
           <h2 className="text-xl font-bold text-foreground">Provisioning your workspace</h2>
           <p className="text-sm text-muted-foreground">
-            {companyName || "Your company"} is being prepared for {agentName || "Luna"}.
+            {companyName || "Your company"} is being prepared for {agentName || "Chief"}.
           </p>
         </div>
       </div>

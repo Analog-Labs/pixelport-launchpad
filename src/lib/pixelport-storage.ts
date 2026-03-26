@@ -30,6 +30,10 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 function readActiveVaultRefreshCommands(storage: Storage): Record<string, string> {
   const raw = storage.getItem("pixelport_active_vault_refresh_commands");
   if (!raw) {
@@ -86,10 +90,26 @@ export function hydratePixelportTenantState(userId: string, tenant: TenantLike):
   }
 
   const onboardingData = tenant.onboarding_data ?? {};
-  const agentName = readString(onboardingData.agent_name) ?? "Luna";
-  const agentAvatar = readString(onboardingData.agent_avatar_url) ?? "amber-l";
-  const companyUrl = readString(onboardingData.company_url) ?? "";
-  const agentTone = readString(onboardingData.agent_tone) ?? "professional";
+  const nested = isRecord(onboardingData.v2) ? onboardingData.v2 : null;
+  const nestedCompany = nested && isRecord(nested.company) ? nested.company : null;
+
+  const agentName =
+    readString(onboardingData.agent_name) ??
+    readString(nestedCompany?.chief_name) ??
+    "Chief";
+  const agentAvatar =
+    readString(onboardingData.agent_avatar_id) ??
+    readString(onboardingData.agent_avatar_url) ??
+    readString(nestedCompany?.avatar_id) ??
+    "amber-command";
+  const companyUrl =
+    readString(onboardingData.company_url) ??
+    readString(nestedCompany?.website) ??
+    "";
+  const agentTone =
+    readString(onboardingData.agent_tone) ??
+    readString(nestedCompany?.tone) ??
+    "strategic";
 
   storage.setItem("pixelport_user_id", userId);
   storage.setItem("pixelport_onboarded", "true");

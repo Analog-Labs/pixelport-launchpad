@@ -82,7 +82,7 @@ export function buildOnboardingBootstrapMessage(params: {
   const onboardingData = params.onboardingData ?? {};
   const companyUrl = normalizeText(onboardingData.company_url);
   const goals = normalizeGoals(onboardingData.goals);
-  const agentName = normalizeText(onboardingData.agent_name) || 'Luna';
+  const agentName = normalizeText(onboardingData.agent_name) || 'Chief';
   const starterTask = normalizeText(onboardingData.starter_task);
   const scanSummary = summarizeScanResults(onboardingData.scan_results);
 

@@ -121,8 +121,18 @@ describe("POST /api/tenants/onboarding", () => {
     const req = {
       method: "POST",
       body: {
-        mission_goals: "Increase qualified pipeline",
+        goals: ["Increase qualified pipeline"],
         products_services: ["Growth advisory"],
+        starter_tasks: ["Create a 14-day sprint plan"],
+        approval_policy: {
+          mode: "balanced",
+          guardrails: {
+            publish: true,
+            paid_spend: false,
+            outbound_messages: true,
+            major_strategy_changes: true,
+          },
+        },
       },
     };
     const res = createMockResponse();
@@ -143,10 +153,15 @@ describe("POST /api/tenants/onboarding", () => {
     expect(onboarding.render_version).toBe(1);
     expect(onboarding.mission_goals).toBe("Increase qualified pipeline");
     expect(onboarding.company_name).toBe("Acme Labs");
+    expect(onboarding.starter_tasks).toEqual(["Create a 14-day sprint plan"]);
+    expect(onboarding.starter_task).toBe("Create a 14-day sprint plan");
 
     const v2 = onboarding.v2 as Record<string, unknown>;
     const strategy = v2.strategy as Record<string, unknown>;
+    const task = v2.task as Record<string, unknown>;
     expect(strategy.mission_goals).toBe("Increase qualified pipeline");
     expect(strategy.products_services).toEqual(["Growth advisory"]);
+    expect(task.starter_tasks).toEqual(["Create a 14-day sprint plan"]);
+    expect((task.approval_policy as Record<string, unknown>).mode).toBe("balanced");
   });
 });
