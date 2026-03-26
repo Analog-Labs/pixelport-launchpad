@@ -99,7 +99,7 @@ describe("GET /api/tenants/status", () => {
     await handler(req as never, res as never);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({
+    expect(res.body).toEqual(expect.objectContaining({
       contract_version: THIN_BRIDGE_CONTRACT_VERSION,
       status: "active",
       bootstrap_status: "accepted",
@@ -111,7 +111,8 @@ describe("GET /api/tenants/status", () => {
       has_agentmail: false,
       trial_ends_at: null,
       plan: "trial",
-    });
+    }));
+    expect((res.body as { provisioning_progress?: { total_checks: number } }).provisioning_progress?.total_checks).toBeGreaterThanOrEqual(8);
   });
 
   it("unlocks task step when bootstrap is completed even if tenant status lags", async () => {
@@ -150,7 +151,7 @@ describe("GET /api/tenants/status", () => {
     await handler(req as never, res as never);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({
+    expect(res.body).toEqual(expect.objectContaining({
       contract_version: THIN_BRIDGE_CONTRACT_VERSION,
       status: "provisioning",
       bootstrap_status: "completed",
@@ -162,7 +163,12 @@ describe("GET /api/tenants/status", () => {
       has_agentmail: false,
       trial_ends_at: null,
       plan: "trial",
-    });
+    }));
+    expect((res.body as { provisioning_progress?: { checks: Array<{ key: string; status: string }> } }).provisioning_progress?.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "bootstrap_acknowledged", status: "completed" }),
+      ])
+    );
   });
 
   it("returns structured bootstrap error metadata when bootstrap has failed", async () => {
@@ -201,7 +207,7 @@ describe("GET /api/tenants/status", () => {
     await handler(req as never, res as never);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({
+    expect(res.body).toEqual(expect.objectContaining({
       contract_version: THIN_BRIDGE_CONTRACT_VERSION,
       status: "provisioning",
       bootstrap_status: "failed",
@@ -219,7 +225,12 @@ describe("GET /api/tenants/status", () => {
       has_agentmail: false,
       trial_ends_at: null,
       plan: "trial",
-    });
+    }));
+    expect((res.body as { provisioning_progress?: { checks: Array<{ key: string; status: string }> } }).provisioning_progress?.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: "bootstrap_acknowledged", status: "failed" }),
+      ])
+    );
   });
 
   it("falls back to persisted bootstrap state when reconciliation errors", async () => {
@@ -258,7 +269,7 @@ describe("GET /api/tenants/status", () => {
     await handler(req as never, res as never);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({
+    expect(res.body).toEqual(expect.objectContaining({
       contract_version: THIN_BRIDGE_CONTRACT_VERSION,
       status: "provisioning",
       bootstrap_status: "failed",
@@ -276,6 +287,7 @@ describe("GET /api/tenants/status", () => {
       has_agentmail: false,
       trial_ends_at: null,
       plan: "trial",
-    });
+    }));
+    expect((res.body as { provisioning_progress?: { current_check_key: string | null } }).provisioning_progress?.current_check_key).toBeTruthy();
   });
 });

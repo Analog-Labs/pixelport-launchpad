@@ -51,7 +51,7 @@ const StepAgentSetup = ({ data, onChange, onNext, onBack }: Props) => {
         <Label htmlFor="agent_name">Name your Chief of Staff</Label>
         <Input
           id="agent_name"
-          placeholder="Luna"
+          placeholder="Chief"
           value={data.agent_name}
           onChange={(e) => onChange({ agent_name: e.target.value })}
           className="bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary"
@@ -122,7 +122,7 @@ const StepAgentSetup = ({ data, onChange, onNext, onBack }: Props) => {
             {selectedAvatar.display}
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-sm text-foreground">{data.agent_name || "Luna"}</p>
+            <p className="font-semibold text-sm text-foreground">{data.agent_name || "Chief"}</p>
             <p className="text-sm text-muted-foreground mt-1">{SAMPLE_MESSAGES[data.agent_tone]}</p>
           </div>
         </div>

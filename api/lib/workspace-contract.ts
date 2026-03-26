@@ -103,7 +103,7 @@ function relabelChiefOfStaff(value: string): string {
 }
 
 function getAgentName(onboardingData: JsonRecord): string {
-  return normalizeText(onboardingData.agent_name) || 'Luna';
+  return normalizeText(onboardingData.agent_name) || 'Chief';
 }
 
 function buildSoulAdditiveContext(params: {

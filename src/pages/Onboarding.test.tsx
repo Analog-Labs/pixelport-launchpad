@@ -90,6 +90,12 @@ describe("Onboarding flow", () => {
       );
     });
 
+    const createCall = fetchMock.mock.calls.find(([url]) => url === "/api/tenants");
+    const createBody = JSON.parse(((createCall?.[1] as { body?: string } | undefined)?.body || "{}"));
+    expect(createBody.agent_name).toBe("Chief");
+    expect(createBody.agent_tone).toBe("strategic");
+    expect(typeof createBody.agent_avatar_id).toBe("string");
+
     await waitFor(() => {
       expect(screen.getByText("Strategy setup")).toBeInTheDocument();
     });
@@ -109,17 +115,9 @@ describe("Onboarding flow", () => {
         status: "draft",
         onboarding_data: {
           company_name: "Acme Labs",
-          mission_goals: "Increase qualified pipeline",
+          agent_name: "Chief",
+          goals: ["Increase qualified pipeline"],
           products_services: ["Growth advisory"],
-          starter_task: "Create a focused 14-day marketing plan.",
-          agent_suggestions: [
-            {
-              id: "agent-1",
-              role: "Chief of Staff",
-              name: "Luna",
-              focus: "Run weekly execution.",
-            },
-          ],
         },
       },
       loading: false,
@@ -149,6 +147,28 @@ describe("Onboarding flow", () => {
           json: async () => ({
             status: "provisioning",
             bootstrap_status: "accepted",
+            provisioning_progress: {
+              total_checks: 10,
+              completed_checks: 4,
+              current_check_key: "workspace_contract_seeded",
+              checks: [
+                {
+                  key: "launch_request_recorded",
+                  label: "Launch request recorded",
+                  status: "completed",
+                },
+                {
+                  key: "tenant_marked_provisioning",
+                  label: "Tenant moved to provisioning",
+                  status: "completed",
+                },
+                {
+                  key: "workspace_contract_seeded",
+                  label: "Workspace contract seeded",
+                  status: "running",
+                },
+              ],
+            },
           }),
         };
       }
@@ -195,5 +215,44 @@ describe("Onboarding flow", () => {
 
     const onboardingSaveCalls = fetchMock.mock.calls.filter(([url]) => url === "/api/tenants/onboarding");
     expect(onboardingSaveCalls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("enforces max-3 goals on strategy step", async () => {
+    useAuthMock.mockReturnValue({
+      user: { id: "user-1" },
+      session: { access_token: "token-123" },
+      tenant: {
+        id: "tenant-2",
+        name: "Acme Labs",
+        status: "draft",
+        onboarding_data: {
+          company_name: "Acme Labs",
+          company_url: "https://acme.test",
+          agent_name: "Chief",
+        },
+      },
+      loading: false,
+      tenantLoading: false,
+      refreshTenant: vi.fn(async () => {}),
+      signOut: vi.fn(),
+    });
+
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ onboarding_data: {} }),
+    })) as unknown as typeof fetch;
+
+    renderOnboarding();
+
+    await waitFor(() => {
+      expect(screen.getByText("Strategy setup")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Increase qualified pipeline/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Improve conversion from existing traffic/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Launch consistent founder-led content/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Build predictable outbound pipeline/i }));
+
+    expect(screen.getByText(/You can select up to 3 goals/i)).toBeInTheDocument();
   });
 });
