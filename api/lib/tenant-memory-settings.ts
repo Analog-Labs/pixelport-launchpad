@@ -4,6 +4,7 @@ export const DEFAULT_MEMORY_NATIVE_ENABLED = true;
 export const DEFAULT_MEMORY_MEM0_ENABLED = false;
 export const MEMORY_OPENAI_API_KEY_ENV = 'MEMORY_OPENAI_API_KEY';
 export const OPENCLAW_MEMORY_OPENAI_API_KEY_REF = '${MEMORY_OPENAI_API_KEY}';
+export const OPENCLAW_MEMORY_EXTRA_PATHS = ['knowledge'] as const;
 
 export type TenantMemorySettings = {
   nativeEnabled: boolean;
@@ -90,6 +91,7 @@ export function buildOpenClawMemorySearchConfig(nativeEnabled: boolean): JsonRec
   return {
     enabled: true,
     provider: 'openai',
+    extraPaths: [...OPENCLAW_MEMORY_EXTRA_PATHS],
     remote: {
       apiKey: OPENCLAW_MEMORY_OPENAI_API_KEY_REF,
     },
