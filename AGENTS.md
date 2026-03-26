@@ -14,6 +14,7 @@ If a task feels like an architecture decision rather than implementation, flag i
 ## Key References
 | What | Where |
 |------|-------|
+| Docs index | `docs/README.md` |
 | Session log | `docs/SESSION-LOG.md` |
 | Active plan | `docs/ACTIVE-PLAN.md` |
 | Project history | `docs/pixelport-project-status.md` |

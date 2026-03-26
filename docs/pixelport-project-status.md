@@ -1,12 +1,31 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-03-19
+**Last Updated:** 2026-03-26
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
 **Formerly:** Growth Swarm (now archived historical context)
 **Primary Runtime Direction:** PixelPort-owned Paperclip customization overlay (`paperclip/`) + per-tenant DO droplets
 **Primary Interfaces:** PixelPort web app + Slack (tenant-configured)
 
 ---
+
+## Current Program Snapshot (2026-03-26 Sessions 1-3 Closure)
+
+Sessions 1-3 (draft onboarding to launch-triggered provisioning) are now merged and production-validated on `main`.
+
+- merged implementation PR: `#51` (`aacf8ec`)
+- production hotfixes applied directly on `main` during live canary loop:
+  - `05aec88` (`fix(api): use api-local tenant status helper in server routes`)
+  - `67dee55` (`fix(onboarding): avoid null mission fields during draft create`)
+- validated runtime contract now live:
+  - `POST /api/tenants` creates draft tenant only (no provisioning on company submit)
+  - `POST /api/tenants/onboarding` performs validated safe-merge onboarding saves
+  - `POST /api/tenants/launch` explicitly triggers provisioning with idempotent/retry-safe handling
+  - onboarding order: `Company -> Strategy -> Task -> Launch`
+- live canary outcome:
+  - first account (`board3`) exposed production failures and drove two hotfixes above
+  - second account (`board2`) completed full end-to-end pass to active tenant and dashboard redirect
+  - successful tenant evidence: `b7fd5e72-8bf3-4ed8-ab6f-44f4037f439e` (`ziffy-board2-s13-20260326-0437`)
+- next active implementation target: Session 4 (`Workspace Compiler V2 + OpenClaw Config`)
 
 ## Governance Note (2026-03-06)
 
@@ -81,7 +100,7 @@ This note overrides conflicting older assumptions in this status file while pres
 
 First P0 implementation slice is completed on branch `codex/pivot-p0-implementation`:
 
-- onboarding flow contract shipped in launchpad UI: `Company -> Provision -> Task -> Launch`
+- onboarding flow contract shipped in launchpad UI at that time: `Company -> Provision -> Task -> Launch` (historical; superseded by Session 1-3 flow on 2026-03-26)
 - provisioning gate enforced before Task unlock (`ready`/`active` required)
 - editable starter task + editable agent suggestions shipped
 - invite/allowlist provisioning gate added to `POST /api/tenants`
