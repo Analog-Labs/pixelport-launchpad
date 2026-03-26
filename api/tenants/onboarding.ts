@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { authenticateRequest, errorResponse } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { buildOnboardingData } from '../lib/onboarding-schema';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
   if (req.method !== 'POST') {
@@ -9,15 +10,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   try {
     const { tenant } = await authenticateRequest(req);
-    const onboardingData = req.body;
+    const patch = req.body;
 
-    if (!onboardingData || typeof onboardingData !== 'object' || Array.isArray(onboardingData)) {
+    if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
       return res.status(400).json({ error: 'Request body must be a JSON object' });
+    }
+
+    const normalized = buildOnboardingData(tenant.onboarding_data, patch);
+    if (!normalized.ok) {
+      return res.status(400).json({ error: `Invalid onboarding payload: ${normalized.error}` });
     }
 
     const { data, error } = await supabase
       .from('tenants')
-      .update({ onboarding_data: onboardingData })
+      .update({ onboarding_data: normalized.onboardingData })
       .eq('id', tenant.id)
       .select('onboarding_data')
       .single();
