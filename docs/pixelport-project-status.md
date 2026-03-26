@@ -8,14 +8,15 @@
 
 ---
 
-## Current Program Snapshot (2026-03-26 Sessions 1-4 Closure)
+## Current Program Snapshot (2026-03-26 Sessions 1-5 Closure)
 
-Sessions 1-4 (draft onboarding through workspace/config contract hardening) are merged and production-validated on `main`.
+Sessions 1-5 (draft onboarding through startup-trigger routing cutover) are merged and production-validated on `main`.
 
 - merged implementation PRs:
   - `#51` (`aacf8ec`) — baseline Sessions 1-3 lifecycle contract
   - `#53` (`3f76c34`) — Company/Strategy/Task/Launch UX upgrade with milestone progress rendering
   - `#55` (`104a8e0`) — Session 4 canonical workspace compiler + OpenClaw config defaults
+  - `#57` (`fa87961`) — Session 5 Paperclip-first startup cutover + manual bootstrap provenance
 - production hotfixes previously applied during first canary loop:
   - `05aec88` (`fix(api): use api-local tenant status helper in server routes`)
   - `67dee55` (`fix(onboarding): avoid null mission fields during draft create`)
@@ -27,6 +28,8 @@ Sessions 1-4 (draft onboarding through workspace/config contract hardening) are 
   - launch UI now reflects backend milestone checks with truthful progress states
   - Session 4 provisioning outputs canonical workspace roots + deterministic `/system` artifacts for fresh tenants
   - OpenClaw config now defaults to `skipBootstrap=true`, heartbeat `every: "0m"`, memory extra path `knowledge`
+  - Session 5 startup now routes new tenants through Paperclip kickoff/wakeup readiness before marking tenant `active`
+  - manual bootstrap route remains break-glass with persisted provenance (`startup_source`, user, timestamp, force)
 - live canary outcome:
   - first account (`board3`) in the original loop exposed failures and drove the two hotfixes above
   - second account (`board2`) then completed full end-to-end pass (`b7fd5e72-8bf3-4ed8-ab6f-44f4037f439e`, `ziffy-board2-s13-20260326-0437`)
@@ -40,7 +43,12 @@ Sessions 1-4 (draft onboarding through workspace/config contract hardening) are 
     - slug: `ziffy-homes-board4-s4-canary`
     - droplet id/ip: `560972691` / `104.248.57.142`
     - bootstrap status: `completed`; final tenant status: `active`
-- next active implementation target: Session 5 (`Startup Trigger Routing`)
+  - Session 5 live canary on `board7` completed full pass:
+    - tenant id: `7c47e09a-94d5-41ad-ba4d-2700b9862b49`
+    - slug: `ziffy-homes-board7-s5-canary`
+    - droplet id/ip: `561098067` / `68.183.25.226`
+    - bootstrap lifecycle observed `not_started -> dispatching -> completed`; final tenant status: `active`
+- next active implementation target: Session 6 (`Knowledge Mirror + Sync Backend`)
 
 ## Governance Note (2026-03-06)
 
