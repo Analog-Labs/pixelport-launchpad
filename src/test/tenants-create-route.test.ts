@@ -99,7 +99,6 @@ describe("POST /api/tenants", () => {
       body: {
         company_name: "Acme Labs",
         company_url: "https://acme.test",
-        mission_goals: "Increase pipeline",
         agent_name: "Luna",
       },
     };

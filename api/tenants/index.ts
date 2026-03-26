@@ -129,12 +129,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       (value): value is string => typeof value === 'string' && value.trim().length > 0,
     ) ?? null;
     const normalizedMission = rawMissionValue ? rawMissionValue.trim() : null;
+    const missionPatchValue = normalizedMission ?? undefined;
 
     const normalizedResult = buildOnboardingData({}, {
       company_name: normalizedCompanyName,
       company_url: typeof company_url === 'string' && company_url.trim() ? company_url.trim() : null,
-      mission: normalizedMission,
-      mission_goals: normalizedMission,
+      mission: missionPatchValue,
+      mission_goals: missionPatchValue,
       goals: goals || [],
       agent_name: typeof agent_name === 'string' && agent_name.trim() ? agent_name.trim() : 'Luna',
       scan_results: scan_results && typeof scan_results === 'object' ? scan_results : null,
