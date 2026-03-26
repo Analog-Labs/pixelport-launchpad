@@ -1,14 +1,12 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Building2, ArrowRight } from "lucide-react";
 
 interface Props {
   data: {
     company_name: string;
     company_url: string;
-    mission_goals: string;
     agent_name: string;
   };
   onChange: (patch: Partial<Props["data"]>) => void;
@@ -60,20 +58,6 @@ const StepCompanyInfo = ({ data, onChange, onNext, submitting, error }: Props) =
         />
       </div>
 
-      {/* Mission and goals */}
-      <div className="space-y-2">
-        <Label htmlFor="mission_goals">Mission and goals (optional)</Label>
-        <Textarea
-          id="mission_goals"
-          placeholder="What does success look like in the next 30-90 days?"
-          value={data.mission_goals}
-          onChange={(e) => onChange({ mission_goals: e.target.value })}
-          className="bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary min-h-[120px]"
-          maxLength={500}
-        />
-        <p className="text-xs text-muted-foreground">You can include mission, priorities, or specific growth goals.</p>
-      </div>
-
       {/* Agent name */}
       <div className="space-y-2">
         <Label htmlFor="agent_name">Chief of Staff name</Label>
@@ -92,7 +76,7 @@ const StepCompanyInfo = ({ data, onChange, onNext, submitting, error }: Props) =
         disabled={!valid || submitting}
         onClick={onNext}
       >
-        {submitting ? "Starting provisioning..." : "Continue to Provision"}
+        {submitting ? "Saving company details..." : "Continue to Strategy"}
         {!submitting && <ArrowRight className="ml-1 h-4 w-4" />}
       </Button>
 

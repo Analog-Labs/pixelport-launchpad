@@ -1,16 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient, type PostgrestError } from '@supabase/supabase-js';
-import { Inngest } from 'inngest';
 import type { Tenant } from '../lib/auth';
 import { applyTenantMemorySettingsDefaults } from '../lib/tenant-memory-settings';
 import { isEmailAllowedForProvisioning, parseProvisioningAllowlist } from '../lib/provisioning-allowlist';
-
-// Inline client creation — importing from a local file that re-exports inngest
-// crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
-const inngest = new Inngest({
-  id: 'pixelport',
-  eventKey: process.env.INNGEST_EVENT_KEY,
-});
+import { buildOnboardingData } from '../lib/onboarding-schema';
+import { TENANT_STATUS } from '../../src/lib/tenant-status';
 
 const supabaseUrl = process.env.SUPABASE_PROJECT_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -20,16 +14,6 @@ if (!supabaseUrl || !supabaseServiceKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-const VALID_TONES = new Set(['casual', 'professional', 'bold']);
-const VALID_AVATARS = new Set([
-  'amber-l',
-  'purple-zap',
-  'blue-bot',
-  'green-brain',
-  'pink-sparkle',
-  'orange-fire',
-]);
 
 function getBearerToken(req: VercelRequest): string | null {
   const authHeader = req.headers.authorization;
@@ -107,38 +91,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    const {
-      company_name,
-      company_url,
-      mission,
-      mission_goals,
-      goals,
-      agent_name,
-      agent_tone,
-      agent_avatar_url,
-      scan_results,
-    } = (req.body || {}) as {
+    const { company_name, company_url, mission, mission_goals, goals, agent_name, scan_results } = (req.body || {}) as {
       company_name?: string;
       company_url?: string;
       mission?: string | null;
       mission_goals?: string | null;
       goals?: string[];
       agent_name?: string;
-      agent_tone?: string;
-      agent_avatar_url?: string;
       scan_results?: Record<string, unknown> | null;
     };
 
     if (!company_name || typeof company_name !== 'string' || company_name.trim().length < 2) {
       return res.status(400).json({ error: 'company_name is required and must be at least 2 characters' });
-    }
-
-    if (agent_tone && !VALID_TONES.has(agent_tone)) {
-      return res.status(400).json({ error: 'agent_tone must be: casual, professional, or bold' });
-    }
-
-    if (agent_avatar_url && !VALID_AVATARS.has(agent_avatar_url)) {
-      return res.status(400).json({ error: 'Invalid avatar selection' });
     }
 
     if (mission !== undefined && mission !== null && typeof mission !== 'string') {
@@ -166,18 +130,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     ) ?? null;
     const normalizedMission = rawMissionValue ? rawMissionValue.trim() : null;
 
-    const onboardingData = {
+    const normalizedResult = buildOnboardingData({}, {
       company_name: normalizedCompanyName,
       company_url: typeof company_url === 'string' && company_url.trim() ? company_url.trim() : null,
       mission: normalizedMission,
       mission_goals: normalizedMission,
       goals: goals || [],
       agent_name: typeof agent_name === 'string' && agent_name.trim() ? agent_name.trim() : 'Luna',
-      agent_tone: agent_tone || 'professional',
-      agent_avatar_url: agent_avatar_url || 'amber-l',
       scan_results: scan_results && typeof scan_results === 'object' ? scan_results : null,
-      completed_at: new Date().toISOString(),
-    };
+    });
+
+    if (!normalizedResult.ok) {
+      return res.status(400).json({ error: `Invalid onboarding payload: ${normalizedResult.error}` });
+    }
+
+    if (normalizedResult.state.companyName.trim().length < 2) {
+      return res.status(400).json({ error: 'company_name is required and must be at least 2 characters' });
+    }
+
+    const onboardingData = normalizedResult.onboardingData;
 
     let newTenant: Tenant | null = null;
     let insertError: PostgrestError | null = null;
@@ -192,7 +163,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           name: normalizedCompanyName,
           slug: candidateSlug,
           plan: 'trial',
-          status: 'provisioning',
+          status: TENANT_STATUS.DRAFT,
           onboarding_data: onboardingData,
           settings: applyTenantMemorySettingsDefaults({
             trial_budget_usd: 20,
@@ -229,25 +200,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       console.error('Tenant creation error:', insertError);
       return res.status(500).json({
         error: 'Failed to create tenant workspace. Please retry.',
-      });
-    }
-
-    try {
-      await inngest.send({
-        name: 'pixelport/tenant.created',
-        data: {
-          tenantId: newTenant.id,
-          trialMode: true,
-        },
-      });
-    } catch (inngestError) {
-      console.error('Failed to send Inngest provisioning event:', inngestError);
-      // Tenant is created but provisioning won't start — return 201 with warning
-      const { gateway_token, agent_api_key, paperclip_api_key, ...safeTenant } = newTenant;
-      return res.status(201).json({
-        tenant: safeTenant,
-        created: true,
-        warning: 'Tenant created but provisioning event failed to send. Use retry endpoint.',
       });
     }
 
