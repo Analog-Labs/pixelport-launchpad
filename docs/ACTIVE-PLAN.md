@@ -36,6 +36,8 @@
 **Production validation (2026-03-26):**
 - [x] Merged PR #51 (`aacf8ec`) and applied two direct `main` hotfixes (`05aec88`, `67dee55`)
 - [x] Live canary full pass completed on `board2@ziffyhomes.com`
+- [x] Merged PR #53 (`3f76c34`) for onboarding UX uplift (identity/tone/avatar, goals cap, task policy capture, launch milestones)
+- [x] Live canary full pass completed on `board3@ziffyhomes.com` with tenant `board3-s13-ux-20260326-072201`
 
 ## Session 4 — Workspace Compiler V2 + OpenClaw Config (Next)
 

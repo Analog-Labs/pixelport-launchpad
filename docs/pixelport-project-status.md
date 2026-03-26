@@ -8,12 +8,14 @@
 
 ---
 
-## Current Program Snapshot (2026-03-26 Sessions 1-3 Closure)
+## Current Program Snapshot (2026-03-26 Sessions 1-3 Closure + UX Upgrade)
 
-Sessions 1-3 (draft onboarding to launch-triggered provisioning) are now merged and production-validated on `main`.
+Sessions 1-3 (draft onboarding to launch-triggered provisioning) are merged and production-validated on `main`, including a follow-up onboarding UX uplift.
 
-- merged implementation PR: `#51` (`aacf8ec`)
-- production hotfixes applied directly on `main` during live canary loop:
+- merged implementation PRs:
+  - `#51` (`aacf8ec`) — baseline Sessions 1-3 lifecycle contract
+  - `#53` (`3f76c34`) — Company/Strategy/Task/Launch UX upgrade with milestone progress rendering
+- production hotfixes previously applied during first canary loop:
   - `05aec88` (`fix(api): use api-local tenant status helper in server routes`)
   - `67dee55` (`fix(onboarding): avoid null mission fields during draft create`)
 - validated runtime contract now live:
@@ -21,10 +23,15 @@ Sessions 1-3 (draft onboarding to launch-triggered provisioning) are now merged 
   - `POST /api/tenants/onboarding` performs validated safe-merge onboarding saves
   - `POST /api/tenants/launch` explicitly triggers provisioning with idempotent/retry-safe handling
   - onboarding order: `Company -> Strategy -> Task -> Launch`
+  - launch UI now reflects backend milestone checks with truthful progress states
 - live canary outcome:
-  - first account (`board3`) exposed production failures and drove two hotfixes above
-  - second account (`board2`) completed full end-to-end pass to active tenant and dashboard redirect
-  - successful tenant evidence: `b7fd5e72-8bf3-4ed8-ab6f-44f4037f439e` (`ziffy-board2-s13-20260326-0437`)
+  - first account (`board3`) in the original loop exposed failures and drove the two hotfixes above
+  - second account (`board2`) then completed full end-to-end pass (`b7fd5e72-8bf3-4ed8-ab6f-44f4037f439e`, `ziffy-board2-s13-20260326-0437`)
+  - post-UX-upgrade canary rerun on `board3` also completed full end-to-end pass:
+    - tenant id: `6bd8a0b5-176f-4742-9510-2419abd3246c`
+    - slug: `board3-s13-ux-20260326-072201`
+    - droplet id/ip: `560947774` / `167.172.150.34`
+    - bootstrap status: `completed`; final tenant status: `active`
 - next active implementation target: Session 4 (`Workspace Compiler V2 + OpenClaw Config`)
 
 ## Governance Note (2026-03-06)
