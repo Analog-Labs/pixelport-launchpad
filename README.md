@@ -9,17 +9,16 @@ This repo contains:
 
 ## Current Production State
 
-As of 2026-03-26, Sessions 1-3 of the onboarding refactor are live and production-validated:
-- onboarding flow is now `Company -> Strategy -> Task -> Launch`
+As of 2026-03-26, Sessions 1-4 of the onboarding/provisioning program are live and production-validated:
+- onboarding flow is `Company -> Strategy -> Task -> Launch`
 - `POST /api/tenants` creates `draft` tenants (no provisioning on company submit)
-- `POST /api/tenants/launch` explicitly triggers provisioning
-- launch path is idempotent and retry-safe
-- onboarding UX upgrade from PR `#53` is now live:
-  - Company step includes Chief identity, tone presets, and avatar picker
-  - Strategy step enforces max-3 goals with presets + custom goals
-  - Task step uses multi-row starter tasks and required approval policy controls
-  - Launch step shows backend-driven milestone progress checks
-- latest live canary pass completed on `board3@ziffyhomes.com` with a fresh tenant reaching `active`
+- `POST /api/tenants/launch` explicitly triggers provisioning with idempotent/retry-safe behavior
+- Session 4 workspace/runtime contract is live for new tenants:
+  - canonical root files: `AGENTS`, `SOUL`, `TOOLS`, `IDENTITY`, `USER`, `HEARTBEAT`, `BOOT`, `MEMORY`
+  - deterministic `/system/onboarding.json` and `/system/render-manifest.json`
+  - config defaults: `agents.defaults.skipBootstrap=true`, heartbeat narrowed (`every: "0m"`), and memory `extraPaths=["knowledge"]`
+- latest live canary pass completed on `board4@ziffyhomes.com` with a fresh tenant reaching `active`
+- Session 5 startup trigger routing is still planned and intentionally not part of this release
 
 ## Local Development
 

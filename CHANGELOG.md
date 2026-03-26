@@ -11,7 +11,7 @@ All notable changes to PixelPort are documented here.
 
 ### Changed
 - OpenClaw tenant config emission now sets `agents.defaults.skipBootstrap: true`, narrows heartbeat to `every: "0m"`, and includes memory search `extraPaths: ["knowledge"]`
-- Project docs were updated with the latest Sessions 1-3 onboarding UX canary evidence from production
+- Project docs now include Session 4 production canary evidence (`board4`) and refreshed Sessions 1-4 program state
 
 ## [0.19.2.0] - 2026-03-23
 

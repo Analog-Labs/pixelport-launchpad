@@ -39,12 +39,18 @@
 - [x] Merged PR #53 (`3f76c34`) for onboarding UX uplift (identity/tone/avatar, goals cap, task policy capture, launch milestones)
 - [x] Live canary full pass completed on `board3@ziffyhomes.com` with tenant `board3-s13-ux-20260326-072201`
 
-## Session 4 — Workspace Compiler V2 + OpenClaw Config (Next)
+## Session 4 — Workspace Compiler V2 + OpenClaw Config ✅
 
-- [ ] Emit deterministic root files (`AGENTS`, `SOUL`, `TOOLS`, `IDENTITY`, `USER`, `HEARTBEAT`, `BOOT`, `MEMORY`)
-- [ ] Write `/system/onboarding.json` and `/system/render-manifest.json`
-- [ ] Keep Paperclip integration-safe behavior with approved defaults
-- [ ] Add workspace/config contract tests
+- [x] Emit deterministic root files (`AGENTS`, `SOUL`, `TOOLS`, `IDENTITY`, `USER`, `HEARTBEAT`, `BOOT`, `MEMORY`)
+- [x] Write `/system/onboarding.json` and `/system/render-manifest.json`
+- [x] Keep Paperclip integration-safe behavior with approved defaults
+- [x] Add workspace/config contract tests
+
+**Production validation (2026-03-26):**
+- [x] Merged PR #55 (`104a8e0`) to `main`
+- [x] Live canary full pass completed on `board4@ziffyhomes.com` with tenant `ziffy-homes-board4-s4-canary`
+- [x] OpenClaw runtime config validated in-container (`openclaw config validate --json` returned `valid: true`)
+- [x] Session 4 evidence captured: `docs/qa/2026-03-26-s4-live-canary-board4.md`
 
 ## Session 5 — Startup Trigger Routing (Planned)
 
