@@ -1,78 +1,87 @@
 # PixelPort — Active Plan
 
-> Current phase checklist. Check off items as they complete. Only one phase is active at a time.
+> Current phase checklist. Check off items as they complete. Only one program is active at a time.
 
 ---
 
-## Current Program: V1 Full Wedge Dashboard
+## Current Program: Onboarding + Provisioning Sessions 1–8
 
-**Objective:** Build PixelPort's first real dashboard — from redirect button to living command center.
-**Sequence:** `T1 → T2 → T3 → T4 → T5 → T6`
+**Objective:** Deliver the full new-tenant flow from draft onboarding through runtime policy/governance closure.
+**Sequence:** `Session 1 → Session 2 → Session 3 → Session 4 → Session 5 → Session 6 → Session 7 → Session 8`
 **Design system:** `DESIGN.md`
-**Full spec:** `docs/designs/v1-full-wedge.md`
+**Execution mode:** strict session stop rule (no forward scope inside a session)
 **gstack artifacts:** `~/.gstack/projects/Analog-Labs-pixelport-launchpad/`
 
-## T1 — Paperclip API Audit ✅
+## Session 1 — Data Contract + Draft Tenant Foundation ✅
 
-- [x] Audited all Paperclip endpoints needed for dashboard views
-- [x] Documented contract in `docs/paperclip-api-contract.md`
-- [x] Merged PR #28 (`d6a6a4e`)
+- [x] Added onboarding schema v2 handling with required version metadata
+- [x] Shifted tenant create to draft-first behavior (`POST /api/tenants`)
+- [x] Implemented one-release dual-write compatibility (nested v2 + legacy flat mirror)
+- [x] Preserved behavior for already-active/legacy tenants
 
-## T2 — Proxy Layer ✅
+## Session 2 — Onboarding UI Restructure ✅
 
-- [x] Built `api/tenant-proxy/[...path].ts` — forwards dashboard requests to tenant Paperclip
-- [x] Created allowlist at `api/lib/paperclip-proxy-allowlist.ts`
-- [x] Merged PR #29 (`15cc13d`)
+- [x] Flow order finalized to `Company -> Strategy -> Task -> Launch`
+- [x] Removed old onboarding provision-step gating from step 1
+- [x] Added draft-save continuity across step transitions
+- [x] Kept onboarding usable without immediate provisioning
 
-## T3 — Dashboard V1 Core Views ✅
+## Session 3 — Launch-Triggered Provisioning + Progress UX ✅
 
-- [x] CEO plan reviewed and merged: `docs/designs/t3-dashboard-core.md` (PR #30, `b285590`)
-- [x] gstack artifacts: design doc, CEO plan, eng test plan all in `~/.gstack/projects/`
-- [x] Implementation: 5 dashboard views built via Codex + Claude Code (PR #48, `d0fcfd7`)
-  - Home (approval banner, agent cards, weekly cost, intelligence brief)
-  - Agents (live status, activity timeline, budget bar, Chief workspace launch)
-  - Approvals (inline edit, approve/reject, DOMPurify XSS sanitization, Clerk Bearer auth)
-  - Run History (expandable detail, cost coloring, event timeline)
-  - Tasks (kanban drag-and-drop, mobile snap-scroll, slide-out detail + comments)
-- [x] Architecture: TanStack Query hooks (`usePaperclip*`), shared cache, client-side polling
-- [x] Tenant proxy enhanced with board-handoff + agent-key fallback
-- [x] `/review` pass (eng review + Codex code review + adversarial challenge)
-- [x] Design review: 6 DESIGN.md violations fixed (a11y, shimmer CTA, heading hierarchy)
-- [x] `/ship` — v0.19.2.0
+- [x] Provisioning now starts only from explicit Launch trigger (`POST /api/tenants/launch`)
+- [x] Launch transition is retry-safe and idempotent (`draft -> provisioning`)
+- [x] Failure path rolls back to `draft` when dispatch fails
+- [x] Post-launch flow locks prior steps read-only and reports truthful status
 
-## T4 — Functional Dashboard: Actionability + Visibility + Polish
+**Production validation (2026-03-26):**
+- [x] Merged PR #51 (`aacf8ec`) and applied two direct `main` hotfixes (`05aec88`, `67dee55`)
+- [x] Live canary full pass completed on `board2@ziffyhomes.com`
 
-- [ ] Proxy allowlist expansion (POST issues, agent wakeup, activity, costs)
-- [ ] Home page: 4-card stats row, recent tasks, activity feed
-- [ ] Create Task panel (title, description, priority, assign to agent)
-- [ ] Task Detail: properties panel, agent invoke button, activity tab
-- [ ] Agent Detail page (profile, latest run, recent issues, costs)
-- [ ] Inbox page (Recent/Unread/All with badges)
-- [ ] Costs page (spend by agent, tokens)
-- [ ] Sidebar: add Inbox + Costs nav items
-- [ ] Tests for new hooks + proxy allowlist
-- [ ] Polish: loading states, empty states, mobile, a11y
+## Session 4 — Workspace Compiler V2 + OpenClaw Config (Next)
 
-## T5 — Settings & Billing (Planned)
+- [ ] Emit deterministic root files (`AGENTS`, `SOUL`, `TOOLS`, `IDENTITY`, `USER`, `HEARTBEAT`, `BOOT`, `MEMORY`)
+- [ ] Write `/system/onboarding.json` and `/system/render-manifest.json`
+- [ ] Keep Paperclip integration-safe behavior with approved defaults
+- [ ] Add workspace/config contract tests
 
-- [ ] Not yet planned via gstack
+## Session 5 — Startup Trigger Routing (Planned)
 
-## T6 — Launch Readiness (Planned)
+- [ ] New tenants start via Paperclip kickoff/wakeup only
+- [ ] Keep webhook bootstrap path for legacy/manual recovery
+- [ ] Add new-vs-legacy trigger path regression tests
 
-- [ ] Not yet planned via gstack
+## Session 6 — Knowledge Mirror + Sync Backend (Planned)
 
-## Release Gates (Per Phase)
+- [ ] Add editable `onboarding_data.knowledge_mirror`
+- [ ] Sync approved mirror files into workspace `knowledge/*.md`
+- [ ] Expose sync status model (`pending` / `synced` / `failed`)
+
+## Session 7 — Knowledge Dashboard Surface (Planned)
+
+- [ ] Add Knowledge route + sidebar entry
+- [ ] Reuse Vault UX patterns against mirror+sync backend
+- [ ] Support edits with truthful sync/error states
+
+## Session 8 — Approval Policy Runtime Apply + Docs + Final Regression (Planned)
+
+- [ ] Apply policy edits immediately with audit logging
+- [ ] Patch managed blocks in `AGENTS` and `TOOLS` (no full-file overwrite)
+- [ ] Add post-onboarding governance editor surface
+- [ ] Run full regression and rollout checklist
+
+## Release Gates (Per Session)
 
 - [ ] `npx tsc --noEmit`
 - [ ] `npm test`
 - [ ] `/review` pass
-- [ ] `/qa` pass against localhost
-- [ ] `/ship` creates PR
+- [ ] `/ship` PR flow
+- [ ] Production canary evidence for sessions that affect runtime provisioning
 
 ---
 
 ## Previous Programs (Historical)
 
+- Program V1 Full Wedge Dashboard (T1→T6) — superseded by Session 1–8 sequence
 - Program P6 — Reset (R1→R5) ✅ (PRs #18–#24)
 - Program P5 — Monorepo Paperclip + LiteLLM Removal ✅
 - Program P3 — Launchpad Runtime Prune ✅

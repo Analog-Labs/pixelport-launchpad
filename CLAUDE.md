@@ -14,6 +14,7 @@ The Founder makes all product, architecture, and UX decisions — escalate to th
 ## Key References
 | What | Where |
 |------|-------|
+| Docs index | `docs/README.md` |
 | Session log | `docs/SESSION-LOG.md` |
 | Active plan | `docs/ACTIVE-PLAN.md` |
 | Project history | `docs/pixelport-project-status.md` |

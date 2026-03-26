@@ -7,6 +7,56 @@
 
 ## Last Session
 
+- **Date:** 2026-03-26 (session 123)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Ran `/document-release` closeout after Sessions 1-3 production validation.
+  - Replaced stale root `README.md` placeholder content with current PixelPort project overview, live state, and core docs entry points.
+  - Added `docs/README.md` as a central documentation index and linked it from `README.md`, `AGENTS.md`, and `CLAUDE.md`.
+  - Updated `docs/ACTIVE-PLAN.md` from the old dashboard-track framing to the approved Session 1-8 sequence, with Sessions 1-3 marked complete and Session 4 marked next.
+  - Updated `docs/pixelport-project-status.md` with a fresh `Last Updated` date and a top-level Sessions 1-3 closure snapshot (merge, hotfixes, canary outcomes, and next-step pointer).
+  - Added discoverability links for design/changelog/TODO docs and supporting QA/history references.
+- **What's next:**
+  - Start Session 4 implementation (`Workspace Compiler V2 + OpenClaw Config`) under the session stop rule.
+  - Use `board1@ziffyhomes.com` as the next production canary account when Session 4 reaches live gate.
+- **Blockers:** None.
+
+- **Date:** 2026-03-26 (session 122)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Completed the Sessions 1-3 onboarding/provisioning slice and ran full pre-merge gates on branch `codex/onboarding-draft-launch-s1-s3`.
+  - Verified release gates before merge:
+    - `npx tsc --noEmit` (`pass`)
+    - `npm test` (`pass`)
+    - targeted suite (`tenants-create`, `tenants-onboarding`, `tenants-launch`, `Onboarding.test.tsx`) (`pass`)
+  - Shipped and merged PR `#51` to `main`:
+    - merge commit: `aacf8ec`
+    - PR URL: `https://github.com/Analog-Labs/pixelport-launchpad/pull/51`
+  - Ran live production canary sequence for the Session 1-3 flow.
+  - First canary (`board3@ziffyhomes.com`) surfaced two real production failures:
+    - `POST /api/tenants` and `POST /api/tenants/launch` returning `FUNCTION_INVOCATION_FAILED`
+    - company step create failing on null mission payload validation
+  - Applied hotfix loop directly on `main` (founder-approved policy), with full local gates before each push:
+    - `05aec88` — `fix(api): use api-local tenant status helper in server routes`
+    - `67dee55` — `fix(onboarding): avoid null mission fields during draft create`
+    - both hotfixes passed `npx tsc --noEmit`, `npm test`, and post-push CI on `main`
+  - Second canary (`board2@ziffyhomes.com`) passed end-to-end:
+    - draft creation on company step confirmed
+    - step order confirmed: `Company -> Strategy -> Task -> Launch`
+    - autosave state confirmed across transitions
+    - launch moved tenant `draft -> provisioning -> active`
+    - post-launch onboarding was read-only summary (no back edits while provisioning)
+    - dashboard redirect succeeded with truthful backend status
+  - Pass evidence from successful canary:
+    - tenant id: `b7fd5e72-8bf3-4ed8-ab6f-44f4037f439e`
+    - slug: `ziffy-board2-s13-20260326-0437`
+    - droplet id/ip: `560925152` / `192.34.63.216`
+    - `POST /api/tenants/launch` duplicate check returned idempotent success (`200`, `idempotent=true`) once tenant was active
+- **What's next:**
+  - Start Session 4 only (`Workspace Compiler V2 + OpenClaw Config`) under the strict session stop rule.
+  - Use `board1@ziffyhomes.com` as the next live canary account when Session 4 reaches production test gate.
+- **Blockers:** None for Sessions 1-3 closure. Session 4 work is pending start.
+
 - **Date:** 2026-03-22 (session 121)
 - **Who worked:** Founder + Claude Code
 - **What was done:**
