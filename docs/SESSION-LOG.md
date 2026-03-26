@@ -7,6 +7,33 @@
 
 ## Last Session
 
+- **Date:** 2026-03-26 (session 125)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Completed Session 4 release flow and merged PR `#55` to `main`:
+    - merge commit: `104a8e0`
+    - PR URL: `https://github.com/Analog-Labs/pixelport-launchpad/pull/55`
+  - Ran production fresh-tenant canary on `main` with `board4@ziffyhomes.com`.
+  - Confirmed end-to-end launch reached `active` with truthful backend/runtime state:
+    - tenant id: `295b4d1b-5b41-4953-8208-f34bc1fe2177`
+    - slug: `ziffy-homes-board4-s4-canary`
+    - droplet id/ip: `560972691` / `104.248.57.142`
+    - provisioning checks: `12/12`
+    - bootstrap status: `completed`
+  - Verified Session 4 workspace/config runtime contract on droplet:
+    - canonical root files present (`AGENTS`, `SOUL`, `TOOLS`, `IDENTITY`, `USER`, `HEARTBEAT`, `BOOT`, `MEMORY`)
+    - `BOOTSTRAP.md` absent
+    - `/system/onboarding.json` and `/system/render-manifest.json` present
+    - OpenClaw config includes `skipBootstrap=true`, heartbeat `every="0m"`, and `memorySearch.extraPaths=["knowledge"]`
+    - in-container config validation passed: `openclaw config validate --json` returned valid
+  - Added release evidence doc:
+    - `docs/qa/2026-03-26-s4-live-canary-board4.md`
+- **What's next:**
+  - Session 5 remains planned and not started in code yet:
+    - new-tenant startup trigger routing cutover to Paperclip kickoff/wakeup only
+    - keep webhook bootstrap path only for legacy/manual recovery
+- **Blockers:** None.
+
 - **Date:** 2026-03-26 (session 124)
 - **Who worked:** Founder + Codex
 - **What was done:**
