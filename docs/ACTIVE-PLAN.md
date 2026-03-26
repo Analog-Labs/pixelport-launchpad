@@ -52,11 +52,16 @@
 - [x] OpenClaw runtime config validated in-container (`openclaw config validate --json` returned `valid: true`)
 - [x] Session 4 evidence captured: `docs/qa/2026-03-26-s4-live-canary-board4.md`
 
-## Session 5 — Startup Trigger Routing (Planned)
+## Session 5 — Startup Trigger Routing ✅
 
-- [ ] New tenants start via Paperclip kickoff/wakeup only
-- [ ] Keep webhook bootstrap path for legacy/manual recovery
-- [ ] Add new-vs-legacy trigger path regression tests
+- [x] New tenants start via Paperclip kickoff/wakeup only
+- [x] Keep webhook bootstrap path for legacy/manual recovery
+- [x] Add new-vs-legacy trigger path regression tests
+
+**Production validation (2026-03-26):**
+- [x] Merged PR #57 (`fa87961`) to `main`
+- [x] Live canary full pass completed on `board7@ziffyhomes.com` with tenant `ziffy-homes-board7-s5-canary`
+- [x] Session 5 evidence captured: `docs/qa/2026-03-26-s5-live-canary-board7.md`
 
 ## Session 6 — Knowledge Mirror + Sync Backend (Planned)
 
@@ -79,11 +84,11 @@
 
 ## Release Gates (Per Session)
 
-- [ ] `npx tsc --noEmit`
-- [ ] `npm test`
-- [ ] `/review` pass
-- [ ] `/ship` PR flow
-- [ ] Production canary evidence for sessions that affect runtime provisioning
+- [x] `npx tsc --noEmit`
+- [x] `npm test`
+- [x] `/review` pass
+- [x] `/ship` PR flow
+- [x] Production canary evidence for sessions that affect runtime provisioning
 
 ---
 
