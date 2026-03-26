@@ -4,7 +4,7 @@ import type { Tenant } from '../lib/auth';
 import { applyTenantMemorySettingsDefaults } from '../lib/tenant-memory-settings';
 import { isEmailAllowedForProvisioning, parseProvisioningAllowlist } from '../lib/provisioning-allowlist';
 import { buildOnboardingData } from '../lib/onboarding-schema';
-import { TENANT_STATUS } from '../../src/lib/tenant-status';
+import { TENANT_STATUS } from '../lib/tenant-status';
 
 const supabaseUrl = process.env.SUPABASE_PROJECT_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

@@ -8,7 +8,7 @@ import {
   isTenantDraft,
   isTenantProvisioningComplete,
   isTenantProvisioningInFlight,
-} from "../../src/lib/tenant-status";
+} from "../lib/tenant-status";
 
 const inngest = new Inngest({
   id: "pixelport",
