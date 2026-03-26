@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  OPENCLAW_MEMORY_EXTRA_PATHS,
   OPENCLAW_MEMORY_OPENAI_API_KEY_REF,
   applyTenantMemorySettingsDefaults,
   buildOpenClawMemorySearchConfig,
@@ -52,6 +53,7 @@ describe("tenant memory settings", () => {
     expect(buildOpenClawMemorySearchConfig(true)).toEqual({
       enabled: true,
       provider: "openai",
+      extraPaths: [...OPENCLAW_MEMORY_EXTRA_PATHS],
       remote: {
         apiKey: OPENCLAW_MEMORY_OPENAI_API_KEY_REF,
       },

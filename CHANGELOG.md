@@ -2,6 +2,17 @@
 
 All notable changes to PixelPort are documented here.
 
+## [0.19.3.0] - 2026-03-26
+
+### Added
+- Session 4 workspace compiler now scaffolds canonical OpenClaw root files for new tenants: `AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOT.md`, and `MEMORY.md`
+- Provisioned workspaces now include deterministic `/system` outputs (`onboarding.json`, `render-manifest.json`), minimal `/knowledge` scaffolds, and `skills/paperclip/SKILL.md`
+- Added a strict config-validation smoke-test assertion for OpenClaw startup (`openclaw.mjs config validate --json`) in provisioning cloud-init tests
+
+### Changed
+- OpenClaw tenant config emission now sets `agents.defaults.skipBootstrap: true`, narrows heartbeat to `every: "0m"`, and includes memory search `extraPaths: ["knowledge"]`
+- Project docs were updated with the latest Sessions 1-3 onboarding UX canary evidence from production
+
 ## [0.19.2.0] - 2026-03-23
 
 ### Added

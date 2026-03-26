@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { WORKSPACE_CONTRACT_VERSION } from "../../api/lib/workspace-contract";
 
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => ({
@@ -35,9 +36,14 @@ describe("provision tenant memory config", () => {
     expect(config).toMatchObject({
       agents: {
         defaults: {
+          skipBootstrap: true,
+          heartbeat: {
+            every: "0m",
+          },
           memorySearch: {
             enabled: true,
             provider: "openai",
+            extraPaths: ["knowledge"],
             remote: {
               apiKey: "${MEMORY_OPENAI_API_KEY}",
             },
@@ -64,6 +70,10 @@ describe("provision tenant memory config", () => {
     expect(config).toMatchObject({
       agents: {
         defaults: {
+          skipBootstrap: true,
+          heartbeat: {
+            every: "0m",
+          },
           memorySearch: {
             enabled: false,
           },
@@ -470,12 +480,23 @@ describe("provision tenant memory config", () => {
     expect(script).toContain("PAPERCLIP_HANDOFF_SECRET=handoff-secret");
     expect(script).not.toContain("OPENAI_BASE_URL=");
     expect(script).toContain("cat > /opt/openclaw/workspace-main/AGENTS.md");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/BOOT.md");
     expect(script).toContain("cat > /opt/openclaw/workspace-main/HEARTBEAT.md");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/IDENTITY.md");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/MEMORY.md");
     expect(script).toContain("cat > /opt/openclaw/workspace-main/SOUL.md");
     expect(script).toContain("cat > /opt/openclaw/workspace-main/TOOLS.md");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/USER.md");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/knowledge/company-overview.md");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/system/onboarding.json");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/system/render-manifest.json");
+    expect(script).toContain("cat > /opt/openclaw/workspace-main/skills/paperclip/SKILL.md");
     expect(script).not.toContain("cat > /opt/openclaw/workspace-main/BOOTSTRAP.md");
-    expect(script).not.toContain("cat > /opt/openclaw/workspace-main/MEMORY.md");
-    expect(script).not.toContain("cat > /opt/openclaw/workspace-main/memory/business-context.md");
+    expect(script).toContain('"skipBootstrap": true');
+    expect(script).toContain('"heartbeat": {');
+    expect(script).toContain('"every": "0m"');
+    expect(script).toContain('"extraPaths": [');
+    expect(script).toContain('"knowledge"');
     expect(script).toContain("chmod 600 /opt/openclaw/openclaw.json /opt/openclaw/.env");
     expect(script).toContain('"dangerouslyDisableDeviceAuth": true');
     expect(script).toContain("normalize_runtime_state_perms()");
@@ -514,6 +535,44 @@ describe("provision tenant memory config", () => {
     );
     expect(script).toContain("apt-get install -y caddy");
     expect(script).toContain("reverse_proxy 127.0.0.1:18789");
+  });
+
+  it("keeps strict OpenClaw config validation and fail-fast fallback in cloud-init", async () => {
+    const { buildCloudInit } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const script = buildCloudInit({
+      tenantId: "tenant-validate-123",
+      tenantSlug: "validate-tenant",
+      tenantName: "Validate Tenant",
+      gatewayToken: "gw-token",
+      runtimeHostTemplate: "validate-tenant.__PUBLIC_IPV4_DASH__.sslip.io",
+      openclawBaseImage: "ghcr.io/openclaw/openclaw:2026.3.13-1",
+      openclawRuntimeImage: "ghcr.io/openclaw/openclaw:2026.3.13-1",
+      paperclipImage: "pixelport-paperclip:2026.3.11-handoff-p1",
+      openaiApiKey: "openai-key",
+      paperclipHandoffSecret: "handoff-secret",
+      supabaseUrl: "https://supabase.example.co",
+      supabaseServiceRoleKey: "supabase-service-role",
+      memoryOpenAiApiKey: "memory-openai-key",
+      memoryNativeEnabled: true,
+      geminiApiKey: "",
+      agentmailApiKey: "",
+      agentApiKey: "ppk-test",
+      paperclipApiKey: "pak-test",
+      onboardingData: {
+        agent_name: "Luna",
+      },
+    });
+
+    expect(script).toContain("validate_openclaw_config()");
+    expect(script).toContain("openclaw.mjs config validate --json");
+    expect(script).toContain("if validate_openclaw_config /opt/openclaw/config-validate.with-acp.json; then");
+    expect(script).toContain("if validate_openclaw_config /opt/openclaw/config-validate.no-acp.json; then");
+    expect(script).toContain("OpenClaw config validation failed even after removing ACP dispatch");
+    expect(script).toContain("OpenClaw config validation failed before startup");
+    expect(script).toContain("exit 1");
   });
 
   it("includes onboarding starter task in the kickoff issue description", async () => {
@@ -568,7 +627,7 @@ describe("provision tenant memory config", () => {
       onboarding_goals: ["Retention"],
       agent_suggestions_count: 2,
       workspace_contract: {
-        version: "2026-03-19.paperclip-default-chief.v1",
+        version: WORKSPACE_CONTRACT_VERSION,
         memory_contract: "memory-para-v1",
       },
     });

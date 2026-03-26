@@ -14,6 +14,12 @@ As of 2026-03-26, Sessions 1-3 of the onboarding refactor are live and productio
 - `POST /api/tenants` creates `draft` tenants (no provisioning on company submit)
 - `POST /api/tenants/launch` explicitly triggers provisioning
 - launch path is idempotent and retry-safe
+- onboarding UX upgrade from PR `#53` is now live:
+  - Company step includes Chief identity, tone presets, and avatar picker
+  - Strategy step enforces max-3 goals with presets + custom goals
+  - Task step uses multi-row starter tasks and required approval policy controls
+  - Launch step shows backend-driven milestone progress checks
+- latest live canary pass completed on `board3@ziffyhomes.com` with a fresh tenant reaching `active`
 
 ## Local Development
 

@@ -2761,9 +2761,13 @@ export function buildOpenClawConfig(params: {
     },
     agents: {
       defaults: {
+        skipBootstrap: true,
         model: {
           primary: 'openai/gpt-5.4',
           fallbacks: ['google/gemini-2.5-flash', 'openai/gpt-4o-mini'],
+        },
+        heartbeat: {
+          every: '0m',
         },
         memorySearch: buildOpenClawMemorySearchConfig(params.memoryNativeEnabled),
         subagents: {
