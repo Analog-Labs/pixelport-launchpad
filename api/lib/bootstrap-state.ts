@@ -4,7 +4,7 @@ import { VAULT_SECTION_KEYS } from './vault-contract';
 type JsonRecord = Record<string, unknown>;
 
 const BOOTSTRAP_STATUSES = ['not_started', 'dispatching', 'accepted', 'completed', 'failed'] as const;
-const BOOTSTRAP_SOURCES = ['provisioning', 'dashboard_replay', 'manual_force'] as const;
+const BOOTSTRAP_SOURCES = ['provisioning', 'dashboard_replay', 'manual_force', 'manual_bootstrap'] as const;
 
 export type BootstrapStatus = (typeof BOOTSTRAP_STATUSES)[number];
 export type BootstrapSource = (typeof BOOTSTRAP_SOURCES)[number];

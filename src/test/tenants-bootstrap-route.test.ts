@@ -13,6 +13,11 @@ const reconcileBootstrapState = vi.fn();
 const transitionBootstrapState = vi.fn();
 const buildOnboardingBootstrapMessage = vi.fn(() => "bootstrap-message");
 const dispatchBootstrapWithPairingRecovery = vi.fn();
+const fromMock = vi.fn();
+const updateMock = vi.fn();
+const eqMock = vi.fn();
+const selectMock = vi.fn();
+const singleMock = vi.fn();
 const classifyGatewayFailure = vi.fn(({ message }: { message: string }) => ({
   tag: "gateway_request_failed",
   retryable: true,
@@ -54,6 +59,12 @@ vi.mock("../../api/lib/openclaw-bootstrap-guard", () => ({
   formatGatewayDiagnostic,
 }));
 
+vi.mock("../../api/lib/supabase", () => ({
+  supabase: {
+    from: fromMock,
+  },
+}));
+
 type MockResponse = {
   statusCode: number;
   body: unknown;
@@ -79,6 +90,11 @@ function createMockResponse(): MockResponse {
 describe("POST /api/tenants/bootstrap", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    singleMock.mockResolvedValue({ data: { onboarding_data: {} }, error: null });
+    selectMock.mockReturnValue({ single: singleMock });
+    eqMock.mockReturnValue({ select: selectMock });
+    updateMock.mockReturnValue({ eq: eqMock });
+    fromMock.mockReturnValue({ update: updateMock });
     loadBootstrapSnapshot.mockResolvedValue({
       onboardingData: {},
       state: {
@@ -96,7 +112,7 @@ describe("POST /api/tenants/bootstrap", () => {
         onboardingData: {},
         state: {
           status: "accepted",
-          source: "dashboard_replay",
+          source: "manual_bootstrap",
           requested_at: "2026-03-10T10:30:00.000Z",
           accepted_at: "2026-03-10T10:30:02.000Z",
           completed_at: null,
@@ -121,6 +137,7 @@ describe("POST /api/tenants/bootstrap", () => {
     const { default: handler } = await import("../../api/tenants/bootstrap");
 
     authenticateRequest.mockResolvedValue({
+      userId: "user-1",
       tenant: {
         id: "tenant-1",
         status: "active",
@@ -167,16 +184,34 @@ describe("POST /api/tenants/bootstrap", () => {
       existing_output_present: true,
       hooks_repaired: false,
       bootstrap_status: "accepted",
+      startup_source: "manual_bootstrap",
+      forced: false,
       auto_pair_attempted: false,
       auto_pair_approved: false,
       auto_pair_reason: null,
     });
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        onboarding_data: expect.objectContaining({
+          startup_provenance: expect.objectContaining({
+            manual_bootstrap: expect.objectContaining({
+              startup_source: "manual_bootstrap",
+              invoked_by_user_id: "user-1",
+              invoked_at: expect.any(String),
+              force: false,
+            }),
+          }),
+        }),
+      }),
+    );
   });
 
   it("blocks replay while bootstrap is still in progress", async () => {
     const { default: handler } = await import("../../api/tenants/bootstrap");
 
     authenticateRequest.mockResolvedValue({
+      userId: "user-2",
       tenant: {
         id: "tenant-1",
         status: "active",
@@ -231,6 +266,7 @@ describe("POST /api/tenants/bootstrap", () => {
     const { default: handler } = await import("../../api/tenants/bootstrap");
 
     authenticateRequest.mockResolvedValue({
+      userId: "user-3",
       tenant: {
         id: "tenant-1",
         status: "active",
@@ -332,5 +368,103 @@ describe("POST /api/tenants/bootstrap", () => {
       auto_pair_approved: false,
       auto_pair_reason: null,
     });
+  });
+
+  it("blocks manual bootstrap when tenant is not active", async () => {
+    const { default: handler } = await import("../../api/tenants/bootstrap");
+
+    authenticateRequest.mockResolvedValue({
+      userId: "user-4",
+      tenant: {
+        id: "tenant-1",
+        status: "provisioning",
+        name: "Analog",
+        droplet_ip: "127.0.0.1",
+        gateway_token: "gw-1",
+        onboarding_data: {},
+      },
+    });
+
+    const req = {
+      method: "POST",
+      body: {},
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toEqual({
+      error: "Tenant must be active before bootstrap can be replayed",
+      status: "provisioning",
+    });
+    expect(dispatchBootstrapWithPairingRecovery).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("records forced manual bootstrap provenance", async () => {
+    const { default: handler } = await import("../../api/tenants/bootstrap");
+
+    authenticateRequest.mockResolvedValue({
+      userId: "user-force",
+      tenant: {
+        id: "tenant-1",
+        status: "active",
+        name: "Analog",
+        droplet_ip: "127.0.0.1",
+        gateway_token: "gw-1",
+        onboarding_data: {},
+      },
+    });
+    reconcileBootstrapState.mockResolvedValue({
+      snapshot: {
+        onboardingData: {},
+        state: {
+          status: "failed",
+        },
+        updatedAt: "2026-03-10T10:20:00.000Z",
+      },
+      progress: {
+        taskCount: 0,
+        competitorCount: 0,
+        agentUpdatedVaultCount: 0,
+        hasAgentOutput: false,
+      },
+      effectiveState: {
+        status: "failed",
+        last_error: "timeout",
+      },
+      changed: false,
+    });
+
+    const req = {
+      method: "POST",
+      body: { force: true },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(202);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        accepted: true,
+        startup_source: "manual_bootstrap",
+        forced: true,
+      }),
+    );
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        onboarding_data: expect.objectContaining({
+          startup_provenance: expect.objectContaining({
+            manual_bootstrap: expect.objectContaining({
+              startup_source: "manual_bootstrap",
+              invoked_by_user_id: "user-force",
+              force: true,
+            }),
+          }),
+        }),
+      }),
+    );
   });
 });

@@ -633,6 +633,49 @@ describe("provision tenant memory config", () => {
     });
   });
 
+  it("builds startup compensation metadata for preserved retry resources", async () => {
+    const { buildStartupCompensationRecord } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const compensation = buildStartupCompensationRecord({
+      failedAt: "2026-03-26T12:00:00.000Z",
+      startupStage: "wait_for_chief_readiness",
+      failureReason: "readiness timeout",
+      resources: {
+        tenantId: "tenant-1",
+        tenantSlug: "pixelport-qa",
+        dropletId: "droplet-42",
+        dropletIp: "127.0.0.1",
+        workspaceSeeded: true,
+        paperclipCompanyId: "company-1",
+        kickoffIssueId: "issue-1",
+        kickoffApprovalId: "approval-1",
+        readinessRunId: "run-1",
+      },
+    });
+
+    expect(compensation).toMatchObject({
+      version: "2026-03-26.startup-compensation.v1",
+      policy: "preserved_for_retry",
+      rollback_status: "tenant_reset_to_draft",
+      failed_at: "2026-03-26T12:00:00.000Z",
+      startup_stage: "wait_for_chief_readiness",
+      failure_reason: "readiness timeout",
+      resources: {
+        tenant_id: "tenant-1",
+        tenant_slug: "pixelport-qa",
+        droplet_id: "droplet-42",
+        droplet_ip: "127.0.0.1",
+        workspace_seeded: true,
+        paperclip_company_id: "company-1",
+        kickoff_issue_id: "issue-1",
+        kickoff_approval_id: "approval-1",
+        readiness_run_id: "run-1",
+      },
+    });
+  });
+
   it("validates chief gateway adapter state for persisted config completeness", async () => {
     const { validateChiefGatewayState } = await import(
       "../../api/inngest/functions/provision-tenant"

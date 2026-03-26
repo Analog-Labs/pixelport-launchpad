@@ -16,12 +16,10 @@ import {
 } from '../../lib/workspace-contract';
 import {
   buildBootstrapHooksConfig,
-  buildOnboardingBootstrapMessage,
 } from '../../lib/onboarding-bootstrap';
 import {
   autoApproveGatewayPairing,
   classifyGatewayFailure,
-  dispatchBootstrapWithPairingRecovery,
   formatGatewayDiagnostic,
   isPairingRecoveryEligible,
 } from '../../lib/openclaw-bootstrap-guard';
@@ -168,6 +166,18 @@ type PaperclipHeartbeatRunRecord = {
   errorCode?: string | null;
   stdoutExcerpt?: string | null;
   stderrExcerpt?: string | null;
+};
+
+type StartupResourceSnapshot = {
+  tenantId: string;
+  tenantSlug: string;
+  dropletId: string | null;
+  dropletIp: string | null;
+  workspaceSeeded: boolean;
+  paperclipCompanyId: string | null;
+  kickoffIssueId: string | null;
+  kickoffApprovalId: string | null;
+  readinessRunId: string | null;
 };
 
 const ONBOARDING_KICKOFF_SEED_TAG = 'pixelport_onboarding_kickoff_v1';
@@ -743,6 +753,40 @@ function countOnboardingAgentSuggestions(value: unknown): number {
     .length;
 }
 
+function isJsonObject(value: unknown): value is Json {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
+}
+
+function resetLaunchStateForRetry(onboardingData: Json): Json {
+  const nextOnboardingData: Json = {
+    ...onboardingData,
+    launch_started_at: null,
+    launch_completed_at: null,
+  };
+
+  const existingV2 = isJsonObject(onboardingData.v2) ? onboardingData.v2 : {};
+  const existingLaunch = isJsonObject(existingV2.launch) ? existingV2.launch : {};
+
+  nextOnboardingData.v2 = {
+    ...existingV2,
+    launch: {
+      ...existingLaunch,
+      started_at: null,
+      completed_at: null,
+    },
+  };
+
+  return nextOnboardingData;
+}
+
 export function buildBootstrapSeedEvidence(params: {
   onboardingData: Json | null | undefined;
   issueId: string | null;
@@ -773,6 +817,33 @@ export function buildBootstrapSeedEvidence(params: {
       version: WORKSPACE_CONTRACT_VERSION,
       root_prompt_files: [...WORKSPACE_ROOT_PROMPT_FILES],
       memory_contract: WORKSPACE_MEMORY_CONTRACT_VERSION,
+    },
+  };
+}
+
+export function buildStartupCompensationRecord(params: {
+  failedAt?: string;
+  startupStage: string;
+  failureReason: string;
+  resources: StartupResourceSnapshot;
+}): Json {
+  return {
+    version: '2026-03-26.startup-compensation.v1',
+    policy: 'preserved_for_retry',
+    rollback_status: 'tenant_reset_to_draft',
+    failed_at: params.failedAt ?? new Date().toISOString(),
+    startup_stage: params.startupStage,
+    failure_reason: params.failureReason,
+    resources: {
+      tenant_id: params.resources.tenantId,
+      tenant_slug: params.resources.tenantSlug,
+      droplet_id: params.resources.dropletId,
+      droplet_ip: params.resources.dropletIp,
+      workspace_seeded: params.resources.workspaceSeeded,
+      paperclip_company_id: params.resources.paperclipCompanyId,
+      kickoff_issue_id: params.resources.kickoffIssueId,
+      kickoff_approval_id: params.resources.kickoffApprovalId,
+      readiness_run_id: params.resources.readinessRunId,
     },
   };
 }
@@ -1437,6 +1508,20 @@ export const provisionTenant = inngest.createFunction(
       return data as TenantRow;
     });
     let onboardingData = (tenant.onboarding_data ?? {}) as Json;
+    let startupStage = 'resolve_memory_settings';
+    const startupResources: StartupResourceSnapshot = {
+      tenantId,
+      tenantSlug: tenant.slug,
+      dropletId: null,
+      dropletIp: null,
+      workspaceSeeded: false,
+      paperclipCompanyId: null,
+      kickoffIssueId: null,
+      kickoffApprovalId: null,
+      readinessRunId: null,
+    };
+
+    const executeProvisioning = async () => {
     const memoryProvisioningPlan = await step.run('resolve-memory-settings', async () => {
       const plan = resolveTenantMemoryProvisioningPlan({
         settings: tenant.settings,
@@ -1453,6 +1538,7 @@ export const provisionTenant = inngest.createFunction(
       return plan;
     });
 
+    startupStage = 'resolve_runtime_ingress_plan';
     const runtimeIngressPlan = await step.run('resolve-runtime-ingress-plan', async () => {
       return resolveRuntimeIngressPlan({
         tenantSlug: tenant.slug,
@@ -1490,6 +1576,7 @@ export const provisionTenant = inngest.createFunction(
       });
     }
 
+    startupStage = 'create_droplet';
     const droplet = await step.run('create-droplet', async () => {
       const gatewayToken = `gw-${randomUUID()}`;
       const requestedSize = trialMode
@@ -1575,7 +1662,10 @@ export const provisionTenant = inngest.createFunction(
         requestedRegion: createResult.requestedRegion,
       };
     });
+    startupResources.dropletId = droplet.dropletId;
+    startupResources.workspaceSeeded = true;
 
+    startupStage = 'wait_for_droplet_readiness';
     // Poll for droplet readiness using Inngest durable steps
     // (each attempt is a separate step execution to avoid Vercel function timeout)
     let dropletIp = '';
@@ -1619,7 +1709,9 @@ export const provisionTenant = inngest.createFunction(
     if (!dropletIp) {
       throw new Error('[readiness_timeout] Droplet did not become ready within 5 minutes');
     }
+    startupResources.dropletIp = dropletIp;
 
+    startupStage = 'resolve_runtime_ingress';
     const runtimeIngress = await step.run('resolve-runtime-ingress', async () => {
       return resolveRuntimeIngressFromDroplet({
         dropletIp,
@@ -1627,6 +1719,7 @@ export const provisionTenant = inngest.createFunction(
       });
     });
 
+    startupStage = 'create_agentmail_inbox';
     const agentmailInbox = await step.run('create-agentmail-inbox', async () => {
       if (!AGENTMAIL_API_KEY) {
         return null;
@@ -1653,6 +1746,7 @@ export const provisionTenant = inngest.createFunction(
       return result.address ?? null;
     });
 
+    startupStage = 'store_infra_refs';
     await step.run('store-infra-refs', async () => {
       const nextOnboardingData: Json = {
         ...onboardingData,
@@ -1683,6 +1777,7 @@ export const provisionTenant = inngest.createFunction(
       onboardingData = nextOnboardingData;
     });
 
+    startupStage = 'wait_for_gateway_readiness';
     // Poll for gateway readiness using Inngest durable steps
     // (each attempt is a separate step execution to avoid Vercel function timeout)
     const gatewayUrl = `http://${dropletIp}:18789`;
@@ -1716,6 +1811,7 @@ export const provisionTenant = inngest.createFunction(
       throw new Error('[readiness_timeout] OpenClaw gateway did not become healthy within 10 minutes');
     }
 
+    startupStage = 'verify_gateway_config';
     await step.run('verify-gateway-config', async () => {
       // OpenClaw gateway is a WebSocket server — no REST API to query agents.
       // Agents are configured via openclaw.json written by cloud-init.
@@ -1732,6 +1828,7 @@ export const provisionTenant = inngest.createFunction(
       return { verified: true, status: response.status };
     });
 
+    startupStage = 'wait_for_paperclip_health';
     // Poll for Paperclip readiness on port 3100
     const paperclipUrl = `http://${dropletIp}:3100`;
     const paperclipMaxAttempts = 20;
@@ -1763,6 +1860,7 @@ export const provisionTenant = inngest.createFunction(
       throw new Error('[readiness_timeout] Paperclip server did not become healthy within 3 minutes');
     }
 
+    startupStage = 'resolve_paperclip_refs';
     const paperclipRefsMaxAttempts = 20;
     let paperclipCompanyId = '';
     let resolvedPaperclipApiKey = '';
@@ -1787,6 +1885,7 @@ export const provisionTenant = inngest.createFunction(
       if (refs.companyId && refs.apiKey) {
         paperclipCompanyId = refs.companyId;
         resolvedPaperclipApiKey = refs.apiKey;
+        startupResources.paperclipCompanyId = refs.companyId;
         break;
       }
 
@@ -1802,6 +1901,7 @@ export const provisionTenant = inngest.createFunction(
       );
     }
 
+    startupStage = 'store_paperclip_refs';
     await step.run('store-paperclip-refs', async () => {
       const { error } = await supabase
         .from('tenants')
@@ -1816,6 +1916,7 @@ export const provisionTenant = inngest.createFunction(
       }
     });
 
+    startupStage = 'create_agent_records';
     await step.run('create-agent-records', async () => {
       const agentName = (onboardingData.agent_name as string) || 'Chief';
       const agentTone = (onboardingData.agent_tone as string) || 'strategic';
@@ -1840,6 +1941,7 @@ export const provisionTenant = inngest.createFunction(
       // Chief dynamically spawns sub-agents via OpenClaw's native sessions_spawn.
     });
 
+    startupStage = 'seed_vault';
     await step.run('seed-vault', async () => {
       const scanResults = onboardingData.scan_results as Record<string, unknown> | undefined;
 
@@ -1894,6 +1996,7 @@ export const provisionTenant = inngest.createFunction(
       }
     });
 
+    startupStage = 'send_welcome';
     await step.run('send-welcome', async () => {
       if (!agentmailInbox) {
         return;
@@ -1902,6 +2005,7 @@ export const provisionTenant = inngest.createFunction(
       console.log(`Welcome message placeholder for inbox ${agentmailInbox}`);
     });
 
+    startupStage = 'mark_bootstrap_dispatching';
     onboardingData = await step.run('mark-bootstrap-dispatching', async () => {
       return await persistBootstrapState({
         tenantId,
@@ -1927,6 +2031,7 @@ export const provisionTenant = inngest.createFunction(
       });
     };
 
+    startupStage = 'seed_kickoff_artifacts';
     const controlPlaneGatewayWsUrl = buildOpenClawGatewayWsUrlFromDropletIp(dropletIp);
     const chiefGatewayWsUrl = `ws://${OPENCLAW_GATEWAY_DOCKER_HOST_ALIAS}:${OPENCLAW_GATEWAY_DEFAULT_WS_PORT}`;
 
@@ -1967,11 +2072,14 @@ export const provisionTenant = inngest.createFunction(
         };
       }
     });
+    startupResources.kickoffIssueId = kickoffSeed.issueId;
+    startupResources.kickoffApprovalId = kickoffSeed.approvalId;
 
     let chiefAgentId = kickoffSeed.chiefAgentId;
     let expectedDeviceId = kickoffSeed.expectedDeviceId;
 
     if (!chiefAgentId) {
+      startupStage = 'resolve_chief_agent_for_readiness';
       const chiefFallback = await step.run('resolve-chief-agent-for-readiness', async () => {
         const agentsResponse = await fetch(
           `${paperclipUrl}/api/companies/${paperclipCompanyId}/agents`,
@@ -2008,6 +2116,7 @@ export const provisionTenant = inngest.createFunction(
 
     let readinessRunId = kickoffSeed.wakeRunId;
     if (!readinessRunId) {
+      startupStage = 'trigger_chief_readiness_run';
       readinessRunId = await step.run('trigger-chief-readiness-run', async () => {
         return await triggerChiefWakeupRun({
           paperclipUrl,
@@ -2018,7 +2127,9 @@ export const provisionTenant = inngest.createFunction(
         });
       });
     }
+    startupResources.readinessRunId = readinessRunId;
 
+    startupStage = 'wait_for_chief_readiness';
     const readinessMaxAttempts = 40; // ~200 seconds, bounded by step sleep
     const maxRetryRuns = 2;
     let readinessPassed = false;
@@ -2101,6 +2212,7 @@ export const provisionTenant = inngest.createFunction(
 
         if (shouldRetryRun) {
           retryRunsUsed += 1;
+          startupStage = 'retry_chief_readiness_run';
           readinessRunId = await step.run(`retry-chief-readiness-run-${i}`, async () => {
             return await triggerChiefWakeupRun({
               paperclipUrl,
@@ -2110,6 +2222,7 @@ export const provisionTenant = inngest.createFunction(
               reason: `provisioning_readiness_retry_${retryRunsUsed}`,
             });
           });
+          startupResources.readinessRunId = readinessRunId;
           continue;
         }
 
@@ -2157,42 +2270,8 @@ export const provisionTenant = inngest.createFunction(
       return (data?.onboarding_data as Json | null) ?? nextOnboardingData;
     });
 
-    const bootstrapResult = await step.run('trigger-initial-bootstrap', async () => {
-      return await dispatchBootstrapWithPairingRecovery({
-        gatewayHttpUrl: gatewayUrl,
-        gatewayWsUrl: controlPlaneGatewayWsUrl,
-        gatewayToken: droplet.gatewayToken,
-        expectedDeviceId,
-        message: buildOnboardingBootstrapMessage({
-          tenantName: tenant.name,
-          onboardingData,
-        }),
-        fallbackPairingApproval: async ({ diagnostics }) => {
-          return await approveGatewayPairingViaSsh({
-            host: dropletIp,
-            gatewayToken: droplet.gatewayToken,
-            requestId: diagnostics.requestId,
-            expectedDeviceId,
-          });
-        },
-      });
-    });
-
-    if (!bootstrapResult.ok) {
-      const diagnostics = bootstrapResult.diagnostics ?? classifyGatewayFailure({
-        status: bootstrapResult.status,
-        message: bootstrapResult.body,
-      });
-      const failureMessage = `${formatGatewayDiagnostic(diagnostics)}${
-        bootstrapResult.autoPairAttempted
-          ? ` autoPair=${bootstrapResult.autoPairReason ?? 'attempted'}`
-          : ''
-      }`;
-      await persistBootstrapFailure('persist-bootstrap-failure-dispatch', failureMessage);
-      throw new Error(failureMessage);
-    }
-
-    onboardingData = await step.run('persist-bootstrap-result', async () => {
+    startupStage = 'mark_bootstrap_accepted';
+    onboardingData = await step.run('persist-bootstrap-readiness-accepted', async () => {
       return await persistBootstrapState({
         tenantId,
         onboardingData,
@@ -2203,6 +2282,7 @@ export const provisionTenant = inngest.createFunction(
       });
     });
 
+    startupStage = 'mark_tenant_active';
     await step.run('mark-active', async () => {
       const { error } = await supabase.from('tenants').update({ status: 'active' }).eq('id', tenantId);
 
@@ -2210,6 +2290,7 @@ export const provisionTenant = inngest.createFunction(
         throw new Error(`Failed to mark tenant as active: ${error.message}`);
       }
     });
+    startupStage = 'completed';
 
     return {
       success: true,
@@ -2217,17 +2298,101 @@ export const provisionTenant = inngest.createFunction(
       dropletId: droplet.dropletId,
       dropletIp,
       agentmailInbox,
-      bootstrapAccepted: bootstrapResult.ok,
-      bootstrapStatus: bootstrapResult.status,
-      bootstrapDiagnostics: bootstrapResult.diagnostics,
-      bootstrapAutoPairAttempted: bootstrapResult.autoPairAttempted,
-      bootstrapAutoPairApproved: bootstrapResult.autoPairApproved,
+      bootstrapAccepted: true,
+      bootstrapStatus: 'readiness_passed',
+      bootstrapDiagnostics: null,
+      bootstrapAutoPairAttempted: false,
+      bootstrapAutoPairApproved: false,
+      startupRoute: 'paperclip_kickoff_wakeup',
       memoryNativeEnabled: memoryProvisioningPlan.effectiveNativeEnabled,
       memoryNativeDowngraded: memoryProvisioningPlan.nativeDowngradedMissingApiKey,
       trialMode: !!trialMode,
       requestedSize: droplet.requestedSize,
       requestedRegion: droplet.requestedRegion,
     };
+    };
+
+    try {
+      return await executeProvisioning();
+    } catch (error) {
+      const failureReason = toErrorMessage(error);
+      const failedAt = new Date().toISOString();
+      const compensation = buildStartupCompensationRecord({
+        failedAt,
+        startupStage,
+        failureReason,
+        resources: startupResources,
+      });
+
+      console.warn(
+        `[provision-tenant] Startup failed for tenant ${tenantId} at stage ${startupStage}: ${failureReason}`,
+      );
+
+      await step.run('persist-startup-failure-and-rollback', async () => {
+        const failedBootstrapOnboardingData = await persistBootstrapState({
+          tenantId,
+          onboardingData,
+          update: {
+            status: 'failed',
+            source: 'provisioning',
+            lastError: failureReason,
+            at: failedAt,
+          },
+        });
+
+        const compensationOnboardingData = resetLaunchStateForRetry({
+          ...failedBootstrapOnboardingData,
+          startup_compensation: compensation,
+        });
+
+        const { data: rolledBackTenant, error: rollbackError } = await supabase
+          .from('tenants')
+          .update({
+            status: 'draft',
+            onboarding_data: compensationOnboardingData,
+          })
+          .eq('id', tenantId)
+          .eq('status', 'provisioning')
+          .select('status')
+          .maybeSingle();
+
+        if (rollbackError) {
+          throw new Error(`Failed to rollback tenant to draft after startup failure: ${rollbackError.message}`);
+        }
+
+        if (!rolledBackTenant) {
+          const { data: latestTenant, error: latestTenantError } = await supabase
+            .from('tenants')
+            .select('status')
+            .eq('id', tenantId)
+            .single();
+
+          if (latestTenantError) {
+            throw new Error(
+              `Failed to verify tenant status after startup failure rollback miss: ${latestTenantError.message}`,
+            );
+          }
+
+          if (latestTenant?.status !== 'draft') {
+            throw new Error(
+              `Startup rollback did not land in draft (current status: ${latestTenant?.status ?? 'unknown'})`,
+            );
+          }
+        }
+
+        onboardingData = compensationOnboardingData;
+      });
+
+      return {
+        success: false,
+        tenantId,
+        startupFailed: true,
+        startupStage,
+        startupError: failureReason,
+        rolledBackToDraft: true,
+        compensationPolicy: 'preserved_for_retry',
+      };
+    }
   }
 );
 

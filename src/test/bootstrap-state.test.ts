@@ -10,6 +10,7 @@ import {
   BOOTSTRAP_ACCEPTED_TIMEOUT_MS,
   BOOTSTRAP_DISPATCH_TIMEOUT_MS,
   deriveBootstrapState,
+  getBootstrapState,
   type BootstrapDurableProgress,
   type BootstrapState,
 } from "../../api/lib/bootstrap-state";
@@ -44,6 +45,17 @@ function buildProgress(overrides: Partial<BootstrapDurableProgress> = {}): Boots
 }
 
 describe("bootstrap truth evaluation", () => {
+  it("recognizes manual bootstrap as a valid bootstrap source", () => {
+    const state = getBootstrapState({
+      bootstrap: {
+        status: "dispatching",
+        source: "manual_bootstrap",
+      },
+    });
+
+    expect(state.source).toBe("manual_bootstrap");
+  });
+
   it("keeps bootstrap accepted when partial durable output exists and activity is still fresh", () => {
     const derived = deriveBootstrapState({
       state: buildState(),

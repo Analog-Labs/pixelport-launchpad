@@ -4,11 +4,42 @@ import { repairBootstrapHooksOnDroplet } from '../lib/bootstrap-hooks-repair';
 import { loadBootstrapSnapshot, reconcileBootstrapState, transitionBootstrapState } from '../lib/bootstrap-state';
 import { buildOnboardingBootstrapMessage } from '../lib/onboarding-bootstrap';
 import { approveGatewayPairingViaSsh } from '../lib/openclaw-pairing-ssh';
+import { supabase } from '../lib/supabase';
 import {
   classifyGatewayFailure,
   dispatchBootstrapWithPairingRecovery,
   formatGatewayDiagnostic,
 } from '../lib/openclaw-bootstrap-guard';
+
+type JsonRecord = Record<string, unknown>;
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function withManualBootstrapProvenance(params: {
+  onboardingData: JsonRecord;
+  userId: string;
+  force: boolean;
+  at?: string;
+}): JsonRecord {
+  const nextOnboardingData = { ...params.onboardingData };
+  const existingProvenance = isJsonRecord(nextOnboardingData.startup_provenance)
+    ? nextOnboardingData.startup_provenance
+    : {};
+
+  nextOnboardingData.startup_provenance = {
+    ...existingProvenance,
+    manual_bootstrap: {
+      startup_source: 'manual_bootstrap',
+      invoked_by_user_id: params.userId,
+      invoked_at: params.at ?? new Date().toISOString(),
+      force: params.force,
+    },
+  };
+
+  return nextOnboardingData;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
   if (req.method !== 'POST') {
@@ -16,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   try {
-    const { tenant } = await authenticateRequest(req);
+    const { tenant, userId } = await authenticateRequest(req);
     const force = req.body?.force === true;
     let bootstrapSnapshot = await loadBootstrapSnapshot({
       tenantId: tenant.id,
@@ -33,6 +64,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     if (!tenant.droplet_ip || !tenant.gateway_token) {
       return res.status(503).json({ error: 'Agent infrastructure not ready' });
+    }
+
+    const provenanceOnboardingData = withManualBootstrapProvenance({
+      onboardingData,
+      userId,
+      force,
+    });
+    try {
+      const { data, error } = await supabase
+        .from('tenants')
+        .update({ onboarding_data: provenanceOnboardingData })
+        .eq('id', tenant.id)
+        .select('onboarding_data')
+        .single();
+
+      if (error) {
+        console.warn(
+          `[tenants/bootstrap] Failed to persist manual bootstrap provenance for tenant ${tenant.id}: ${error.message}`,
+        );
+      } else {
+        onboardingData = (data?.onboarding_data as JsonRecord | null | undefined) ?? provenanceOnboardingData;
+      }
+    } catch (provenanceError) {
+      console.warn(
+        `[tenants/bootstrap] Unexpected provenance persistence error for tenant ${tenant.id}: ${
+          provenanceError instanceof Error ? provenanceError.message : String(provenanceError)
+        }`,
+      );
     }
 
     const bootstrap = await reconcileBootstrapState({
@@ -66,7 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       });
     }
 
-    const bootstrapSource = force ? 'manual_force' : 'dashboard_replay';
+    const bootstrapSource = 'manual_bootstrap';
 
     const dispatchTransition = await transitionBootstrapState({
       tenantId: tenant.id,
@@ -206,6 +265,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       existing_output_present: hasAgentOutput,
       hooks_repaired: hooksRepaired,
       bootstrap_status: bootstrapSnapshot.state.status,
+      startup_source: 'manual_bootstrap',
+      forced: force,
       auto_pair_attempted: result.autoPairAttempted,
       auto_pair_approved: result.autoPairApproved,
       auto_pair_reason: result.autoPairReason,
