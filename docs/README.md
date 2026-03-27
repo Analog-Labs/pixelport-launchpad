@@ -38,6 +38,7 @@ This index helps you find the current source-of-truth docs quickly.
 
 ## QA and Collaboration
 
+- [qa/2026-03-26-s6-live-canary-board8.md](./qa/2026-03-26-s6-live-canary-board8.md)
 - [qa/2026-03-26-s5-live-canary-board7.md](./qa/2026-03-26-s5-live-canary-board7.md)
 - [qa/2026-03-26-s4-live-canary-board4.md](./qa/2026-03-26-s4-live-canary-board4.md)
 - [qa/2026-03-26-s1-3-ux-live-canary-board3.md](./qa/2026-03-26-s1-3-ux-live-canary-board3.md)
