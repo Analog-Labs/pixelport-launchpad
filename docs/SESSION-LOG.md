@@ -7,6 +7,32 @@
 
 ## Last Session
 
+- **Date:** 2026-03-26 (session 127)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Completed Session 6 release flow and merged PR `#59` to `main`:
+    - merge commit: `2b0de82`
+    - PR URL: `https://github.com/Analog-Labs/pixelport-launchpad/pull/59`
+  - Ran production fresh-tenant canary on `main` with `board8@ziffyhomes.com`.
+  - Completed onboarding `Company -> Strategy -> Task -> Launch` and confirmed truthful lifecycle:
+    - tenant id: `9f87f6b2-c075-456f-9918-a35b20d1a5dc`
+    - slug: `stripe`
+    - droplet id/ip: `561116232` / `67.207.94.54`
+    - status progression: `provisioning -> active`
+    - provisioning checks: `12/12`
+  - Verified Session 6 knowledge mirror sync contract on production:
+    - `/api/tenants/status` showed `knowledge_sync.status=synced`
+    - `revision=1`, `synced_revision=1`, `seeded_revision=1`
+    - host-mounted runtime knowledge files present at `/opt/openclaw/workspace-main/knowledge/*.md`
+    - no leftover `*.tmp` files on runtime host
+  - Ran post-pass release smoke on `main` and captured evidence.
+  - Added release evidence doc:
+    - `docs/qa/2026-03-26-s6-live-canary-board8.md`
+  - No hotfix loop was required; `board9` and `board10` were not used.
+- **What's next:**
+  - Session 7 is now the next planned implementation (`Knowledge Dashboard Surface`).
+- **Blockers:** None.
+
 - **Date:** 2026-03-26 (session 126)
 - **Who worked:** Founder + Codex
 - **What was done:**

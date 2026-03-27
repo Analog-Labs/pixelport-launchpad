@@ -63,11 +63,18 @@
 - [x] Live canary full pass completed on `board7@ziffyhomes.com` with tenant `ziffy-homes-board7-s5-canary`
 - [x] Session 5 evidence captured: `docs/qa/2026-03-26-s5-live-canary-board7.md`
 
-## Session 6 — Knowledge Mirror + Sync Backend (Planned)
+## Session 6 — Knowledge Mirror + Sync Backend ✅
 
-- [ ] Add editable `onboarding_data.knowledge_mirror`
-- [ ] Sync approved mirror files into workspace `knowledge/*.md`
-- [ ] Expose sync status model (`pending` / `synced` / `failed`)
+- [x] Add editable `onboarding_data.knowledge_mirror`
+- [x] Sync approved mirror files into workspace `knowledge/*.md`
+- [x] Expose sync status model (`pending` / `synced` / `failed`)
+
+**Production validation (2026-03-26):**
+- [x] Merged PR #59 (`2b0de82`) to `main`
+- [x] Live canary full pass completed on `board8@ziffyhomes.com` with tenant `stripe`
+- [x] `knowledge_sync` truth confirmed on `/api/tenants/status` (`revision=1`, `synced_revision=1`, `seeded_revision=1`)
+- [x] Runtime knowledge mirror files verified on host-mounted path `/opt/openclaw/workspace-main/knowledge/*.md` with no leftover temp files
+- [x] Session 6 evidence captured: `docs/qa/2026-03-26-s6-live-canary-board8.md`
 
 ## Session 7 — Knowledge Dashboard Surface (Planned)
 

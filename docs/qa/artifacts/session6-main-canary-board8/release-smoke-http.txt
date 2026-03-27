@@ -1,0 +1,11 @@
+200 / bytes=1337
+200 /api/tenants/me bytes=7996
+200 /api/tenants/status bytes=2132
+200 /api/tenant-proxy/companies/dashboard bytes=262
+200 /api/tenant-proxy/companies/activity bytes=8186
+200 /api/tenant-proxy/companies/issues bytes=6693
+200 /api/tenant-proxy/companies/agents bytes=520
+200 /api/tenant-proxy/companies/sidebar-badges bytes=57
+404 /api/tasks bytes=79
+404 /api/vault bytes=79
+404 /api/competitors bytes=79
