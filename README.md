@@ -9,7 +9,7 @@ This repo contains:
 
 ## Current Production State
 
-As of 2026-03-26, Sessions 1-4 of the onboarding/provisioning program are live and production-validated:
+As of 2026-03-26, Sessions 1-6 of the onboarding/provisioning program are live and production-validated:
 - onboarding flow is `Company -> Strategy -> Task -> Launch`
 - `POST /api/tenants` creates `draft` tenants (no provisioning on company submit)
 - `POST /api/tenants/launch` explicitly triggers provisioning with idempotent/retry-safe behavior
@@ -17,8 +17,9 @@ As of 2026-03-26, Sessions 1-4 of the onboarding/provisioning program are live a
   - canonical root files: `AGENTS`, `SOUL`, `TOOLS`, `IDENTITY`, `USER`, `HEARTBEAT`, `BOOT`, `MEMORY`
   - deterministic `/system/onboarding.json` and `/system/render-manifest.json`
   - config defaults: `agents.defaults.skipBootstrap=true`, heartbeat narrowed (`every: "0m"`), and memory `extraPaths=["knowledge"]`
-- latest live canary pass completed on `board4@ziffyhomes.com` with a fresh tenant reaching `active`
-- Session 5 startup trigger routing is still planned and intentionally not part of this release
+- Session 5 startup trigger routing is live for new tenants (Paperclip kickoff/wakeup path)
+- Session 6 knowledge mirror sync is live with truthful `pending/synced/failed` status projection on `/api/tenants/status`
+- latest live canary pass completed on `board8@ziffyhomes.com` (`stripe`) with a fresh tenant reaching `active`
 
 ## Local Development
 

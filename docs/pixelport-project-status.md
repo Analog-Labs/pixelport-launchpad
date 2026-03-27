@@ -8,15 +8,16 @@
 
 ---
 
-## Current Program Snapshot (2026-03-26 Sessions 1-5 Closure)
+## Current Program Snapshot (2026-03-26 Sessions 1-6 Closure)
 
-Sessions 1-5 (draft onboarding through startup-trigger routing cutover) are merged and production-validated on `main`.
+Sessions 1-6 (draft onboarding through knowledge mirror sync integrity) are merged and production-validated on `main`.
 
 - merged implementation PRs:
   - `#51` (`aacf8ec`) — baseline Sessions 1-3 lifecycle contract
   - `#53` (`3f76c34`) — Company/Strategy/Task/Launch UX upgrade with milestone progress rendering
   - `#55` (`104a8e0`) — Session 4 canonical workspace compiler + OpenClaw config defaults
   - `#57` (`fa87961`) — Session 5 Paperclip-first startup cutover + manual bootstrap provenance
+  - `#59` (`2b0de82`) — Session 6 knowledge mirror backend + sync integrity guards
 - production hotfixes previously applied during first canary loop:
   - `05aec88` (`fix(api): use api-local tenant status helper in server routes`)
   - `67dee55` (`fix(onboarding): avoid null mission fields during draft create`)
@@ -29,6 +30,8 @@ Sessions 1-5 (draft onboarding through startup-trigger routing cutover) are merg
   - Session 4 provisioning outputs canonical workspace roots + deterministic `/system` artifacts for fresh tenants
   - OpenClaw config now defaults to `skipBootstrap=true`, heartbeat `every: "0m"`, memory extra path `knowledge`
   - Session 5 startup now routes new tenants through Paperclip kickoff/wakeup readiness before marking tenant `active`
+  - Session 6 stores canonical `onboarding_data.knowledge_mirror` and syncs deterministic `knowledge/*.md` files to runtime
+  - Session 6 status surface exposes truthful `knowledge_sync` state (`pending/synced/failed`) on `/api/tenants/status`
   - manual bootstrap route remains break-glass with persisted provenance (`startup_source`, user, timestamp, force)
 - live canary outcome:
   - first account (`board3`) in the original loop exposed failures and drove the two hotfixes above
@@ -48,7 +51,12 @@ Sessions 1-5 (draft onboarding through startup-trigger routing cutover) are merg
     - slug: `ziffy-homes-board7-s5-canary`
     - droplet id/ip: `561098067` / `68.183.25.226`
     - bootstrap lifecycle observed `not_started -> dispatching -> completed`; final tenant status: `active`
-- next active implementation target: Session 6 (`Knowledge Mirror + Sync Backend`)
+  - Session 6 live canary on `board8` completed full pass:
+    - tenant id: `9f87f6b2-c075-456f-9918-a35b20d1a5dc`
+    - slug: `stripe`
+    - droplet id/ip: `561116232` / `67.207.94.54`
+    - final tenant status: `active`; `knowledge_sync` finalized as `synced` with `revision=1`, `synced_revision=1`, `seeded_revision=1`
+- next active implementation target: Session 7 (`Knowledge Dashboard Surface`)
 
 ## Governance Note (2026-03-06)
 
