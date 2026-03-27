@@ -73,6 +73,7 @@ describe('AppSidebar badge rendering', () => {
     // Nav items should still render
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Inbox')).toBeInTheDocument();
+    expect(screen.getByText('Knowledge')).toBeInTheDocument();
     expect(screen.getByText('Approvals')).toBeInTheDocument();
   });
 
@@ -89,13 +90,15 @@ describe('AppSidebar badge rendering', () => {
     const navItems = screen.getAllByRole('link');
     const navTexts = navItems.map((el) => el.textContent?.trim()).filter(Boolean);
 
-    // Home should come before Approvals, Approvals before Tasks, etc.
+    // Home should come before Knowledge, Knowledge before Approvals, Approvals before Tasks.
     const homeIdx = navTexts.findIndex((t) => t === 'Home');
+    const knowledgeIdx = navTexts.findIndex((t) => t === 'Knowledge');
     const approvalsIdx = navTexts.findIndex((t) => t?.includes('Approvals'));
     const tasksIdx = navTexts.findIndex((t) => t === 'Tasks');
 
     expect(homeIdx).toBeGreaterThanOrEqual(0);
-    expect(approvalsIdx).toBeGreaterThan(homeIdx);
+    expect(knowledgeIdx).toBeGreaterThan(homeIdx);
+    expect(approvalsIdx).toBeGreaterThan(knowledgeIdx);
     expect(tasksIdx).toBeGreaterThan(approvalsIdx);
   });
 });

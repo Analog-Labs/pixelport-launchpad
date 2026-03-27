@@ -134,4 +134,42 @@
 **Priority:** P1
 **Depends on:** Session 1-3 launch-triggered provisioning baseline
 
+## Knowledge Dashboard Follow-ups
+
+### Mobile Full-Height Knowledge Editor
+
+**What:** Replace inline section editing on small screens with a dedicated full-height drawer/sheet editor.
+
+**Why:** Inline mobile editing is acceptable for Session 7 scope, but cramped long-form editing makes usability and keyboard behavior weaker on phones.
+
+**Context:** Session 7 intentionally deferred mobile drawer UX to keep implementation bounded while shipping the full desktop Knowledge workflow.
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** Session 7 Knowledge dashboard baseline
+
+### Per-File Knowledge Sync Truth Model
+
+**What:** Expand backend sync projection from one global `knowledge_sync` status to per-file sync truth.
+
+**Why:** Global status is sufficient for Session 7, but per-file truth is needed for sharper error attribution and future partial sync UX.
+
+**Context:** Session 7 locks to the stable global `pending/synced/failed` contract from Session 6 and defers per-file projection.
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** Session 6 `knowledge_mirror` sync contract
+
+### Automatic Knowledge Sync Retry/Backoff Policy
+
+**What:** Add automatic enqueue retry/backoff policy for failed knowledge sync attempts.
+
+**Why:** Session 7 ships manual retry for lower blast radius; auto-retry can improve resilience once behavior is observed in production.
+
+**Context:** Manual retry is the approved resilience mechanism for Session 7. This follow-up adds controlled automated recovery.
+
+**Effort:** M
+**Priority:** P2
+**Depends on:** Session 7 manual retry baseline
+
 ## Completed

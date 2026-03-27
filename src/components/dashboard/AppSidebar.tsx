@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   LayoutDashboard,
   Inbox,
+  BookOpenText,
   CheckSquare,
   ListTodo,
   Bot,
@@ -26,6 +27,7 @@ import { cn } from '@/lib/utils';
 const primaryNav = [
   { title: 'Home', url: '/dashboard', icon: LayoutDashboard, end: true, badge: null },
   { title: 'Inbox', url: '/dashboard/inbox', icon: Inbox, badge: 'inbox' as const },
+  { title: 'Knowledge', url: '/dashboard/knowledge', icon: BookOpenText, badge: null },
   { title: 'Approvals', url: '/dashboard/approvals', icon: CheckSquare, badge: 'approvals' as const },
   { title: 'Tasks', url: '/dashboard/tasks', icon: ListTodo, badge: null },
   { title: 'Agents', url: '/dashboard/agents', icon: Bot, badge: null },

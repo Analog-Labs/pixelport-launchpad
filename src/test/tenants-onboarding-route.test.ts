@@ -115,7 +115,7 @@ describe("POST /api/tenants/onboarding", () => {
       }),
       eq: vi.fn(() => updateChain),
       select: vi.fn(() => updateChain),
-      single: vi.fn(async () => ({
+      maybeSingle: vi.fn(async () => ({
         data: {
           onboarding_data: (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data,
         },
@@ -174,6 +174,118 @@ describe("POST /api/tenants/onboarding", () => {
     expect((task.approval_policy as Record<string, unknown>).mode).toBe("balanced");
   });
 
+  it("returns 409 conflict when expected revision is stale", async () => {
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-conflict-1",
+        status: "active",
+        droplet_ip: "127.0.0.1",
+        onboarding_data: {
+          knowledge_mirror: {
+            revision: 4,
+          },
+        },
+      },
+    });
+
+    const { default: handler } = await import("../../api/tenants/onboarding");
+    const req = {
+      method: "POST",
+      body: {
+        knowledge_mirror_expected_revision: 3,
+        knowledge_mirror: {
+          files: {
+            "knowledge/company-overview.md": "# Company Overview\n\nConflicting content",
+          },
+        },
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        code: "knowledge_conflict",
+        expected_revision: 3,
+        current_revision: 4,
+      }),
+    );
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when atomic save guard detects a concurrent update", async () => {
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-conflict-2",
+        status: "active",
+        droplet_ip: "127.0.0.1",
+        updated_at: "2026-03-27T05:00:00.000Z",
+        onboarding_data: {
+          knowledge_mirror: {
+            revision: 4,
+          },
+        },
+      },
+    });
+
+    const staleUpdateChain: Record<string, unknown> = {
+      update: vi.fn(() => staleUpdateChain),
+      eq: vi.fn(() => staleUpdateChain),
+      select: vi.fn(() => staleUpdateChain),
+      maybeSingle: vi.fn(async () => ({
+        data: null,
+        error: null,
+      })),
+    };
+    const latestTenantChain: Record<string, unknown> = {
+      select: vi.fn(() => latestTenantChain),
+      eq: vi.fn(() => latestTenantChain),
+      maybeSingle: vi.fn(async () => ({
+        data: {
+          onboarding_data: {
+            knowledge_mirror: {
+              revision: 5,
+            },
+          },
+        },
+        error: null,
+      })),
+    };
+
+    fromMock
+      .mockReturnValueOnce(staleUpdateChain)
+      .mockReturnValueOnce(latestTenantChain);
+
+    const { default: handler } = await import("../../api/tenants/onboarding");
+    const req = {
+      method: "POST",
+      body: {
+        knowledge_mirror_expected_revision: 4,
+        knowledge_mirror: {
+          files: {
+            "knowledge/company-overview.md": "# Company Overview\n\nConcurrent write test",
+          },
+        },
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        code: "knowledge_conflict",
+        expected_revision: 4,
+        current_revision: 5,
+      }),
+    );
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
   it("queues knowledge sync for runtime-ready tenants when mirror files are edited", async () => {
     authenticateRequest.mockResolvedValue({
       tenant: {
@@ -194,7 +306,7 @@ describe("POST /api/tenants/onboarding", () => {
       }),
       eq: vi.fn(() => updateChain),
       select: vi.fn(() => updateChain),
-      single: vi.fn(async () => ({
+      maybeSingle: vi.fn(async () => ({
         data: {
           onboarding_data: (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data,
         },
@@ -239,6 +351,136 @@ describe("POST /api/tenants/onboarding", () => {
     );
   });
 
+  it("queues force sync for runtime-ready tenants without requiring file edits", async () => {
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-force-sync-1",
+        status: "active",
+        droplet_ip: "127.0.0.1",
+        onboarding_data: {
+          company_name: "Acme Labs",
+          knowledge_mirror: {
+            revision: 6,
+            files: {
+              "knowledge/company-overview.md": "# Company Overview\n\nAcme Labs",
+            },
+            sync: {
+              status: "failed",
+              last_error: "Old failure",
+            },
+          },
+        },
+      },
+    });
+
+    let updatePayload: Record<string, unknown> | null = null;
+    const updateChain: Record<string, unknown> = {
+      update: vi.fn((payload: Record<string, unknown>) => {
+        updatePayload = payload;
+        return updateChain;
+      }),
+      eq: vi.fn(() => updateChain),
+      select: vi.fn(() => updateChain),
+      maybeSingle: vi.fn(async () => ({
+        data: {
+          onboarding_data: (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data,
+        },
+        error: null,
+      })),
+    };
+
+    fromMock.mockReturnValue(updateChain);
+    sendMock.mockResolvedValue(undefined);
+
+    const { default: handler } = await import("../../api/tenants/onboarding");
+    const req = {
+      method: "POST",
+      body: {
+        knowledge_mirror_expected_revision: 6,
+        force_knowledge_sync: true,
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(sendMock).toHaveBeenCalledWith({
+      name: "pixelport/knowledge.sync.requested",
+      data: {
+        tenantId: "tenant-force-sync-1",
+        revision: 6,
+      },
+    });
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        knowledge_sync: {
+          queued: true,
+          revision: 6,
+        },
+      }),
+    );
+  });
+
+  it("returns non-queued force sync state when runtime is not ready", async () => {
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-force-sync-2",
+        status: "draft",
+        droplet_ip: null,
+        onboarding_data: {
+          company_name: "Acme Labs",
+          knowledge_mirror: {
+            revision: 2,
+          },
+        },
+      },
+    });
+
+    let updatePayload: Record<string, unknown> | null = null;
+    const updateChain: Record<string, unknown> = {
+      update: vi.fn((payload: Record<string, unknown>) => {
+        updatePayload = payload;
+        return updateChain;
+      }),
+      eq: vi.fn(() => updateChain),
+      select: vi.fn(() => updateChain),
+      maybeSingle: vi.fn(async () => ({
+        data: {
+          onboarding_data: (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data,
+        },
+        error: null,
+      })),
+    };
+
+    fromMock.mockReturnValue(updateChain);
+    sendMock.mockResolvedValue(undefined);
+
+    const { default: handler } = await import("../../api/tenants/onboarding");
+    const req = {
+      method: "POST",
+      body: {
+        force_knowledge_sync: true,
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        knowledge_sync: expect.objectContaining({
+          queued: false,
+          reason: "runtime_not_ready",
+        }),
+      }),
+    );
+  });
+
   it("marks sync as failed when enqueue fails after mirror save", async () => {
     authenticateRequest.mockResolvedValue({
       tenant: {
@@ -259,7 +501,7 @@ describe("POST /api/tenants/onboarding", () => {
       }),
       eq: vi.fn(() => firstUpdateChain),
       select: vi.fn(() => firstUpdateChain),
-      single: vi.fn(async () => ({
+      maybeSingle: vi.fn(async () => ({
         data: {
           onboarding_data: (firstPayload as { onboarding_data: Record<string, unknown> }).onboarding_data,
         },
@@ -275,7 +517,7 @@ describe("POST /api/tenants/onboarding", () => {
       }),
       eq: vi.fn(() => secondUpdateChain),
       select: vi.fn(() => secondUpdateChain),
-      single: vi.fn(async () => ({
+      maybeSingle: vi.fn(async () => ({
         data: {
           onboarding_data: (secondPayload as { onboarding_data: Record<string, unknown> }).onboarding_data,
         },

@@ -22,6 +22,7 @@ import Approvals from "./pages/dashboard/Approvals";
 import Inbox from "./pages/dashboard/Inbox";
 import Costs from "./pages/dashboard/Costs";
 import RunHistory from "./pages/dashboard/RunHistory";
+import Knowledge from "./pages/dashboard/Knowledge";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="tasks" element={<Tasks />} />
               <Route path="approvals" element={<Approvals />} />
               <Route path="runs" element={<RunHistory />} />
+              <Route path="knowledge" element={<Knowledge />} />
               <Route path="costs" element={<Costs />} />
               <Route path="connections" element={<Connections />} />
             </Route>
