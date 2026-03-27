@@ -32,6 +32,15 @@ export interface TenantStatusBridgePayload {
     missing_scope?: string | null;
     request_id?: string | null;
   } | null;
+  knowledge_sync?: {
+    status: 'pending' | 'synced' | 'failed';
+    revision: number;
+    synced_revision: number | null;
+    seeded_revision: number | null;
+    last_synced_at: string | null;
+    last_error: string | null;
+    updated_at: string | null;
+  } | null;
   task_step_unlocked: boolean;
   has_agent_output: boolean;
   has_droplet: boolean;

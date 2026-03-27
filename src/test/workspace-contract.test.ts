@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   WORKSPACE_ROOT_PROMPT_FILES,
+  WORKSPACE_KNOWLEDGE_FILES,
   WORKSPACE_CONTRACT_VERSION,
   WORKSPACE_MEMORY_CONTRACT_VERSION,
   buildWorkspaceScaffold,
@@ -98,10 +99,32 @@ describe("workspace contract", () => {
     expect(renderManifest.contract_version).toBe(WORKSPACE_CONTRACT_VERSION);
     expect(renderManifest.memory_contract).toBe(WORKSPACE_MEMORY_CONTRACT_VERSION);
     expect(renderManifest.root_files).toEqual(WORKSPACE_ROOT_PROMPT_FILES);
+    expect(renderManifest.knowledge_files).toEqual(WORKSPACE_KNOWLEDGE_FILES);
     expect(renderManifest.system_files).toEqual(["system/onboarding.json", "system/render-manifest.json"]);
     expect(renderManifest.boot_execution).toBe("scaffold_only");
     expect(renderManifest.paperclip_integration).toBe("runtime_api_wiring_existing");
     expect(renderManifest.skill_files).toEqual(["skills/paperclip/SKILL.md"]);
+  });
+
+  it("uses knowledge_mirror file content when present", () => {
+    const scaffold = buildWorkspaceScaffold({
+      tenantName: "Acme",
+      tenantSlug: "acme",
+      apiBaseUrl: "https://pixelport.test",
+      onboardingData: {
+        company_name: "Acme",
+        knowledge_mirror: {
+          files: {
+            "knowledge/company-overview.md": "# Company Overview\n\nCustom mirror content",
+            "knowledge/brand-voice.md": "# Brand Voice\n\nUse short confident sentences.",
+          },
+        },
+      },
+    });
+
+    expect(scaffold.files["knowledge/company-overview.md"]).toContain("Custom mirror content");
+    expect(scaffold.files["knowledge/brand-voice.md"]).toContain("Use short confident sentences.");
+    expect(scaffold.files["knowledge/products-and-offers.md"]).toContain("# Products and Offers");
   });
 
   it("keeps company mission context scoped to SOUL and USER files", () => {

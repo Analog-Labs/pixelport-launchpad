@@ -290,4 +290,68 @@ describe("GET /api/tenants/status", () => {
     }));
     expect((res.body as { provisioning_progress?: { current_check_key: string | null } }).provisioning_progress?.current_check_key).toBeTruthy();
   });
+
+  it("projects knowledge_sync summary from onboarding_data.knowledge_mirror", async () => {
+    const { default: handler } = await import("../../api/tenants/status");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-knowledge-status",
+        status: "active",
+        droplet_id: "droplet-k1",
+        gateway_token: "gw-k1",
+        agentmail_inbox: null,
+        trial_ends_at: null,
+        plan: "trial",
+        onboarding_data: {
+          knowledge_mirror: {
+            revision: 4,
+            sync: {
+              status: "failed",
+              synced_revision: 3,
+              seeded_revision: 2,
+              last_synced_at: "2026-03-26T18:00:00.000Z",
+              last_error: "Runtime host unavailable",
+              updated_at: "2026-03-26T18:05:00.000Z",
+            },
+          },
+        },
+      },
+    });
+    reconcileBootstrapState.mockResolvedValue({
+      snapshot: {
+        onboardingData: {},
+        updatedAt: "2026-03-26T18:10:00.000Z",
+      },
+      progress: {
+        hasAgentOutput: true,
+      },
+      effectiveState: {
+        status: "accepted",
+        last_error: null,
+      },
+      changed: true,
+    });
+
+    const req = { method: "GET" };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        contract_version: THIN_BRIDGE_CONTRACT_VERSION,
+        knowledge_sync: {
+          status: "failed",
+          revision: 4,
+          synced_revision: 3,
+          seeded_revision: 2,
+          last_synced_at: "2026-03-26T18:00:00.000Z",
+          last_error: "Runtime host unavailable",
+          updated_at: "2026-03-26T18:05:00.000Z",
+        },
+      }),
+    );
+  });
 });

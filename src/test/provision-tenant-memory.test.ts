@@ -709,4 +709,68 @@ describe("provision tenant memory config", () => {
       ]),
     );
   });
+
+  it("keeps knowledge mirror pending on activation when seeded revision lags current revision", async () => {
+    const { resolveKnowledgeMirrorActivationState } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const activation = resolveKnowledgeMirrorActivationState({
+      tenantName: "PixelPort QA",
+      seededRevision: 2,
+      onboardingData: {
+        company_name: "PixelPort QA",
+        knowledge_mirror: {
+          revision: 4,
+          files: {
+            "knowledge/company-overview.md": "# Company Overview\n\nr4",
+          },
+          sync: {
+            status: "pending",
+            synced_revision: 2,
+            seeded_revision: 2,
+            last_synced_at: "2026-03-26T10:00:00.000Z",
+            last_error: "old failure",
+            updated_at: "2026-03-26T11:00:00.000Z",
+          },
+        },
+      },
+    });
+
+    expect(activation.needsCatchupSync).toBe(true);
+    expect(activation.currentRevision).toBe(4);
+    expect(activation.seededRevision).toBe(2);
+    expect(activation.mirror.sync.status).toBe("pending");
+    expect(activation.mirror.sync.seeded_revision).toBe(2);
+    expect(activation.mirror.sync.synced_revision).toBe(2);
+  });
+
+  it("marks knowledge mirror synced on activation when current revision equals seeded revision", async () => {
+    const { resolveKnowledgeMirrorActivationState } = await import(
+      "../../api/inngest/functions/provision-tenant"
+    );
+
+    const activation = resolveKnowledgeMirrorActivationState({
+      tenantName: "PixelPort QA",
+      seededRevision: 3,
+      onboardingData: {
+        company_name: "PixelPort QA",
+        knowledge_mirror: {
+          revision: 3,
+          sync: {
+            status: "pending",
+            synced_revision: 2,
+            seeded_revision: 2,
+          },
+        },
+      },
+    });
+
+    expect(activation.needsCatchupSync).toBe(false);
+    expect(activation.currentRevision).toBe(3);
+    expect(activation.mirror.sync.status).toBe("synced");
+    expect(activation.mirror.sync.seeded_revision).toBe(3);
+    expect(activation.mirror.sync.synced_revision).toBe(3);
+    expect(activation.mirror.sync.last_error).toBeNull();
+  });
 });

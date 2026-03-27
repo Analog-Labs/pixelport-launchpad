@@ -60,13 +60,15 @@ const PIXELPORT_RUNTIME_DIRECTORIES = [
 
 const WORKSPACE_SYSTEM_DIRECTORIES = ['system', 'knowledge', 'skills/paperclip'] as const;
 
-const WORKSPACE_KNOWLEDGE_FILES = [
+export const WORKSPACE_KNOWLEDGE_FILES = [
   'knowledge/company-overview.md',
   'knowledge/products-and-offers.md',
   'knowledge/audience-and-icp.md',
   'knowledge/brand-voice.md',
   'knowledge/competitors.md',
 ] as const;
+
+export type WorkspaceKnowledgeFilePath = (typeof WORKSPACE_KNOWLEDGE_FILES)[number];
 
 function asRecord(value: unknown): JsonRecord | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as JsonRecord) : null;
@@ -263,7 +265,7 @@ function buildMemoryFile(): string {
 function buildKnowledgeFiles(params: {
   tenantName: string;
   onboardingData: JsonRecord;
-}): Record<(typeof WORKSPACE_KNOWLEDGE_FILES)[number], string> {
+}): Record<WorkspaceKnowledgeFilePath, string> {
   const companyName = getCompanyName(params.onboardingData, params.tenantName);
   const companyUrl = getCompanyUrl(params.onboardingData);
   const mission = normalizeText(params.onboardingData.mission_goals)
@@ -305,6 +307,39 @@ function buildKnowledgeFiles(params: {
       '',
     ].join('\n'),
   };
+}
+
+export function buildWorkspaceKnowledgeFiles(params: {
+  tenantName: string;
+  onboardingData: Record<string, unknown>;
+}): Record<WorkspaceKnowledgeFilePath, string> {
+  return buildKnowledgeFiles({
+    tenantName: params.tenantName,
+    onboardingData: (asRecord(params.onboardingData) ?? {}) as JsonRecord,
+  });
+}
+
+function resolveKnowledgeFilesFromOnboardingData(params: {
+  tenantName: string;
+  onboardingData: JsonRecord;
+}): Record<WorkspaceKnowledgeFilePath, string> {
+  const defaults = buildKnowledgeFiles(params);
+  const mirrorRoot = asRecord(params.onboardingData.knowledge_mirror);
+  const mirror = asRecord(mirrorRoot?.files);
+
+  if (!mirror) {
+    return defaults;
+  }
+
+  const files = { ...defaults };
+  for (const relativePath of WORKSPACE_KNOWLEDGE_FILES) {
+    const mirrorValue = mirror[relativePath];
+    if (typeof mirrorValue === 'string') {
+      files[relativePath] = mirrorValue;
+    }
+  }
+
+  return files;
 }
 
 function buildPaperclipSkillFile(): string {
@@ -381,7 +416,7 @@ export function buildWorkspaceScaffold(params: {
     tenantName: params.tenantName,
     onboardingData,
   });
-  const knowledgeFiles = buildKnowledgeFiles({
+  const knowledgeFiles = resolveKnowledgeFilesFromOnboardingData({
     tenantName: params.tenantName,
     onboardingData,
   });

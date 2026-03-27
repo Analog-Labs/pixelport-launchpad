@@ -15,6 +15,15 @@ import {
   buildWorkspaceScaffold,
 } from '../../lib/workspace-contract';
 import {
+  KNOWLEDGE_SYNC_REQUESTED_EVENT,
+  markKnowledgeMirrorPending,
+  markKnowledgeMirrorSeededRevision,
+  markKnowledgeMirrorSyncFailed,
+  markKnowledgeMirrorSynced,
+  normalizeKnowledgeMirror,
+  withKnowledgeMirror,
+} from '../../lib/knowledge-mirror';
+import {
   buildBootstrapHooksConfig,
 } from '../../lib/onboarding-bootstrap';
 import {
@@ -1508,6 +1517,7 @@ export const provisionTenant = inngest.createFunction(
       return data as TenantRow;
     });
     let onboardingData = (tenant.onboarding_data ?? {}) as Json;
+    let seededKnowledgeMirrorRevision = 1;
     let startupStage = 'resolve_memory_settings';
     const startupResources: StartupResourceSnapshot = {
       tenantId,
@@ -1597,6 +1607,12 @@ export const provisionTenant = inngest.createFunction(
 
       // Generate Paperclip API key for dashboard proxy → Paperclip auth
       const paperclipApiKey = `pak-${randomUUID()}`;
+      const seededKnowledgeMirror = normalizeKnowledgeMirror({
+        raw: onboardingData.knowledge_mirror,
+        tenantName: tenant.name,
+        onboardingData,
+      });
+      seededKnowledgeMirrorRevision = seededKnowledgeMirror.revision;
 
       const cloudInit = buildCloudInit({
         tenantId,
@@ -1618,7 +1634,7 @@ export const provisionTenant = inngest.createFunction(
         agentmailApiKey: AGENTMAIL_API_KEY || '',
         agentApiKey,
         paperclipApiKey,
-        onboardingData: tenant.onboarding_data ?? {},
+        onboardingData,
       });
 
       // Fetch account SSH keys so we can SSH into the droplet for debugging
@@ -2283,13 +2299,94 @@ export const provisionTenant = inngest.createFunction(
     });
 
     startupStage = 'mark_tenant_active';
-    await step.run('mark-active', async () => {
-      const { error } = await supabase.from('tenants').update({ status: 'active' }).eq('id', tenantId);
+    const activationState = await step.run('mark-active', async () => {
+      const { data: latestTenantData, error: latestTenantError } = await supabase
+        .from('tenants')
+        .select('onboarding_data')
+        .eq('id', tenantId)
+        .single();
+
+      if (latestTenantError) {
+        throw new Error(`Failed to load latest onboarding data before activation: ${latestTenantError.message}`);
+      }
+
+      const latestOnboardingData = (latestTenantData?.onboarding_data ?? {}) as Json;
+      const activationMirrorState = resolveKnowledgeMirrorActivationState({
+        onboardingData: latestOnboardingData,
+        tenantName: tenant.name,
+        seededRevision: seededKnowledgeMirrorRevision,
+      });
+      const nextOnboardingData = withKnowledgeMirror(latestOnboardingData, activationMirrorState.mirror);
+
+      const { error } = await supabase
+        .from('tenants')
+        .update({ status: 'active', onboarding_data: nextOnboardingData })
+        .eq('id', tenantId);
 
       if (error) {
         throw new Error(`Failed to mark tenant as active: ${error.message}`);
       }
+
+      onboardingData = nextOnboardingData;
+
+      return {
+        currentRevision: activationMirrorState.currentRevision,
+        seededRevision: activationMirrorState.seededRevision,
+        needsCatchupSync: activationMirrorState.needsCatchupSync,
+      };
     });
+
+    let activationKnowledgeSyncQueued = false;
+    let activationKnowledgeSyncError: string | null = null;
+    if (activationState.needsCatchupSync) {
+      startupStage = 'enqueue_knowledge_sync_catchup';
+      try {
+        await step.run('enqueue-knowledge-sync-catchup', async () => {
+          await inngest.send({
+            name: KNOWLEDGE_SYNC_REQUESTED_EVENT,
+            data: {
+              tenantId,
+              revision: activationState.currentRevision,
+            },
+          });
+        });
+        activationKnowledgeSyncQueued = true;
+      } catch (error) {
+        activationKnowledgeSyncError = `Activation catch-up sync enqueue failed: ${toErrorMessage(error)}`;
+        await step.run('persist-activation-sync-enqueue-failure', async () => {
+          const { data: latestTenantData, error: latestTenantError } = await supabase
+            .from('tenants')
+            .select('onboarding_data')
+            .eq('id', tenantId)
+            .single();
+
+          if (latestTenantError) {
+            throw new Error(`Failed to load onboarding data after sync enqueue failure: ${latestTenantError.message}`);
+          }
+
+          const latestOnboardingData = (latestTenantData?.onboarding_data ?? {}) as Json;
+          const latestMirror = normalizeKnowledgeMirror({
+            raw: latestOnboardingData.knowledge_mirror,
+            tenantName: tenant.name,
+            onboardingData: latestOnboardingData,
+          });
+          const failedMirror = markKnowledgeMirrorSyncFailed({
+            mirror: latestMirror,
+            error: activationKnowledgeSyncError || 'Activation catch-up sync enqueue failed',
+          });
+          const nextOnboardingData = withKnowledgeMirror(latestOnboardingData, failedMirror);
+
+          const { error: updateError } = await supabase
+            .from('tenants')
+            .update({ onboarding_data: nextOnboardingData })
+            .eq('id', tenantId);
+
+          if (updateError) {
+            throw new Error(`Failed to persist activation sync enqueue failure: ${updateError.message}`);
+          }
+        });
+      }
+    }
     startupStage = 'completed';
 
     return {
@@ -2304,6 +2401,11 @@ export const provisionTenant = inngest.createFunction(
       bootstrapAutoPairAttempted: false,
       bootstrapAutoPairApproved: false,
       startupRoute: 'paperclip_kickoff_wakeup',
+      knowledgeSeededRevision: activationState.seededRevision,
+      knowledgeCurrentRevision: activationState.currentRevision,
+      knowledgeCatchupPending: activationState.needsCatchupSync,
+      knowledgeCatchupQueued: activationKnowledgeSyncQueued,
+      knowledgeCatchupQueueError: activationKnowledgeSyncError,
       memoryNativeEnabled: memoryProvisioningPlan.effectiveNativeEnabled,
       memoryNativeDowngraded: memoryProvisioningPlan.nativeDowngradedMissingApiKey,
       trialMode: !!trialMode,
@@ -2426,6 +2528,39 @@ ${heredocTag}`;
   });
 
   return [...directoryCommands, ...fileCommands].join('\n\n');
+}
+
+export function resolveKnowledgeMirrorActivationState(params: {
+  onboardingData: Json;
+  tenantName: string;
+  seededRevision: number;
+}) {
+  const latestMirror = normalizeKnowledgeMirror({
+    raw: params.onboardingData.knowledge_mirror,
+    tenantName: params.tenantName,
+    onboardingData: params.onboardingData,
+  });
+  const mirrorWithSeededRevision = markKnowledgeMirrorSeededRevision({
+    mirror: latestMirror,
+    seededRevision: params.seededRevision,
+  });
+  const currentRevisionMatchesSeed = latestMirror.revision === params.seededRevision;
+  const activationMirror = currentRevisionMatchesSeed
+    ? markKnowledgeMirrorSynced({
+      mirror: mirrorWithSeededRevision,
+      syncedRevision: params.seededRevision,
+    })
+    : markKnowledgeMirrorPending({
+      mirror: mirrorWithSeededRevision,
+      clearError: true,
+    });
+
+  return {
+    mirror: activationMirror,
+    currentRevision: activationMirror.revision,
+    seededRevision: params.seededRevision,
+    needsCatchupSync: !currentRevisionMatchesSeed,
+  };
 }
 
 export function buildCloudInit(params: {

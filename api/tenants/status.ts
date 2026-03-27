@@ -7,6 +7,7 @@ import {
 } from '../lib/bootstrap-state';
 import { classifyGatewayFailure } from '../lib/openclaw-bootstrap-guard';
 import { tryRecoverProvisioningTenant } from '../lib/provisioning-recovery';
+import { projectKnowledgeSyncSummary } from '../lib/knowledge-mirror';
 import {
   THIN_BRIDGE_CONTRACT_VERSION,
   isTaskStepUnlocked,
@@ -296,6 +297,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       contract_version: THIN_BRIDGE_CONTRACT_VERSION,
       status: tenantStatus,
       bootstrap_status: bootstrapStatus,
+      knowledge_sync: projectKnowledgeSyncSummary(effectiveTenant.onboarding_data),
       provisioning_progress: provisioningProgress,
       bootstrap_error: bootstrapError
         ? {
