@@ -3,6 +3,7 @@ import { Inngest } from 'inngest';
 import { provisionTenant } from './functions/provision-tenant';
 import { activateSlack } from './functions/activate-slack';
 import { activateIntegration } from './functions/activate-integration';
+import { syncKnowledgeMirror } from './functions/sync-knowledge-mirror';
 
 // Inline client creation — importing from a local file that re-exports inngest
 // crashes Vercel's esbuild bundler at runtime. Direct imports work fine.
@@ -15,6 +16,6 @@ const serveHost = process.env.INNGEST_SERVE_HOST;
 
 export default serve({
   client: inngest,
-  functions: [provisionTenant, activateSlack, activateIntegration],
+  functions: [provisionTenant, activateSlack, activateIntegration, syncKnowledgeMirror],
   ...(serveHost ? { serveHost } : {}),
 });

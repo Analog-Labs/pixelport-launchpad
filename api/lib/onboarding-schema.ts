@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { WORKSPACE_KNOWLEDGE_FILES, type WorkspaceKnowledgeFilePath } from "./workspace-contract";
+import {
+  applyKnowledgeMirrorFilePatch,
+  normalizeKnowledgeMirror,
+  normalizeKnowledgeMirrorFilePatch,
+  withKnowledgeMirror,
+  type KnowledgeMirrorState,
+} from "./knowledge-mirror";
 
 export const ONBOARDING_SCHEMA_VERSION = 2;
 export const ONBOARDING_RENDER_VERSION = 1;
@@ -13,6 +21,7 @@ const APPROVAL_MODE_VALUES = ["strict", "balanced", "autonomous"] as const;
 const DEFAULT_AGENT_NAME = "Chief";
 const DEFAULT_AGENT_TONE = AGENT_TONE_VALUES[0];
 const DEFAULT_AGENT_AVATAR_ID = "amber-command";
+const MAX_KNOWLEDGE_FILE_CHARS = 50_000;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -47,6 +56,26 @@ const agentSuggestionSchema = z
     focus: z.string().max(400).optional(),
   })
   .passthrough();
+
+const KNOWLEDGE_MIRROR_FILE_KEYS = new Set<string>(WORKSPACE_KNOWLEDGE_FILES);
+
+const knowledgeMirrorFilesPatchSchema = z.record(z.string().max(MAX_KNOWLEDGE_FILE_CHARS)).superRefine((value, ctx) => {
+  for (const key of Object.keys(value)) {
+    if (!KNOWLEDGE_MIRROR_FILE_KEYS.has(key)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `Unsupported knowledge mirror file key: ${key}`,
+      });
+    }
+  }
+});
+
+const knowledgeMirrorPatchSchema = z
+  .object({
+    files: knowledgeMirrorFilesPatchSchema.optional(),
+  })
+  .partial();
 
 const nestedPatchSchema = z
   .object({
@@ -109,6 +138,7 @@ const onboardingPatchSchema = z
     scan_results: z.record(z.unknown()).nullable().optional(),
     launch_started_at: z.string().max(64).nullable().optional(),
     launch_completed_at: z.string().max(64).nullable().optional(),
+    knowledge_mirror: knowledgeMirrorPatchSchema.optional(),
     v2: nestedPatchSchema.optional(),
   })
   .passthrough();
@@ -142,6 +172,8 @@ type BuildSuccess = {
   ok: true;
   state: OnboardingState;
   onboardingData: JsonRecord;
+  knowledgeMirror: KnowledgeMirrorState;
+  knowledgeMirrorEdited: boolean;
 };
 
 type BuildFailure = {
@@ -546,6 +578,12 @@ function applyPatch(state: OnboardingState, rawPatch: z.infer<typeof onboardingP
   return next;
 }
 
+function extractKnowledgeMirrorFilesPatch(
+  rawPatch: z.infer<typeof onboardingPatchSchema>,
+): Partial<Record<WorkspaceKnowledgeFilePath, string>> {
+  return normalizeKnowledgeMirrorFilePatch(rawPatch.knowledge_mirror?.files);
+}
+
 function formatZodError(error: z.ZodError): string {
   return error.issues
     .map((issue) => {
@@ -566,8 +604,9 @@ export function buildOnboardingData(existingRaw: unknown, patchRaw: unknown): Bu
 
   const existing = isRecord(existingRaw) ? existingRaw : {};
   const state = applyPatch(extractStateFromOnboardingData(existing), parsedPatch.data);
+  const nowIso = new Date().toISOString();
 
-  const canonical: JsonRecord = {
+  const canonicalBase: JsonRecord = {
     ...existing,
     schema_version: ONBOARDING_SCHEMA_VERSION,
     render_version: ONBOARDING_RENDER_VERSION,
@@ -615,9 +654,25 @@ export function buildOnboardingData(existingRaw: unknown, patchRaw: unknown): Bu
     launch_completed_at: state.launchCompletedAt,
   };
 
+  const normalizedMirror = normalizeKnowledgeMirror({
+    raw: existing.knowledge_mirror,
+    tenantName: state.companyName || "Company",
+    onboardingData: canonicalBase,
+    now: nowIso,
+  });
+  const mirrorPatch = extractKnowledgeMirrorFilesPatch(parsedPatch.data);
+  const mirrorApplied = applyKnowledgeMirrorFilePatch({
+    mirror: normalizedMirror,
+    filesPatch: mirrorPatch,
+    now: nowIso,
+  });
+  const canonical = withKnowledgeMirror(canonicalBase, mirrorApplied.mirror);
+
   return {
     ok: true,
     state,
     onboardingData: canonical,
+    knowledgeMirror: mirrorApplied.mirror,
+    knowledgeMirrorEdited: mirrorApplied.edited,
   };
 }
