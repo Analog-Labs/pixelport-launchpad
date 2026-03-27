@@ -1,6 +1,6 @@
 # PixelPort — Project Status and Execution Plan
 
-**Last Updated:** 2026-03-26
+**Last Updated:** 2026-03-27
 **Project:** PixelPort — AI GTM Employees SaaS (pixelport.ai)
 **Formerly:** Growth Swarm (now archived historical context)
 **Primary Runtime Direction:** PixelPort-owned Paperclip customization overlay (`paperclip/`) + per-tenant DO droplets
@@ -8,9 +8,9 @@
 
 ---
 
-## Current Program Snapshot (2026-03-26 Sessions 1-6 Closure)
+## Current Program Snapshot (2026-03-27 Sessions 1-7 Closure)
 
-Sessions 1-6 (draft onboarding through knowledge mirror sync integrity) are merged and production-validated on `main`.
+Sessions 1-7 (draft onboarding through Knowledge dashboard surface) are merged and production-validated on `main`.
 
 - merged implementation PRs:
   - `#51` (`aacf8ec`) — baseline Sessions 1-3 lifecycle contract
@@ -18,6 +18,7 @@ Sessions 1-6 (draft onboarding through knowledge mirror sync integrity) are merg
   - `#55` (`104a8e0`) — Session 4 canonical workspace compiler + OpenClaw config defaults
   - `#57` (`fa87961`) — Session 5 Paperclip-first startup cutover + manual bootstrap provenance
   - `#59` (`2b0de82`) — Session 6 knowledge mirror backend + sync integrity guards
+  - `#62` (`accff8f`) — Session 7 Knowledge dashboard route/sidebar/hook + conflict-safe save/retry contract
 - production hotfixes previously applied during first canary loop:
   - `05aec88` (`fix(api): use api-local tenant status helper in server routes`)
   - `67dee55` (`fix(onboarding): avoid null mission fields during draft create`)
@@ -32,6 +33,8 @@ Sessions 1-6 (draft onboarding through knowledge mirror sync integrity) are merg
   - Session 5 startup now routes new tenants through Paperclip kickoff/wakeup readiness before marking tenant `active`
   - Session 6 stores canonical `onboarding_data.knowledge_mirror` and syncs deterministic `knowledge/*.md` files to runtime
   - Session 6 status surface exposes truthful `knowledge_sync` state (`pending/synced/failed`) on `/api/tenants/status`
+  - Session 7 adds `/dashboard/knowledge` with five collapsible section editors, markdown read mode, and one-section-at-a-time edit/save/cancel flow
+  - Session 7 extends `POST /api/tenants/onboarding` with `knowledge_mirror_expected_revision`, explicit `force_knowledge_sync`, and `409 knowledge_conflict` stale-write guardrails
   - manual bootstrap route remains break-glass with persisted provenance (`startup_source`, user, timestamp, force)
 - live canary outcome:
   - first account (`board3`) in the original loop exposed failures and drove the two hotfixes above
@@ -56,7 +59,14 @@ Sessions 1-6 (draft onboarding through knowledge mirror sync integrity) are merg
     - slug: `stripe`
     - droplet id/ip: `561116232` / `67.207.94.54`
     - final tenant status: `active`; `knowledge_sync` finalized as `synced` with `revision=1`, `synced_revision=1`, `seeded_revision=1`
-- next active implementation target: Session 7 (`Knowledge Dashboard Surface`)
+  - Session 7 live canary on `board11` completed full pass:
+    - tenant id: `6da5aec1-c63c-4dc9-bbc1-91603f42a452`
+    - slug: `board11-stripe-canary`
+    - droplet id/ip: `561153803` / `147.182.211.186`
+    - conflict guard validated live (`409 knowledge_conflict`)
+    - `knowledge_sync` finalized as `synced` with `revision=3`, `synced_revision=3`
+    - runtime file write verified at `/opt/openclaw/workspace-main/knowledge/company-overview.md`
+- next active implementation target: Session 8 (`Approval Policy Runtime Apply + Docs + Final Regression`)
 
 ## Governance Note (2026-03-06)
 

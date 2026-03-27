@@ -76,11 +76,21 @@
 - [x] Runtime knowledge mirror files verified on host-mounted path `/opt/openclaw/workspace-main/knowledge/*.md` with no leftover temp files
 - [x] Session 6 evidence captured: `docs/qa/2026-03-26-s6-live-canary-board8.md`
 
-## Session 7 — Knowledge Dashboard Surface (Planned)
+## Session 7 — Knowledge Dashboard Surface ✅
 
-- [ ] Add Knowledge route + sidebar entry
-- [ ] Reuse Vault UX patterns against mirror+sync backend
-- [ ] Support edits with truthful sync/error states
+- [x] Add Knowledge route + sidebar entry
+- [x] Reuse Vault UX patterns against mirror+sync backend
+- [x] Support edits with truthful sync/error states
+- [x] Add conflict-safe revision guard + manual retry contract on onboarding save
+
+**Production validation (2026-03-27):**
+- [x] Merged PR #62 (`accff8f`) to `main`
+- [x] Live canary full pass completed on `board11@ziffyhomes.com` with tenant `board11-stripe-canary`
+- [x] Knowledge UI verified: sidebar entry, five collapsible section cards, markdown read mode, and single-section edit/save flow
+- [x] Conflict handling verified with stale-tab save returning `409 knowledge_conflict`
+- [x] Sync truth finalized on `/api/tenants/status` as `synced` (`revision=3`, `synced_revision=3`) after explicit manual retry trigger
+- [x] Runtime knowledge file write verified on host path `/opt/openclaw/workspace-main/knowledge/company-overview.md`
+- [x] Session 7 evidence captured: `docs/qa/2026-03-27-s7-live-canary-board11.md`
 
 ## Session 8 — Approval Policy Runtime Apply + Docs + Final Regression (Planned)
 

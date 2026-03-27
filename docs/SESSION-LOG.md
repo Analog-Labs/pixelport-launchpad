@@ -7,6 +7,39 @@
 
 ## Last Session
 
+- **Date:** 2026-03-27 (session 128)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Completed Session 7 release flow and merged PR `#62` to `main`:
+    - merge commit: `accff8f`
+    - PR URL: `https://github.com/Analog-Labs/pixelport-launchpad/pull/62`
+  - Ran production fresh-tenant canary on `main` with `board11@ziffyhomes.com` (website seed: `https://stripe.com`).
+  - Confirmed onboarding lifecycle and runtime truth on live tenant:
+    - tenant id: `6da5aec1-c63c-4dc9-bbc1-91603f42a452`
+    - slug: `board11-stripe-canary`
+    - droplet id/ip: `561153803` / `147.182.211.186`
+    - status progression reached `active`
+    - bootstrap status finalized as `completed`
+  - Validated Session 7 Knowledge dashboard behavior on production:
+    - sidebar includes `Knowledge` and route `/dashboard/knowledge` loads
+    - five section cards render and expand/collapse
+    - markdown renders in read mode
+    - section edit/save flow works with single-section edit lock
+    - stale-tab conflict scenario returns `409` with `code=knowledge_conflict`
+  - Investigated pending sync stall on first run and closed it without code hotfix:
+    - observed `knowledge_sync.status=pending` until manual retry
+    - re-registered Inngest endpoint (`PUT /api/inngest` returned `modified=true`)
+    - triggered explicit retry via `force_knowledge_sync`
+    - `/api/tenants/status` moved to terminal `knowledge_sync.status=synced` with `revision=3`, `synced_revision=3`
+  - Verified runtime artifact truth via SSH:
+    - `/opt/openclaw/workspace-main/knowledge/company-overview.md` contains saved canary edit text
+  - Added release evidence doc:
+    - `docs/qa/2026-03-27-s7-live-canary-board11.md`
+  - Stop rule honored after first full successful canary pass; `board12` and `board13` not used.
+- **What's next:**
+  - Session 8 is now the next planned implementation (`Approval Policy Runtime Apply + Docs + Final Regression`).
+- **Blockers:** None.
+
 - **Date:** 2026-03-26 (session 127)
 - **Who worked:** Founder + Codex
 - **What was done:**
