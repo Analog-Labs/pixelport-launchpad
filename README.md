@@ -9,7 +9,7 @@ This repo contains:
 
 ## Current Production State
 
-As of 2026-03-26, Sessions 1-6 of the onboarding/provisioning program are live and production-validated:
+As of 2026-03-27, Sessions 1-7 of the onboarding/provisioning program are live and production-validated:
 - onboarding flow is `Company -> Strategy -> Task -> Launch`
 - `POST /api/tenants` creates `draft` tenants (no provisioning on company submit)
 - `POST /api/tenants/launch` explicitly triggers provisioning with idempotent/retry-safe behavior
@@ -19,7 +19,12 @@ As of 2026-03-26, Sessions 1-6 of the onboarding/provisioning program are live a
   - config defaults: `agents.defaults.skipBootstrap=true`, heartbeat narrowed (`every: "0m"`), and memory `extraPaths=["knowledge"]`
 - Session 5 startup trigger routing is live for new tenants (Paperclip kickoff/wakeup path)
 - Session 6 knowledge mirror sync is live with truthful `pending/synced/failed` status projection on `/api/tenants/status`
-- latest live canary pass completed on `board8@ziffyhomes.com` (`stripe`) with a fresh tenant reaching `active`
+- Session 7 Knowledge dashboard is live (`/dashboard/knowledge`) with:
+  - sidebar navigation entry + dedicated route
+  - five collapsible Knowledge sections with markdown read mode
+  - single-section edit flow (`Save` / `Cancel`) with conflict-safe save guard
+  - explicit manual sync retry support (`force_knowledge_sync`) on failure paths
+- latest live canary pass completed on `board11@ziffyhomes.com` (`board11-stripe-canary`) with a fresh tenant reaching `active` and Knowledge sync finalized at `synced`
 
 ## Local Development
 

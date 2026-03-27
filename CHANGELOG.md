@@ -2,6 +2,21 @@
 
 All notable changes to PixelPort are documented here.
 
+## [0.19.4.0] - 2026-03-27
+
+### Added
+- Knowledge dashboard is now live at `/dashboard/knowledge` with five collapsible sections, markdown read mode, and section-level edit controls
+- Session 7 save flow now protects against stale overwrites with revision-aware conflict responses (`409 knowledge_conflict`)
+- Manual Knowledge sync retry is now available from the same onboarding contract using `force_knowledge_sync`
+
+### Changed
+- Startup routing for fresh tenants now runs through the Session 5 Paperclip kickoff/wakeup path while keeping manual bootstrap replay as break-glass recovery
+- Knowledge mirror sync status (`pending` / `synced` / `failed`) from Session 6 is now surfaced and exercised end-to-end through the Session 7 dashboard UI
+- Release documentation now reflects Sessions 1-7 production closure and board11 live canary evidence
+
+### Fixed
+- Session 7 canary sync stall was resolved operationally by re-registering Inngest functions and triggering explicit retry, resulting in terminal `synced` status on live tenant `board11`
+
 ## [0.19.3.0] - 2026-03-26
 
 ### Added
