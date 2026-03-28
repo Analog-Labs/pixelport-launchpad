@@ -2,6 +2,21 @@
 
 All notable changes to PixelPort are documented here.
 
+## [0.19.5.0] - 2026-03-28
+
+### Added
+- Session 8 approval-policy runtime apply worker now processes `pixelport/policy.apply.requested` events with stale-revision skip guards and persisted apply outcomes
+- Connections now includes a Governance card where operators can edit approval mode/guardrails, save policy changes, and trigger retry apply when runtime patching fails
+- Tenant status contract now surfaces `policy_apply` runtime truth for governance UI state rendering
+
+### Changed
+- New tenant workspace scaffolding now seeds managed approval-policy marker blocks in both `AGENTS.md` and `TOOLS.md`
+- Onboarding save now performs synchronous policy apply attempts, writes audit/runtime state to `onboarding_data`, and queues worker fallback on runtime patch failures
+- Session 8 tests now cover revision conflicts, sync apply success/failure paths, worker fail-closed marker behavior, and governance UI save/retry flows
+
+### Fixed
+- Legacy tenants without an `approval_policy_runtime` block now return `policy_apply: null` (instead of misleading default pending state) from `/api/tenants/status`
+
 ## [0.19.4.0] - 2026-03-27
 
 ### Added

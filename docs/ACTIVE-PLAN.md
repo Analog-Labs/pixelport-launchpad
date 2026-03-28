@@ -92,12 +92,14 @@
 - [x] Runtime knowledge file write verified on host path `/opt/openclaw/workspace-main/knowledge/company-overview.md`
 - [x] Session 7 evidence captured: `docs/qa/2026-03-27-s7-live-canary-board11.md`
 
-## Session 8 — Approval Policy Runtime Apply + Docs + Final Regression (Planned)
+## Session 8 — Approval Policy Runtime Apply + Docs + Final Regression (In Progress)
 
-- [ ] Apply policy edits immediately with audit logging
-- [ ] Patch managed blocks in `AGENTS` and `TOOLS` (no full-file overwrite)
-- [ ] Add post-onboarding governance editor surface
+- [x] Apply policy edits immediately with audit logging
+- [x] Patch managed blocks in `AGENTS` and `TOOLS` (no full-file overwrite)
+- [x] Add post-onboarding governance editor surface
 - [ ] Run full regression and rollout checklist
+- [x] Local regression gates complete (`npx tsc --noEmit`, `npm test`)
+- [ ] Live canary + rollout evidence capture pending
 
 ## Release Gates (Per Session)
 

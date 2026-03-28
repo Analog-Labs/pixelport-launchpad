@@ -49,9 +49,12 @@ describe("workspace contract", () => {
     const boot = scaffold.files["BOOT.md"];
     const memory = scaffold.files["MEMORY.md"];
     const soul = scaffold.files["SOUL.md"];
+    const tools = scaffold.files["TOOLS.md"];
 
     expect(agents).toContain("You are the Chief of Staff.");
     expect(agents).not.toContain("You are the CEO.");
+    expect(agents).toContain("<!-- PIXELPORT:BEGIN approval-policy -->");
+    expect(agents).toContain("Current mode: **Balanced**");
 
     expect(identity).toContain("# IDENTITY.md");
     expect(identity).toContain("- Name: Luna");
@@ -64,6 +67,8 @@ describe("workspace contract", () => {
     expect(heartbeat).toContain("# HEARTBEAT.md -- Chief of Staff Heartbeat Checklist");
     expect(heartbeat).toContain("## Chief of Staff Responsibilities");
     expect(heartbeat).not.toContain("## CEO Responsibilities");
+    expect(tools).toContain("<!-- PIXELPORT:BEGIN approval-policy -->");
+    expect(tools).toContain("Tool actions that match an approval-required guardrail");
 
     expect(boot).toContain("# BOOT.md");
     expect(boot).toContain("scaffold only");
@@ -125,6 +130,29 @@ describe("workspace contract", () => {
     expect(scaffold.files["knowledge/company-overview.md"]).toContain("Custom mirror content");
     expect(scaffold.files["knowledge/brand-voice.md"]).toContain("Use short confident sentences.");
     expect(scaffold.files["knowledge/products-and-offers.md"]).toContain("# Products and Offers");
+  });
+
+  it("renders managed approval policy section from onboarding policy values", () => {
+    const scaffold = buildWorkspaceScaffold({
+      tenantName: "Policy Co",
+      tenantSlug: "policy-co",
+      apiBaseUrl: "https://pixelport.test",
+      onboardingData: {
+        approval_policy: {
+          mode: "strict",
+          guardrails: {
+            publish: true,
+            paid_spend: false,
+            outbound_messages: true,
+            major_strategy_changes: false,
+          },
+        },
+      },
+    });
+
+    expect(scaffold.files["AGENTS.md"]).toContain("Current mode: **Strict**");
+    expect(scaffold.files["AGENTS.md"]).toContain("Paid spend changes: no approval required");
+    expect(scaffold.files["TOOLS.md"]).toContain("Major strategy changes: no approval required");
   });
 
   it("keeps company mission context scoped to SOUL and USER files", () => {

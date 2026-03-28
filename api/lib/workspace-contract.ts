@@ -3,6 +3,10 @@ import {
   PAPERCLIP_DEFAULT_CEO_SOURCE,
   PAPERCLIP_DEFAULT_CEO_TEMPLATES,
 } from './paperclip-default-ceo-templates';
+import {
+  readApprovalPolicyFromOnboardingData,
+  upsertApprovalPolicyManagedSection,
+} from './approval-policy-runtime';
 
 type JsonValue =
   | string
@@ -393,10 +397,22 @@ function buildRootPromptFiles(params: {
   tenantName: string;
   onboardingData: JsonRecord;
 }): Record<WorkspaceRootPromptFile, string> {
+  const policy = readApprovalPolicyFromOnboardingData(params.onboardingData);
+  const agentsTemplate = `${relabelChiefOfStaff(PAPERCLIP_DEFAULT_CEO_TEMPLATES['AGENTS.md'])}\n`;
+  const toolsTemplate = `${relabelChiefOfStaff(PAPERCLIP_DEFAULT_CEO_TEMPLATES['TOOLS.md'])}\n`;
+
   return {
-    'AGENTS.md': `${relabelChiefOfStaff(PAPERCLIP_DEFAULT_CEO_TEMPLATES['AGENTS.md'])}\n`,
+    'AGENTS.md': upsertApprovalPolicyManagedSection({
+      fileContent: agentsTemplate,
+      policy,
+      target: 'agents',
+    }),
     'SOUL.md': buildSoulFile(params),
-    'TOOLS.md': `${relabelChiefOfStaff(PAPERCLIP_DEFAULT_CEO_TEMPLATES['TOOLS.md'])}\n`,
+    'TOOLS.md': upsertApprovalPolicyManagedSection({
+      fileContent: toolsTemplate,
+      policy,
+      target: 'tools',
+    }),
     'IDENTITY.md': buildIdentityFile(params),
     'USER.md': buildUserFile(params),
     'HEARTBEAT.md': `${relabelChiefOfStaff(PAPERCLIP_DEFAULT_CEO_TEMPLATES['HEARTBEAT.md'])}\n`,

@@ -5,6 +5,7 @@ import {
   reconcileBootstrapState,
   type BootstrapDurableProgress,
 } from '../lib/bootstrap-state';
+import { projectApprovalPolicyApplySummary } from '../lib/approval-policy-runtime';
 import { classifyGatewayFailure } from '../lib/openclaw-bootstrap-guard';
 import { tryRecoverProvisioningTenant } from '../lib/provisioning-recovery';
 import { projectKnowledgeSyncSummary } from '../lib/knowledge-mirror';
@@ -298,6 +299,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       status: tenantStatus,
       bootstrap_status: bootstrapStatus,
       knowledge_sync: projectKnowledgeSyncSummary(effectiveTenant.onboarding_data),
+      policy_apply: projectApprovalPolicyApplySummary(effectiveTenant.onboarding_data),
       provisioning_progress: provisioningProgress,
       bootstrap_error: bootstrapError
         ? {
