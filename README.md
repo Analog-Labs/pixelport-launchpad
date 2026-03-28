@@ -9,7 +9,7 @@ This repo contains:
 
 ## Current Production State
 
-As of 2026-03-27, Sessions 1-7 of the onboarding/provisioning program are live and production-validated:
+As of 2026-03-28, Sessions 1-8 of the onboarding/provisioning program are live and production-validated:
 - onboarding flow is `Company -> Strategy -> Task -> Launch`
 - `POST /api/tenants` creates `draft` tenants (no provisioning on company submit)
 - `POST /api/tenants/launch` explicitly triggers provisioning with idempotent/retry-safe behavior
@@ -24,7 +24,12 @@ As of 2026-03-27, Sessions 1-7 of the onboarding/provisioning program are live a
   - five collapsible Knowledge sections with markdown read mode
   - single-section edit flow (`Save` / `Cancel`) with conflict-safe save guard
   - explicit manual sync retry support (`force_knowledge_sync`) on failure paths
-- latest live canary pass completed on `board11@ziffyhomes.com` (`board11-stripe-canary`) with a fresh tenant reaching `active` and Knowledge sync finalized at `synced`
+- Session 8 approval-policy governance runtime apply is live with:
+  - managed approval-policy sections in runtime `AGENTS.md` and `TOOLS.md`
+  - immediate policy apply on save with queued retry fallback
+  - additive `policy_apply` truth block on `/api/tenants/status`
+  - conflict-safe revision guard (`approval_policy_conflict`) on onboarding policy save
+- latest live canary pass completed on `board12@ziffyhomes.com` (`stripe-2`) with a fresh tenant reaching `active`, governance save/apply validated, and runtime managed markers confirmed
 
 ## Local Development
 

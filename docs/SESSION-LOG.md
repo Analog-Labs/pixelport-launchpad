@@ -7,6 +7,40 @@
 
 ## Last Session
 
+- **Date:** 2026-03-28 (session 129)
+- **Who worked:** Founder + Codex
+- **What was done:**
+  - Completed Session 8 release flow and merged PR `#64` to `main`:
+    - merge commit: `3b77acf`
+    - PR URL: `https://github.com/Analog-Labs/pixelport-launchpad/pull/64`
+  - Ran production fresh-tenant canary on `main` with `board12@ziffyhomes.com` (website seed: `https://stripe.com`).
+  - Confirmed onboarding lifecycle and runtime truth on live tenant:
+    - tenant id: `30dd2ac6-67cd-4667-9336-e95af1702f7f`
+    - slug: `stripe-2`
+    - droplet id/ip: `561394185` / `143.244.144.93`
+    - status progression reached `active`
+    - bootstrap status finalized as `completed`
+  - Validated Session 8 governance behavior on production:
+    - Connections Governance card save flow executed in UI
+    - status transitioned `policy_apply.pending (revision=1)` -> `policy_apply.applied (revision=2)`
+    - card reflected terminal `Applied` state
+  - Verified conflict safety contract on production:
+    - first write with revision `2` succeeded and advanced to revision `3`
+    - stale second write with expected revision `2` returned `409` with `code=approval_policy_conflict`
+  - Verified runtime managed marker truth via SSH:
+    - `/opt/openclaw/workspace-main/AGENTS.md` contains approval-policy markers and `Current mode: **Autonomous**`
+    - `/opt/openclaw/workspace-main/TOOLS.md` contains approval-policy markers and `Current mode: **Autonomous**`
+  - Verified onboarding runtime state carries Session 8 metadata:
+    - `approval_policy_runtime.revision=3`
+    - apply status `applied` with `last_applied_revision=3`
+    - capped audit trail present with two policy change entries
+  - Added release evidence doc:
+    - `docs/qa/2026-03-28-s8-live-canary-board12.md`
+  - No hotfix loop was required; `board13` was not needed.
+- **What's next:**
+  - Session 1-8 sequence is closed on `main`; next work should start from the new active plan priority.
+- **Blockers:** None.
+
 - **Date:** 2026-03-27 (session 128)
 - **Who worked:** Founder + Codex
 - **What was done:**

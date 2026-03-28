@@ -1,0 +1,8 @@
+GET /
+200
+GET /api/tenants/me (auth)
+200
+GET /api/tenants/status (auth)
+200
+GET /api/connections (auth)
+200

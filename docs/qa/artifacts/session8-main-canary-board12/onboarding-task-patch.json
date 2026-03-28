@@ -1,0 +1,17 @@
+{
+  "starter_tasks": [
+    "Create a 14-day pipeline sprint for Stripe with daily channel actions and owner check-ins for: Increase qualified pipeline.",
+    "Build a two-week content and messaging execution plan for Stripe aligned to: Launch consistent founder-led content.",
+    "Build a two-week content and messaging execution plan for Stripe aligned to: Sharpen category positioning."
+  ],
+  "starter_task": "Create a 14-day pipeline sprint for Stripe with daily channel actions and owner check-ins for: Increase qualified pipeline.",
+  "approval_policy": {
+    "mode": "balanced",
+    "guardrails": {
+      "publish": true,
+      "paid_spend": true,
+      "outbound_messages": true,
+      "major_strategy_changes": true
+    }
+  }
+}

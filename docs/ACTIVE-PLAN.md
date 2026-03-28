@@ -92,14 +92,23 @@
 - [x] Runtime knowledge file write verified on host path `/opt/openclaw/workspace-main/knowledge/company-overview.md`
 - [x] Session 7 evidence captured: `docs/qa/2026-03-27-s7-live-canary-board11.md`
 
-## Session 8 — Approval Policy Runtime Apply + Docs + Final Regression (In Progress)
+## Session 8 — Approval Policy Runtime Apply + Docs + Final Regression ✅
 
 - [x] Apply policy edits immediately with audit logging
 - [x] Patch managed blocks in `AGENTS` and `TOOLS` (no full-file overwrite)
 - [x] Add post-onboarding governance editor surface
-- [ ] Run full regression and rollout checklist
+- [x] Run full regression and rollout checklist
 - [x] Local regression gates complete (`npx tsc --noEmit`, `npm test`)
-- [ ] Live canary + rollout evidence capture pending
+- [x] Live canary + rollout evidence captured: `docs/qa/2026-03-28-s8-live-canary-board12.md`
+
+**Production validation (2026-03-28):**
+- [x] Merged PR #64 (`3b77acf`) to `main`
+- [x] Live canary full pass completed on `board12@ziffyhomes.com` with tenant `stripe-2`
+- [x] Tenant lifecycle reached `active` with provisioning checks `12/12` and `bootstrap_status=completed`
+- [x] Governance save path verified on `/dashboard/connections` with status transition `pending -> applied`
+- [x] Conflict guard verified with stale write returning `409 approval_policy_conflict`
+- [x] Runtime marker apply verified in both `/opt/openclaw/workspace-main/AGENTS.md` and `/opt/openclaw/workspace-main/TOOLS.md`
+- [x] Session 8 evidence captured: `docs/qa/2026-03-28-s8-live-canary-board12.md`
 
 ## Release Gates (Per Session)
 
