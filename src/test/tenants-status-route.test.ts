@@ -354,4 +354,112 @@ describe("GET /api/tenants/status", () => {
       }),
     );
   });
+
+  it("projects policy_apply summary from onboarding_data.approval_policy_runtime", async () => {
+    const { default: handler } = await import("../../api/tenants/status");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-policy-status",
+        status: "active",
+        droplet_id: "droplet-p1",
+        gateway_token: "gw-p1",
+        agentmail_inbox: null,
+        trial_ends_at: null,
+        plan: "trial",
+        onboarding_data: {
+          approval_policy_runtime: {
+            revision: 7,
+            apply: {
+              status: "failed",
+              last_error: "Managed marker missing in TOOLS.md",
+              last_applied_revision: 6,
+              last_applied_at: "2026-03-27T20:00:00.000Z",
+              updated_at: "2026-03-27T20:05:00.000Z",
+            },
+          },
+        },
+      },
+    });
+    reconcileBootstrapState.mockResolvedValue({
+      snapshot: {
+        onboardingData: {},
+        updatedAt: "2026-03-27T20:10:00.000Z",
+      },
+      progress: {
+        hasAgentOutput: true,
+      },
+      effectiveState: {
+        status: "accepted",
+        last_error: null,
+      },
+      changed: true,
+    });
+
+    const req = { method: "GET" };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        contract_version: THIN_BRIDGE_CONTRACT_VERSION,
+        policy_apply: {
+          status: "failed",
+          revision: 7,
+          last_error: "Managed marker missing in TOOLS.md",
+          last_applied_revision: 6,
+          last_applied_at: "2026-03-27T20:00:00.000Z",
+          updated_at: "2026-03-27T20:05:00.000Z",
+        },
+      }),
+    );
+  });
+
+  it("returns policy_apply as null when no approval_policy_runtime exists yet", async () => {
+    const { default: handler } = await import("../../api/tenants/status");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-policy-status-empty",
+        status: "active",
+        droplet_id: "droplet-p2",
+        gateway_token: "gw-p2",
+        agentmail_inbox: null,
+        trial_ends_at: null,
+        plan: "trial",
+        onboarding_data: {
+          company_name: "Legacy Tenant",
+        },
+      },
+    });
+    reconcileBootstrapState.mockResolvedValue({
+      snapshot: {
+        onboardingData: {},
+        updatedAt: "2026-03-27T20:10:00.000Z",
+      },
+      progress: {
+        hasAgentOutput: true,
+      },
+      effectiveState: {
+        status: "accepted",
+        last_error: null,
+      },
+      changed: true,
+    });
+
+    const req = { method: "GET" };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        contract_version: THIN_BRIDGE_CONTRACT_VERSION,
+        policy_apply: null,
+      }),
+    );
+  });
 });

@@ -7,6 +7,7 @@ const errorResponse = vi.fn((res: MockResponse, error: unknown) =>
   })
 );
 const sendMock = vi.fn();
+const sshExec = vi.fn();
 
 let fromMock: ReturnType<typeof vi.fn>;
 
@@ -27,6 +28,10 @@ vi.mock("inngest", () => ({
       return sendMock(...args);
     }
   },
+}));
+
+vi.mock("../../api/lib/droplet-ssh", () => ({
+  sshExec: (...args: unknown[]) => sshExec(...args),
 }));
 
 type MockResponse = {
@@ -557,6 +562,375 @@ describe("POST /api/tenants/onboarding", () => {
           queued: false,
           revision: 2,
         }),
+      }),
+    );
+  });
+
+  it("returns 409 when approval policy expected revision is stale", async () => {
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-policy-conflict-1",
+        status: "active",
+        droplet_ip: "127.0.0.1",
+        onboarding_data: {
+          approval_policy_runtime: {
+            revision: 4,
+          },
+        },
+      },
+    });
+
+    const { default: handler } = await import("../../api/tenants/onboarding");
+    const req = {
+      method: "POST",
+      body: {
+        approval_policy_expected_revision: 3,
+        approval_policy: {
+          mode: "strict",
+          guardrails: {
+            publish: true,
+            paid_spend: true,
+            outbound_messages: true,
+            major_strategy_changes: true,
+          },
+        },
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        code: "approval_policy_conflict",
+        expected_revision: 3,
+        current_revision: 4,
+      }),
+    );
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(sshExec).not.toHaveBeenCalled();
+  });
+
+  it("applies approval policy synchronously when runtime is ready", async () => {
+    authenticateRequest.mockResolvedValue({
+      userId: "user-policy-1",
+      tenant: {
+        id: "tenant-policy-sync-1",
+        status: "active",
+        droplet_ip: "127.0.0.1",
+        onboarding_data: {
+          company_name: "Acme Labs",
+          approval_policy: {
+            mode: "balanced",
+            guardrails: {
+              publish: true,
+              paid_spend: true,
+              outbound_messages: true,
+              major_strategy_changes: true,
+            },
+          },
+        },
+      },
+    });
+
+    let updatePayload: Record<string, unknown> | null = null;
+    const updateChain: Record<string, unknown> = {
+      update: vi.fn((payload: Record<string, unknown>) => {
+        updatePayload = payload;
+        return updateChain;
+      }),
+      eq: vi.fn(() => updateChain),
+      select: vi.fn(() => updateChain),
+      maybeSingle: vi.fn(async () => ({
+        data: {
+          onboarding_data: (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data,
+        },
+        error: null,
+      })),
+    };
+
+    fromMock.mockReturnValue(updateChain);
+    sshExec.mockResolvedValue("POLICY_APPLY_COMPLETE");
+
+    const { default: handler } = await import("../../api/tenants/onboarding");
+    const req = {
+      method: "POST",
+      body: {
+        approval_policy: {
+          mode: "strict",
+          guardrails: {
+            publish: true,
+            paid_spend: true,
+            outbound_messages: true,
+            major_strategy_changes: true,
+          },
+        },
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(sshExec).toHaveBeenCalledTimes(1);
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        policy_apply: {
+          queued: false,
+          revision: 2,
+          status: "applied",
+        },
+      }),
+    );
+
+    const onboarding = (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data;
+    const runtime = onboarding.approval_policy_runtime as Record<string, unknown>;
+    const apply = runtime.apply as Record<string, unknown>;
+    expect(runtime.revision).toBe(2);
+    expect(apply.status).toBe("applied");
+    expect(apply.last_applied_revision).toBe(2);
+  });
+
+  it("marks policy apply failed and enqueues retry when synchronous apply fails", async () => {
+    authenticateRequest.mockResolvedValue({
+      userId: "user-policy-2",
+      tenant: {
+        id: "tenant-policy-sync-2",
+        status: "active",
+        droplet_ip: "127.0.0.1",
+        onboarding_data: {
+          company_name: "Acme Labs",
+          approval_policy: {
+            mode: "balanced",
+            guardrails: {
+              publish: true,
+              paid_spend: true,
+              outbound_messages: true,
+              major_strategy_changes: true,
+            },
+          },
+        },
+      },
+    });
+
+    let updatePayload: Record<string, unknown> | null = null;
+    const updateChain: Record<string, unknown> = {
+      update: vi.fn((payload: Record<string, unknown>) => {
+        updatePayload = payload;
+        return updateChain;
+      }),
+      eq: vi.fn(() => updateChain),
+      select: vi.fn(() => updateChain),
+      maybeSingle: vi.fn(async () => ({
+        data: {
+          onboarding_data: (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data,
+        },
+        error: null,
+      })),
+    };
+
+    fromMock.mockReturnValue(updateChain);
+    sshExec.mockRejectedValue(new Error("marker missing in AGENTS.md"));
+    sendMock.mockResolvedValue(undefined);
+
+    const { default: handler } = await import("../../api/tenants/onboarding");
+    const req = {
+      method: "POST",
+      body: {
+        approval_policy: {
+          mode: "autonomous",
+          guardrails: {
+            publish: true,
+            paid_spend: true,
+            outbound_messages: false,
+            major_strategy_changes: true,
+          },
+        },
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(sendMock).toHaveBeenCalledWith({
+      name: "pixelport/policy.apply.requested",
+      data: {
+        tenantId: "tenant-policy-sync-2",
+        revision: 2,
+      },
+    });
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        policy_apply: expect.objectContaining({
+          queued: true,
+          revision: 2,
+          status: "failed",
+        }),
+      }),
+    );
+
+    const onboarding = (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data;
+    const runtime = onboarding.approval_policy_runtime as Record<string, unknown>;
+    const apply = runtime.apply as Record<string, unknown>;
+    expect(runtime.revision).toBe(2);
+    expect(apply.status).toBe("failed");
+    expect(String(apply.last_error)).toContain("marker missing");
+  });
+
+  it("supports force_policy_apply retries without requiring policy edits", async () => {
+    authenticateRequest.mockResolvedValue({
+      userId: "user-policy-3",
+      tenant: {
+        id: "tenant-policy-force-1",
+        status: "active",
+        droplet_ip: "127.0.0.1",
+        onboarding_data: {
+          approval_policy: {
+            mode: "balanced",
+            guardrails: {
+              publish: true,
+              paid_spend: true,
+              outbound_messages: true,
+              major_strategy_changes: true,
+            },
+          },
+          approval_policy_runtime: {
+            revision: 6,
+            apply: {
+              status: "failed",
+              last_error: "Old failure",
+              last_applied_revision: 5,
+            },
+          },
+        },
+      },
+    });
+
+    let updatePayload: Record<string, unknown> | null = null;
+    const updateChain: Record<string, unknown> = {
+      update: vi.fn((payload: Record<string, unknown>) => {
+        updatePayload = payload;
+        return updateChain;
+      }),
+      eq: vi.fn(() => updateChain),
+      select: vi.fn(() => updateChain),
+      maybeSingle: vi.fn(async () => ({
+        data: {
+          onboarding_data: (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data,
+        },
+        error: null,
+      })),
+    };
+
+    fromMock.mockReturnValue(updateChain);
+    sshExec.mockResolvedValue("POLICY_APPLY_COMPLETE");
+
+    const { default: handler } = await import("../../api/tenants/onboarding");
+    const req = {
+      method: "POST",
+      body: {
+        approval_policy_expected_revision: 6,
+        force_policy_apply: true,
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(sshExec).toHaveBeenCalledTimes(1);
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        policy_apply: {
+          queued: false,
+          revision: 6,
+          status: "applied",
+        },
+      }),
+    );
+
+    const onboarding = (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data;
+    const runtime = onboarding.approval_policy_runtime as Record<string, unknown>;
+    expect(runtime.revision).toBe(6);
+  });
+
+  it("returns runtime_not_ready policy status when runtime host is unavailable", async () => {
+    authenticateRequest.mockResolvedValue({
+      userId: "user-policy-4",
+      tenant: {
+        id: "tenant-policy-runtime-not-ready",
+        status: "draft",
+        droplet_ip: null,
+        onboarding_data: {
+          approval_policy: {
+            mode: "balanced",
+            guardrails: {
+              publish: true,
+              paid_spend: true,
+              outbound_messages: true,
+              major_strategy_changes: true,
+            },
+          },
+        },
+      },
+    });
+
+    let updatePayload: Record<string, unknown> | null = null;
+    const updateChain: Record<string, unknown> = {
+      update: vi.fn((payload: Record<string, unknown>) => {
+        updatePayload = payload;
+        return updateChain;
+      }),
+      eq: vi.fn(() => updateChain),
+      select: vi.fn(() => updateChain),
+      maybeSingle: vi.fn(async () => ({
+        data: {
+          onboarding_data: (updatePayload as { onboarding_data: Record<string, unknown> }).onboarding_data,
+        },
+        error: null,
+      })),
+    };
+
+    fromMock.mockReturnValue(updateChain);
+
+    const { default: handler } = await import("../../api/tenants/onboarding");
+    const req = {
+      method: "POST",
+      body: {
+        approval_policy: {
+          mode: "strict",
+          guardrails: {
+            publish: true,
+            paid_spend: true,
+            outbound_messages: true,
+            major_strategy_changes: true,
+          },
+        },
+      },
+    };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(sshExec).not.toHaveBeenCalled();
+    expect(sendMock).not.toHaveBeenCalled();
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        success: true,
+        policy_apply: {
+          queued: false,
+          revision: 2,
+          status: "pending",
+          reason: "runtime_not_ready",
+        },
       }),
     );
   });

@@ -1,4 +1,4 @@
-export const THIN_BRIDGE_CONTRACT_VERSION = 'pivot-p0-v2';
+export const THIN_BRIDGE_CONTRACT_VERSION = 'pivot-p0-v3';
 
 const TASK_UNLOCK_STATUSES = new Set(['ready', 'active']);
 
@@ -39,6 +39,14 @@ export interface TenantStatusBridgePayload {
     seeded_revision: number | null;
     last_synced_at: string | null;
     last_error: string | null;
+    updated_at: string | null;
+  } | null;
+  policy_apply?: {
+    status: 'pending' | 'applied' | 'failed';
+    revision: number;
+    last_error: string | null;
+    last_applied_revision: number | null;
+    last_applied_at: string | null;
     updated_at: string | null;
   } | null;
   task_step_unlocked: boolean;
