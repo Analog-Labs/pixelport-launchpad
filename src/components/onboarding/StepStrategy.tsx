@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, ArrowRight, Lightbulb, Loader2, RefreshCw, Plus, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lightbulb, Loader2, RefreshCw, Plus, X, ChevronDown, ChevronRight, Package, Pencil, Target } from "lucide-react";
 import { GOAL_PRESET_OPTIONS, MAX_ONBOARDING_GOALS } from "@/lib/onboarding-presets";
 
 interface Props {
@@ -40,15 +40,21 @@ const StepStrategy = ({
   onNext,
 }: Props) => {
   const [customGoal, setCustomGoal] = useState("");
+  const [productsExpanded, setProductsExpanded] = useState(
+    productsServicesText.trim().length > 0 || scanSuggestions.length > 0
+  );
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [showManualProducts, setShowManualProducts] = useState(false);
   const canContinue = goals.length > 0 && goals.length <= MAX_ONBOARDING_GOALS;
   const selectedGoalSet = useMemo(() => new Set(goals), [goals]);
+  const customGoals = useMemo(
+    () => goals.filter((g) => !GOAL_PRESET_OPTIONS.includes(g as typeof GOAL_PRESET_OPTIONS[number])),
+    [goals]
+  );
 
   const handleAddCustomGoal = () => {
     const trimmed = customGoal.trim();
-    if (!trimmed) {
-      return;
-    }
-
+    if (!trimmed) return;
     onAddCustomGoal(trimmed);
     setCustomGoal("");
   };
@@ -57,26 +63,36 @@ const StepStrategy = ({
     productsServicesText.trim().length === 0 && scanState !== "scanning" && scanSuggestions.length === 0;
 
   return (
-    <div className="space-y-7">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
-          <Lightbulb className="h-5 w-5 text-primary" />
+    <div className="space-y-6">
+      {/* ── Header ── */}
+      <div className="flex items-center gap-4">
+        <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+          <Lightbulb className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-foreground">Strategy setup</h2>
-          <p className="text-sm text-muted-foreground">Pick up to three goals and shape what your Chief should prioritize first.</p>
+          <h2 className="text-2xl font-bold text-foreground">Strategy setup</h2>
+          <p className="text-base text-muted-foreground mt-0.5">
+            Pick up to three goals and shape what your Chief should prioritize first.
+          </p>
         </div>
       </div>
 
-      <section className="rounded-xl border border-border bg-[hsl(240_14%_8%)] p-4 sm:p-5 space-y-4">
+      {/* ── Goals (borderless — right panel bg is the surface) ── */}
+      <section className="space-y-5">
         <div className="flex items-center justify-between gap-3">
-          <Label className="text-sm font-semibold text-foreground">Top goals (next 30-90 days)</Label>
-          <span className="text-xs text-muted-foreground">
-            {goals.length}/{MAX_ONBOARDING_GOALS} selected
+          <div className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-muted-foreground" />
+            <Label className="text-base font-semibold text-foreground">
+              Top goals <span className="text-muted-foreground font-normal">(next 30–90 days)</span>
+            </Label>
+          </div>
+          <span className="text-sm text-muted-foreground tabular-nums">
+            {goals.length}/{MAX_ONBOARDING_GOALS}
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        {/* Preset + custom goal chips — all in one row */}
+        <div className="flex flex-wrap gap-2.5">
           {GOAL_PRESET_OPTIONS.map((presetGoal) => {
             const selected = selectedGoalSet.has(presetGoal);
             const blockedAtLimit = !selected && goals.length >= MAX_ONBOARDING_GOALS;
@@ -84,146 +100,187 @@ const StepStrategy = ({
               <button
                 key={presetGoal}
                 type="button"
-                onClick={() => onToggleGoal(presetGoal)}
+                onClick={() => selected ? onRemoveGoal(presetGoal) : onToggleGoal(presetGoal)}
                 aria-disabled={blockedAtLimit}
-                className={`min-h-11 rounded-full border px-3 py-2 text-xs font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   selected
-                    ? "border-primary bg-primary/12 text-foreground"
+                    ? "border-primary bg-primary/12 text-foreground shadow-[0_0_8px_hsla(38,60%,58%,0.15)]"
                     : blockedAtLimit
-                    ? "border-border bg-[hsl(240_14%_6%)] text-muted-foreground opacity-45"
+                    ? "border-border bg-[hsl(240_14%_6%)] text-muted-foreground opacity-40 cursor-not-allowed"
                     : "border-border bg-[hsl(240_14%_6%)] text-muted-foreground hover:border-primary/40 hover:text-foreground"
                 }`}
               >
                 {presetGoal}
+                {selected && <X className="h-3.5 w-3.5 text-primary/60 hover:text-primary" />}
               </button>
             );
           })}
+
+          {/* Custom goals as chips in the same row */}
+          {customGoals.map((goal) => (
+            <button
+              key={goal}
+              type="button"
+              onClick={() => onRemoveGoal(goal)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary bg-primary/12 text-foreground px-4 py-2.5 text-sm font-medium shadow-[0_0_8px_hsla(38,60%,58%,0.15)] transition-all duration-200"
+            >
+              {goal}
+              <X className="h-3.5 w-3.5 text-primary/60 hover:text-primary" />
+            </button>
+          ))}
         </div>
 
-        <div className="rounded-xl border border-border bg-[hsl(240_14%_6%)] p-3">
-          <Label htmlFor="custom-goal" className="text-xs text-muted-foreground">
-            Add a custom goal
-          </Label>
-          <div className="mt-2 flex gap-2">
+        {goalError && <p className="text-sm text-destructive">{goalError}</p>}
+
+        {/* Custom goal — toggle to show input */}
+        {!showCustomInput ? (
+          <button
+            type="button"
+            onClick={() => setShowCustomInput(true)}
+            disabled={goals.length >= MAX_ONBOARDING_GOALS}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Plus className="h-4 w-4" /> Add custom goal
+          </button>
+        ) : (
+          <div className="flex gap-2">
             <Input
               id="custom-goal"
               value={customGoal}
               onChange={(event) => setCustomGoal(event.target.value)}
               placeholder="e.g. increase partner-sourced demos"
-              className="h-11 bg-[hsl(240_14%_5%)] border-border focus-visible:ring-primary"
+              className="h-10 bg-[hsl(240_14%_5%)] border-border focus-visible:ring-primary text-sm"
               maxLength={160}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAddCustomGoal();
+                if (e.key === "Escape") { setShowCustomInput(false); setCustomGoal(""); }
+              }}
             />
             <Button
               type="button"
               variant="outline"
-              className="min-h-11"
-              onClick={handleAddCustomGoal}
-              disabled={customGoal.trim().length < 3}
+              className="h-10"
+              onClick={() => { handleAddCustomGoal(); setShowCustomInput(false); }}
+              disabled={customGoal.trim().length < 3 || goals.length >= MAX_ONBOARDING_GOALS}
             >
-              <Plus className="mr-1 h-4 w-4" /> Add
+              Add
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-10 px-2"
+              onClick={() => { setShowCustomInput(false); setCustomGoal(""); }}
+            >
+              <X className="h-4 w-4" />
             </Button>
           </div>
-        </div>
-
-        {goals.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Selected goals</p>
-            <div className="space-y-2">
-              {goals.map((goal) => (
-                <div
-                  key={goal}
-                  className="flex min-h-11 items-center justify-between rounded-xl border border-primary/25 bg-primary/8 px-3"
-                >
-                  <p className="text-sm text-foreground pr-3">{goal}</p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                    onClick={() => onRemoveGoal(goal)}
-                    aria-label={`Remove goal ${goal}`}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
         )}
-
-        {goalError && <p className="text-xs text-destructive">{goalError}</p>}
       </section>
 
-      <section className="rounded-xl border border-border bg-[hsl(240_14%_8%)] p-4 sm:p-5 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Label htmlFor="products_services" className="text-sm font-semibold text-foreground">
-            Products and services
-          </Label>
-          <div className="text-xs text-muted-foreground">
+      {/* ── Products & Services (collapsible) ── */}
+      <section className="border-t border-border/30 pt-6">
+        <button
+          type="button"
+          onClick={() => setProductsExpanded(!productsExpanded)}
+          className="w-full flex items-center justify-between text-left group"
+        >
+          <div className="flex items-center gap-3">
+            <Package className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <span className="text-base font-semibold text-foreground">Products & services</span>
+              <span className="text-sm text-muted-foreground ml-2">(optional)</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
             {scanState === "scanning" && (
-              <span className="inline-flex items-center gap-1.5">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Scanning website...
+              <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Scanning...
               </span>
             )}
-            {scanState === "done" && scanSuggestions.length > 0 && "Suggestions found"}
-            {scanState === "done" && scanSuggestions.length === 0 && "Scan complete"}
-            {scanState === "failed" && "Scan failed"}
-            {scanState === "idle" && "Manual input available"}
+            {scanState === "done" && scanSuggestions.length > 0 && !productsExpanded && (
+              <span className="text-sm text-primary">{scanSuggestions.length} suggestions</span>
+            )}
+            {productsExpanded ? (
+              <ChevronDown className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            ) : (
+              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            )}
           </div>
-        </div>
+        </button>
 
-        <div className="rounded-xl border border-border bg-[hsl(240_14%_6%)] p-3 space-y-2">
-          {scanState === "scanning" && (
-            <p className="text-xs text-muted-foreground">We are extracting offer context from your website. You can keep editing manually while this runs.</p>
-          )}
+        {productsExpanded && (
+          <div className="mt-4 space-y-4">
+            {/* Scan status — inline text, no card wrapper */}
+            {scanState === "scanning" && (
+              <p className="text-sm text-muted-foreground">
+                Extracting offer context from your website. You can edit manually while this runs.
+              </p>
+            )}
 
-          {scanState === "failed" && (
-            <div className="space-y-2">
-              <p className="text-xs text-destructive">{scanError || "Scan failed. You can retry without losing edits."}</p>
-              <Button type="button" variant="outline" size="sm" onClick={onRetryScan} className="min-h-11">
-                <RefreshCw className="mr-1 h-3.5 w-3.5" /> Retry scan
-              </Button>
-            </div>
-          )}
-
-          {scanState !== "failed" && scanSuggestions.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">Detected suggestions</p>
-              <div className="flex flex-wrap gap-2">
-                {scanSuggestions.slice(0, 8).map((suggestion) => (
-                  <span
-                    key={suggestion}
-                    className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-foreground"
-                  >
-                    {suggestion}
-                  </span>
-                ))}
+            {scanState === "failed" && (
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-destructive flex-1">{scanError || "Scan failed."}</p>
+                <Button type="button" variant="outline" size="sm" onClick={onRetryScan}>
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" /> Retry
+                </Button>
               </div>
-              <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={onApplyScanSuggestions}>
-                Apply suggestions
-              </Button>
-            </div>
-          )}
+            )}
 
-          {showWarmGuidance && (
-            <p className="text-xs text-muted-foreground">
-              We did not find enough product context yet. Add your core offers manually so your Chief can plan accurately from day one.
-            </p>
-          )}
-        </div>
+            {scanState !== "failed" && scanSuggestions.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">Detected from your website</p>
+                <div className="flex flex-wrap gap-2">
+                  {scanSuggestions.slice(0, 8).map((suggestion) => (
+                    <span
+                      key={suggestion}
+                      className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-foreground font-medium"
+                    >
+                      {suggestion}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button type="button" variant="outline" size="sm" onClick={onApplyScanSuggestions}>
+                    Apply suggestions
+                  </Button>
+                  {!showManualProducts && (
+                    <button
+                      type="button"
+                      onClick={() => setShowManualProducts(true)}
+                      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="h-3 w-3" /> Edit manually
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
-        <Textarea
-          id="products_services"
-          placeholder={"One per line, for example:\n- AI Chief of Staff subscription\n- Content strategy retainer\n- Demand gen advisory"}
-          value={productsServicesText}
-          onChange={(event) => onProductsServicesChange(event.target.value)}
-          className="bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary min-h-[132px]"
-          maxLength={1200}
-        />
+            {showWarmGuidance && (
+              <p className="text-sm text-muted-foreground">
+                Add your core offers so your Chief can plan accurately from day one.
+              </p>
+            )}
+
+            {/* Show textarea when: no suggestions available, or user clicked "Edit manually" */}
+            {(scanSuggestions.length === 0 || showManualProducts) && (
+              <Textarea
+                id="products_services"
+                placeholder={"One per line, for example:\n- AI Chief of Staff subscription\n- Content strategy retainer\n- Demand gen advisory"}
+                value={productsServicesText}
+                onChange={(event) => onProductsServicesChange(event.target.value)}
+                className="bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary min-h-[100px] text-sm"
+                maxLength={1200}
+              />
+            )}
+          </div>
+        )}
       </section>
 
-      <div className="flex gap-3">
+      {/* ── Navigation ── */}
+      <div className="flex gap-3 pt-2">
         <Button variant="ghost" onClick={onBack} className="min-h-11 text-muted-foreground">
           <ArrowLeft className="mr-1 h-4 w-4" /> Back
         </Button>

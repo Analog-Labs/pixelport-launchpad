@@ -70,61 +70,61 @@ const StepTaskSetup = ({
   const canContinue = tasksValid && !!approvalPolicy.mode && guardrailsComplete;
 
   return (
-    <div className="space-y-7">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
-          <CheckSquare className="h-5 w-5 text-primary" />
+    <div className="space-y-6">
+      {/* ── Header ── */}
+      <div className="flex items-center gap-4">
+        <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+          <CheckSquare className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-foreground">Task setup</h2>
-          <p className="text-sm text-muted-foreground">
-            We seeded goal-mapped tasks for {companyName || "your company"}. You can edit any line and add custom tasks.
+          <h2 className="text-2xl font-bold text-foreground">Task setup</h2>
+          <p className="text-base text-muted-foreground mt-0.5">
+            We seeded goal-mapped tasks for {companyName || "your company"}. Edit or add custom tasks.
           </p>
         </div>
       </div>
 
-      <section className="rounded-xl border border-border bg-[hsl(240_14%_8%)] p-4 sm:p-5 space-y-4">
+      {/* ── Starter Tasks (borderless — right panel bg is the surface) ── */}
+      <section className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <Label className="text-sm font-semibold text-foreground">Starter tasks</Label>
-          <Button type="button" variant="outline" size="sm" onClick={onAddCustomTask} className="min-h-11">
-            <Plus className="mr-1 h-4 w-4" /> Add custom task
+          <div className="flex items-center gap-2">
+            <CheckSquare className="h-5 w-5 text-muted-foreground" />
+            <Label className="text-base font-semibold text-foreground">Starter tasks</Label>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={onAddCustomTask}>
+            <Plus className="mr-1 h-4 w-4" /> Add task
           </Button>
         </div>
 
         {goals.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Goal-mapped rows are listed first. Custom rows can be added or removed anytime.
+          <p className="text-sm text-muted-foreground">
+            Goal-mapped rows listed first. Custom rows can be added or removed.
           </p>
         )}
 
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {starterTasks.map((task, index) => {
             const isPresetRow = index < presetTaskCount;
             return (
-              <div
-                key={`starter-task-${index}`}
-                className="rounded-xl border border-border bg-[hsl(240_14%_6%)] px-3 py-3"
-              >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">
+              <div key={`starter-task-${index}`} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-mono uppercase tracking-[0.08em] text-muted-foreground/50">
                     {isPresetRow ? "Goal task" : "Custom task"} {index + 1}
                   </p>
                   {!isPresetRow && (
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-muted-foreground hover:text-destructive"
+                      className="text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
                       onClick={() => onRemoveCustomTask(index)}
                     >
-                      <Trash2 className="mr-1 h-4 w-4" /> Remove
-                    </Button>
+                      <Trash2 className="h-3 w-3" /> Remove
+                    </button>
                   )}
                 </div>
                 <Input
                   value={task}
                   onChange={(event) => onTaskChange(index, event.target.value)}
-                  className="h-11 bg-[hsl(240_14%_5%)] border-border focus-visible:ring-primary"
+                  className="h-11 bg-[hsl(240_14%_5%)] border-border focus-visible:ring-primary text-sm"
                   maxLength={320}
                   aria-label={`Starter task ${index + 1}`}
                 />
@@ -134,14 +134,15 @@ const StepTaskSetup = ({
         </div>
 
         {!tasksValid && (
-          <p className="text-xs text-destructive">Each task row must be at least 6 characters.</p>
+          <p className="text-sm text-destructive">Each task must be at least 6 characters.</p>
         )}
       </section>
 
-      <section className="rounded-xl border border-border bg-[hsl(240_14%_8%)] p-4 sm:p-5 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <ShieldCheck className="h-4 w-4 text-primary" />
-          Approval policy (required)
+      {/* ── Approval Policy (divider, no card) ── */}
+      <section className="border-t border-border/30 pt-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-5 w-5 text-primary" />
+          <Label className="text-base font-semibold text-foreground">Approval policy</Label>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -152,7 +153,7 @@ const StepTaskSetup = ({
                 key={mode.id}
                 type="button"
                 onClick={() => onApprovalModeChange(mode.id)}
-                className={`min-h-11 rounded-xl border px-3 py-3 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`rounded-xl border px-3 py-3 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   selected
                     ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsla(38,60%,58%,0.45)]"
                     : "border-border bg-[hsl(240_14%_6%)] hover:border-primary/45"
@@ -170,7 +171,7 @@ const StepTaskSetup = ({
           {GUARDRAIL_LABELS.map((guardrail) => (
             <label
               key={guardrail.key}
-              className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-[hsl(240_14%_6%)] px-3 py-3 cursor-pointer"
+              className="flex items-start gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-[hsl(240_8%_9%)] transition-colors"
             >
               <input
                 type="checkbox"
@@ -187,7 +188,8 @@ const StepTaskSetup = ({
         </div>
       </section>
 
-      <div className="flex gap-3">
+      {/* ── Navigation ── */}
+      <div className="flex gap-3 pt-2">
         <Button variant="ghost" onClick={onBack} className="min-h-11 text-muted-foreground">
           <ArrowLeft className="mr-1 h-4 w-4" /> Back
         </Button>

@@ -1,8 +1,13 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Building2, ArrowRight, Palette, Sparkles } from "lucide-react";
-import { AGENT_AVATAR_OPTIONS, AGENT_TONE_OPTIONS } from "@/lib/onboarding-presets";
+import { ArrowRight, Building2, Bot, Palette, MessageSquare } from "lucide-react";
+import {
+  AGENT_AVATAR_OPTIONS,
+  AGENT_TONE_OPTIONS,
+  type AgentToneId,
+} from "@/lib/onboarding-presets";
+import { AvatarIllustration } from "./AvatarIllustrations";
 
 interface Props {
   data: {
@@ -18,149 +23,158 @@ interface Props {
   error?: string;
 }
 
-const StepCompanyInfo = ({ data, onChange, onNext, submitting, error }: Props) => {
+const StepCompanyInfo = ({
+  data,
+  onChange,
+  onNext,
+  submitting,
+  error,
+}: Props) => {
   const selectedAvatar =
-    AGENT_AVATAR_OPTIONS.find((avatar) => avatar.id === data.agent_avatar_id) ?? AGENT_AVATAR_OPTIONS[0];
-
+    AGENT_AVATAR_OPTIONS.find((a) => a.id === data.agent_avatar_id) ?? AGENT_AVATAR_OPTIONS[0];
+  const toneId = (data.agent_tone || "strategic") as AgentToneId;
   const valid = data.company_name.trim().length >= 2;
 
   return (
-    <div className="space-y-7">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
-          <Building2 className="h-5 w-5 text-primary" />
+    <div className="space-y-6">
+      {/* Section 1: Company */}
+      <section className="animate-section-in" style={{ animationDelay: "0ms" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold text-foreground">Company</h3>
         </div>
-        <div>
-          <h2 className="text-xl font-bold text-foreground">Tell us about your company</h2>
-          <p className="text-sm text-muted-foreground">We use this to configure your Chief identity and launch context.</p>
-        </div>
-      </div>
-
-      <section className="rounded-xl border border-[hsla(38,60%,58%,0.24)] bg-[hsl(240_14%_8%)] p-4 sm:p-5 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Sparkles className="h-4 w-4 text-primary" />
-          Chief identity
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="agent_name">Chief of Staff name</Label>
+            <Label htmlFor="company_name" className="text-sm text-muted-foreground">
+              Company name
+            </Label>
             <Input
-              id="agent_name"
-              placeholder="Chief"
-              value={data.agent_name}
-              onChange={(event) => onChange({ agent_name: event.target.value })}
-              className="h-11 bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary"
-              maxLength={60}
+              id="company_name"
+              placeholder="e.g. Acme Corp"
+              value={data.company_name}
+              onChange={(e) => onChange({ company_name: e.target.value })}
+              className="h-11 bg-[hsl(240_14%_5%)] border-border/50 focus-visible:ring-primary text-sm"
+              maxLength={100}
             />
-            <p className="text-xs text-muted-foreground">If left blank, we will use "Chief".</p>
           </div>
-
           <div className="space-y-2">
-            <Label>Avatar (dashboard only)</Label>
-            <div className="grid grid-cols-3 gap-2.5">
-              {AGENT_AVATAR_OPTIONS.map((avatar) => {
-                const selected = avatar.id === selectedAvatar.id;
-                return (
-                  <button
-                    key={avatar.id}
-                    type="button"
-                    onClick={() => onChange({ agent_avatar_id: avatar.id })}
-                    className={`min-h-11 rounded-xl border px-2 py-2 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                      selected
-                        ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsla(38,60%,58%,0.45)]"
-                        : "border-border bg-[hsl(240_14%_6%)] hover:border-primary/50"
-                    }`}
-                    aria-pressed={selected}
-                    aria-label={`Choose ${avatar.label} avatar`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold text-white"
-                        style={{ background: avatar.accent }}
-                      >
-                        {avatar.monogram}
-                      </span>
-                      <span className="text-xs font-medium text-foreground">{avatar.label}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <Label htmlFor="company_url" className="text-sm text-muted-foreground">
+              Website URL
+            </Label>
+            <Input
+              id="company_url"
+              placeholder="https://yourcompany.com"
+              value={data.company_url}
+              onChange={(e) => onChange({ company_url: e.target.value })}
+              className="h-11 bg-[hsl(240_14%_5%)] border-border/50 focus-visible:ring-primary text-sm"
+              maxLength={255}
+            />
           </div>
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-[hsl(240_14%_8%)] p-4 sm:p-5 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Building2 className="h-4 w-4 text-primary" />
-          Company profile
+      {/* Section 2: Chief Name */}
+      <section className="animate-section-in" style={{ animationDelay: "80ms" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Bot className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold text-foreground">Your Chief</h3>
         </div>
-
         <div className="space-y-2">
-          <Label htmlFor="company_name">Company name</Label>
+          <Label htmlFor="agent_name" className="text-sm text-muted-foreground">
+            Name
+          </Label>
           <Input
-            id="company_name"
-            placeholder="e.g. Acme Corp"
-            value={data.company_name}
-            onChange={(event) => onChange({ company_name: event.target.value })}
-            className="h-11 bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary"
-            maxLength={100}
+            id="agent_name"
+            placeholder="Chief"
+            value={data.agent_name}
+            onChange={(e) => onChange({ agent_name: e.target.value })}
+            className="h-11 bg-[hsl(240_14%_5%)] border-border/50 focus-visible:ring-primary text-sm"
+            maxLength={60}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="company_url">Website URL</Label>
-          <Input
-            id="company_url"
-            placeholder="https://yourcompany.com"
-            value={data.company_url}
-            onChange={(event) => onChange({ company_url: event.target.value })}
-            className="h-11 bg-[hsl(240_14%_6%)] border-border focus-visible:ring-primary"
-            maxLength={255}
-          />
+          <p className="text-xs text-muted-foreground/50">Defaults to &ldquo;Chief&rdquo; if left blank.</p>
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-[hsl(240_14%_8%)] p-4 sm:p-5 space-y-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Palette className="h-4 w-4 text-primary" />
-          Communication tone
+      {/* Section 3: Avatar Selection */}
+      <section className="animate-section-in" style={{ animationDelay: "160ms" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Palette className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold text-foreground">Avatar</h3>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {AGENT_TONE_OPTIONS.map((tone) => {
-            const selected = tone.id === data.agent_tone;
+        <div className="flex gap-2.5 overflow-x-auto p-1" role="radiogroup" aria-label="Choose avatar">
+          {AGENT_AVATAR_OPTIONS.map((avatar) => {
+            const isSelected = avatar.id === selectedAvatar.id;
             return (
               <button
-                key={tone.id}
+                key={avatar.id}
                 type="button"
-                onClick={() => onChange({ agent_tone: tone.id })}
-                className={`min-h-11 rounded-xl border px-3 py-3 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                  selected
-                    ? "border-primary bg-primary/10 shadow-[0_0_0_1px_hsla(38,60%,58%,0.45)]"
-                    : "border-border bg-[hsl(240_14%_6%)] hover:border-primary/50"
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={`Select ${avatar.label} avatar`}
+                onClick={() => onChange({ agent_avatar_id: avatar.id })}
+                className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  isSelected
+                    ? "border-2 bg-[hsl(240_8%_12%)] scale-110"
+                    : "border border-border/40 bg-[hsl(240_8%_6%)] hover:border-border/70 hover:bg-[hsl(240_8%_9%)] hover:scale-[1.03]"
                 }`}
-                aria-pressed={selected}
+                style={
+                  isSelected
+                    ? {
+                        borderColor: avatar.strokeColor,
+                        boxShadow: `0 0 12px ${avatar.glowColor}`,
+                      }
+                    : undefined
+                }
               >
-                <p className="text-sm font-semibold text-foreground">{tone.label}</p>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{tone.description}</p>
+                <AvatarIllustration id={avatar.svgId} size={36} glowing={isSelected} />
               </button>
             );
           })}
         </div>
       </section>
 
-      <Button
-        className="w-full min-h-11 shimmer-btn text-primary-foreground font-semibold"
-        disabled={!valid || submitting}
-        onClick={onNext}
-      >
-        {submitting ? "Saving company details..." : "Continue to Strategy"}
-        {!submitting && <ArrowRight className="ml-1 h-4 w-4" />}
-      </Button>
+      {/* Section 4: Tone Selection */}
+      <section className="animate-section-in" style={{ animationDelay: "240ms" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-semibold text-foreground">Tone</h3>
+        </div>
+        <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Choose communication tone">
+          {AGENT_TONE_OPTIONS.map((tone) => {
+            const isSelected = tone.id === toneId;
+            return (
+              <button
+                key={tone.id}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => onChange({ agent_tone: tone.id })}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground shadow-[0_0_8px_hsla(38,60%,58%,0.3)]"
+                    : "bg-[hsl(240_8%_12%)] text-muted-foreground hover:text-foreground hover:bg-[hsl(240_8%_16%)]"
+                }`}
+              >
+                {tone.label}
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {/* CTA */}
+      <div className="animate-section-in pt-2" style={{ animationDelay: "320ms" }}>
+        <Button
+          className="w-full min-h-11 shimmer-btn text-primary-foreground font-semibold"
+          disabled={!valid || submitting}
+          onClick={onNext}
+        >
+          {submitting ? "Saving company details..." : "Continue to Strategy"}
+          {!submitting && <ArrowRight className="ml-1.5 h-4 w-4" />}
+        </Button>
+
+        {error && <p className="text-sm text-destructive mt-3">{error}</p>}
+      </div>
     </div>
   );
 };
