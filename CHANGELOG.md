@@ -2,6 +2,30 @@
 
 All notable changes to PixelPort are documented here.
 
+## [0.19.6.0] - 2026-03-28
+
+### Added
+- Two-panel onboarding layout with live agent preview panel (desktop) and compact mobile bar
+- Six SVG avatar illustrations (Command, Operator, Orbit, Vector, Grid, Signal) with glow effects replacing monogram circles
+- Staggered entry animations (avatar-appear, section-slide-in, ambient-pulse) with prefers-reduced-motion support
+- Step 4 "awakening ceremony" with centered large avatar, config summary, and activate button
+- Clickable step indicator for navigating back to completed steps (locked during provisioning)
+- Tone preview phrases shown in agent preview panel
+
+### Changed
+- Onboarding steps 1-3 use flat sections instead of bordered cards with staggered animations
+- Strategy step has bigger header, collapsible products section, and inline custom goal toggle
+- Task setup step uses divider-based approval section instead of bordered cards
+- Launch step splits into pre-launch (activate button) and post-launch (progress) views
+- Avatar picker uses horizontal strip of SVG illustrations instead of monogram circles
+- Tone selector uses rounded pill chips instead of bordered cards
+- Vite dev server now proxies /api to production for local frontend development
+
+### Fixed
+- Step navigation is now locked during provisioning to prevent config drift
+- Sign-out button handles errors gracefully (always navigates to login)
+- Removed dead props from MobileAgentBar and StepConnectTools interfaces
+
 ## [0.19.5.0] - 2026-03-28
 
 ### Added
