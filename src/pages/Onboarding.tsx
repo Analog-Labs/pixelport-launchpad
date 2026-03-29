@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Navigate, useLocation, Link } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import PixelPortLogo from "@/components/PixelPortLogo";
 import StepIndicator from "@/components/onboarding/StepIndicator";
@@ -7,11 +7,15 @@ import StepCompanyInfo from "@/components/onboarding/StepCompanyInfo";
 import StepStrategy from "@/components/onboarding/StepStrategy";
 import StepTaskSetup from "@/components/onboarding/StepTaskSetup";
 import StepConnectTools, { type ProvisioningProgressPayload } from "@/components/onboarding/StepConnectTools";
+import AgentPreviewPanel, { MobileAgentBar } from "@/components/onboarding/AgentPreviewPanel";
+import { AvatarIllustration } from "@/components/onboarding/AvatarIllustrations";
+import { LogOut, Target, Package, ListChecks, ShieldCheck } from "lucide-react";
 import { getPostAuthRedirectPath } from "@/lib/dashboard-redirect";
 import {
   AGENT_AVATAR_OPTIONS,
   APPROVAL_MODE_OPTIONS,
   AGENT_TONE_OPTIONS,
+  TONE_PREVIEW_PHRASES,
   DEFAULT_APPROVAL_POLICY,
   MAX_ONBOARDING_GOALS,
   buildGoalMappedTasks,
@@ -441,8 +445,10 @@ const Onboarding = () => {
     loading: authLoading,
     tenantLoading,
     refreshTenant,
+    signOut,
   } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
   const [fadeIn, setFadeIn] = useState(true);
@@ -922,35 +928,198 @@ const Onboarding = () => {
       : "Draft";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden px-4">
+    <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[640px] h-[420px] rounded-full pointer-events-none"
         style={{ background: "radial-gradient(ellipse, hsla(38,60%,58%,0.09) 0%, transparent 72%)" }}
       />
 
-      <Link to="/" className="absolute top-6 left-6 flex items-center gap-2.5 z-10">
-        <PixelPortLogo className="h-8 w-8" />
-        <span className="text-xl font-bold text-foreground tracking-tight">PixelPort</span>
-      </Link>
+      {/* ── Top Header Bar ── */}
+      <header className="shrink-0 grid grid-cols-[auto_1fr_auto] items-center px-5 sm:px-8 py-3 z-20">
+        <Link to="/" className="flex items-center gap-2 py-1">
+          <PixelPortLogo className="h-6 w-6" />
+          <span className="text-sm font-bold text-foreground tracking-tight">PixelPort</span>
+        </Link>
+        <div className="flex justify-center">
+          <StepIndicator currentStep={step} onStepClick={launchStarted ? undefined : (target) => { if (target < step) changeStep(target); }} />
+        </div>
+        <div className="flex justify-end">
+          {saveStatusText && (
+            <span className={`text-[11px] font-mono ${saveState === "error" ? "text-destructive" : "text-muted-foreground/40"}`}>
+              {saveStatusText}
+            </span>
+          )}
+        </div>
+      </header>
 
-      <div
-        className="w-full max-w-[840px] rounded-2xl border bg-card p-6 sm:p-10 relative z-10"
-        style={{ borderColor: "rgba(212,168,83,0.15)" }}
-      >
-        <div className="flex justify-end mb-4">
-          <div className={`text-xs rounded-full px-3 py-1 border ${saveState === "error" ? "text-destructive border-destructive/30" : "text-muted-foreground border-border"}`}>
-            {saveStatusText}
+      {/* ── Main Content ── */}
+      <div className="flex-1 flex items-center justify-center px-4 pb-8">
+
+      {/* ── STEP 4: "Awakening Ceremony" — the showtime screen ── */}
+      {step === 4 ? (
+      <div className="w-full max-w-[800px] flex flex-col items-center relative z-10 -mt-8">
+        {/* ── Hero: Avatar + Identity (OUTSIDE the card) ── */}
+        <div className="flex flex-col items-center text-center relative mb-5">
+          {/* Single ambient glow */}
+          <div
+            className="absolute w-[260px] h-[260px] rounded-full pointer-events-none animate-ambient-pulse"
+            style={{
+              background: `radial-gradient(circle, ${(AGENT_AVATAR_OPTIONS.find(a => a.id === data.agent_avatar_id) ?? AGENT_AVATAR_OPTIONS[0]).glowColor}, transparent 70%)`,
+            }}
+          />
+          <div className="relative z-10 animate-avatar-appear" key={data.agent_avatar_id}>
+            <AvatarIllustration
+              id={(AGENT_AVATAR_OPTIONS.find(a => a.id === data.agent_avatar_id) ?? AGENT_AVATAR_OPTIONS[0]).svgId}
+              size={120}
+              glowing
+            />
           </div>
+          <h2 className="relative z-10 mt-4 text-3xl font-black tracking-tight text-foreground">
+            {data.agent_name || "Chief"}
+          </h2>
+          <p className="relative z-10 mt-1.5 text-xs font-mono uppercase tracking-[0.25em] text-primary/70">
+            {provisioningComplete
+              ? "AI Chief of Staff — Ready"
+              : launchStarted
+              ? "Deploying..."
+              : "AI Chief of Staff"}
+          </p>
+          <p className="relative z-10 mt-1 text-sm text-muted-foreground">
+            {data.company_name} · {AGENT_TONE_OPTIONS.find(t => t.id === data.agent_tone)?.label ?? "Strategic"}
+          </p>
         </div>
 
-        <StepIndicator currentStep={step} />
-
-        {saveError && <p className="text-sm text-destructive mb-4">{saveError}</p>}
-
+        {/* ── Card: Summary + Activate (INSIDE the card) ── */}
         <div
-          className="transition-all duration-200"
-          style={{ opacity: fadeIn ? 1 : 0, transform: fadeIn ? "translateY(0)" : "translateY(8px)" }}
+          className="w-full rounded-2xl border bg-card overflow-hidden"
+          style={{ borderColor: "rgba(212,168,83,0.15)" }}
         >
+          {/* Config Summary (pre-launch) — spec-sheet rows */}
+          {!launchStarted && (
+            <div className="px-6 sm:px-8 py-5 animate-section-in">
+              <div className="divide-y divide-border/15">
+                {/* Goals */}
+                <div className="flex gap-3 py-3.5 first:pt-0">
+                  <Target className="h-4 w-4 text-muted-foreground/60 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-muted-foreground/50 uppercase tracking-[0.08em] mb-1.5">Goals</p>
+                    <div className="flex flex-wrap gap-x-2 gap-y-1">
+                      {data.goals.map((goal, i) => (
+                        <span key={goal} className="text-sm text-foreground/80">
+                          {goal}{i < data.goals.length - 1 && <span className="text-muted-foreground/30 ml-2">·</span>}
+                        </span>
+                      ))}
+                      {data.goals.length === 0 && <span className="text-sm text-muted-foreground/40">None set</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Products */}
+                <div className="flex gap-3 py-3.5">
+                  <Package className="h-4 w-4 text-muted-foreground/60 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-muted-foreground/50 uppercase tracking-[0.08em] mb-1.5">Products</p>
+                    <p className="text-sm text-foreground/80 leading-relaxed">
+                      {data.products_services_text.trim()
+                        ? data.products_services_text.split("\n").filter(Boolean).slice(0, 5).join(", ") +
+                          (data.products_services_text.split("\n").filter(Boolean).length > 5 ? "..." : "")
+                        : "None set"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Approval */}
+                <div className="flex gap-3 py-3.5">
+                  <ShieldCheck className="h-4 w-4 text-muted-foreground/60 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-muted-foreground/50 uppercase tracking-[0.08em] mb-1.5">Approval</p>
+                    <p className="text-sm text-foreground/80 capitalize">{data.approval_policy.mode}</p>
+                  </div>
+                </div>
+
+                {/* Tasks */}
+                <div className="flex gap-3 py-3.5 last:pb-0">
+                  <ListChecks className="h-4 w-4 text-muted-foreground/60 shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-muted-foreground/50 uppercase tracking-[0.08em] mb-2">Starter Tasks</p>
+                    <div className="space-y-1.5">
+                      {data.starter_tasks.filter(Boolean).map((task, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <span className="shrink-0 mt-0.5 text-xs font-mono text-primary/50">{i + 1}.</span>
+                          <p className="text-sm text-foreground/70 leading-snug">{task}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Activate / Progress Section */}
+          <div className={`${!launchStarted ? "border-t border-border/20" : ""} px-6 sm:px-8 py-6`}>
+          <StepConnectTools
+            companyName={data.company_name}
+            agentName={data.agent_name}
+            goals={data.goals}
+            productsServicesText={data.products_services_text}
+            starterTasks={data.starter_tasks}
+            approvalPolicy={data.approval_policy}
+            launching={launching}
+            launched={launchStarted}
+            status={effectiveStatus}
+            bootstrapStatus={bootstrapStatus}
+            progress={provisionProgress}
+            ready={provisioningComplete}
+            polling={provisionPolling}
+            lastCheckedAt={lastCheckedAt}
+            error={launchError}
+            onBack={() => changeStep(3)}
+            onLaunch={handleLaunch}
+            onRefresh={() => { void pollProvisionStatus(); }}
+          />
+        </div>
+      </div>
+      </div>
+      ) : (
+
+      /* ── Two-panel layout for steps 1-3 ── */
+      <div
+        className="w-full max-w-[1080px] lg:max-h-[calc(100vh-120px)] rounded-2xl border bg-card relative z-10 p-0 overflow-hidden grid lg:grid-cols-[340px_1fr]"
+        style={{ borderColor: "rgba(212,168,83,0.15)" }}
+      >
+        {/* ── Left Panel: Persistent Agent Preview ── */}
+        <AgentPreviewPanel
+          step={step}
+          agentName={data.agent_name}
+          agentTone={(data.agent_tone || "strategic") as import("@/lib/onboarding-presets").AgentToneId}
+          agentAvatarId={data.agent_avatar_id}
+          companyName={data.company_name}
+          companyUrl={data.company_url}
+          goals={data.goals}
+          starterTasks={data.starter_tasks}
+          approvalMode={data.approval_policy.mode}
+          launched={launchStarted}
+          provisioningReady={provisioningComplete}
+        />
+
+        {/* ── Right Panel: Active Step Form ── */}
+        <div className="relative border-t lg:border-t-0 lg:border-l border-border/30 bg-[hsl(240_6%_7%)] p-6 sm:p-8 overflow-y-auto min-h-0">
+          {/* Mobile agent bar */}
+          <MobileAgentBar
+            agentName={data.agent_name}
+            agentTone={(data.agent_tone || "strategic") as import("@/lib/onboarding-presets").AgentToneId}
+            agentAvatarId={data.agent_avatar_id}
+            companyName={data.company_name}
+          />
+
+          {saveError && <p className="text-sm text-destructive mb-4">{saveError}</p>}
+
+          <div
+            className="transition-all duration-200"
+            style={{ opacity: fadeIn ? 1 : 0, transform: fadeIn ? "translateY(0)" : "translateY(8px)" }}
+          >
+
           {step === 1 && (
             <StepCompanyInfo
               data={data}
@@ -1096,31 +1265,23 @@ const Onboarding = () => {
             />
           )}
 
-          {step === 4 && (
-            <StepConnectTools
-              companyName={data.company_name}
-              agentName={data.agent_name}
-              goals={data.goals}
-              productsServicesText={data.products_services_text}
-              starterTasks={data.starter_tasks}
-              approvalPolicy={data.approval_policy}
-              launching={launching}
-              launched={launchStarted}
-              status={effectiveStatus}
-              bootstrapStatus={bootstrapStatus}
-              progress={provisionProgress}
-              ready={provisioningComplete}
-              polling={provisionPolling}
-              lastCheckedAt={lastCheckedAt}
-              error={launchError}
-              onBack={() => changeStep(3)}
-              onLaunch={handleLaunch}
-              onRefresh={() => {
-                void pollProvisionStatus();
-              }}
-            />
-          )}
+          {/* Step 4 is rendered in centered layout above, not in the two-panel grid */}
+          </div>
         </div>
+      </div>
+      )}
+      </div>
+
+      {/* ── Sign out — slim bottom bar ── */}
+      <div className="shrink-0 flex items-center px-5 sm:px-8 py-2">
+        <button
+          type="button"
+          onClick={async () => { try { await signOut(); } finally { navigate("/login"); } }}
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
+        >
+          <LogOut className="h-3 w-3" />
+          Sign out
+        </button>
       </div>
     </div>
   );

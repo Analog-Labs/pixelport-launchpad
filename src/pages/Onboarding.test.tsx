@@ -191,10 +191,10 @@ describe("Onboarding flow", () => {
     fireEvent.click(screen.getByRole("button", { name: /Continue to Launch/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Launch your dashboard")).toBeInTheDocument();
+      expect(screen.getByText("AI Chief of Staff")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Launch and Start Provisioning/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Activate/i }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -204,7 +204,7 @@ describe("Onboarding flow", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("Provisioning status")).toBeInTheDocument();
+      expect(screen.getByText("Deploying...")).toBeInTheDocument();
     });
 
     expect(screen.getByRole("button", { name: /Refresh status/i })).toBeInTheDocument();

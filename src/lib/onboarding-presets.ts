@@ -50,39 +50,60 @@ export const AGENT_AVATAR_OPTIONS = [
     id: "amber-command",
     label: "Command",
     accent: "linear-gradient(135deg, hsl(38 60% 58%), hsl(32 68% 46%))",
-    monogram: "CM",
+    svgId: "command",
+    glowColor: "hsla(38, 60%, 58%, 0.35)",
+    strokeColor: "hsl(38 60% 58%)",
   },
   {
     id: "steel-operator",
     label: "Operator",
     accent: "linear-gradient(135deg, hsl(210 8% 55%), hsl(215 12% 38%))",
-    monogram: "OP",
+    svgId: "operator",
+    glowColor: "hsla(210, 8%, 55%, 0.35)",
+    strokeColor: "hsl(210 8% 55%)",
   },
   {
     id: "teal-orbit",
     label: "Orbit",
     accent: "linear-gradient(135deg, hsl(178 44% 48%), hsl(191 48% 34%))",
-    monogram: "OR",
+    svgId: "orbit",
+    glowColor: "hsla(178, 44%, 48%, 0.35)",
+    strokeColor: "hsl(178 44% 48%)",
   },
   {
     id: "copper-vector",
     label: "Vector",
     accent: "linear-gradient(135deg, hsl(24 72% 56%), hsl(18 70% 42%))",
-    monogram: "VC",
+    svgId: "vector",
+    glowColor: "hsla(24, 72%, 56%, 0.35)",
+    strokeColor: "hsl(24 72% 56%)",
   },
   {
     id: "slate-grid",
     label: "Grid",
     accent: "linear-gradient(135deg, hsl(221 14% 48%), hsl(226 16% 34%))",
-    monogram: "GR",
+    svgId: "grid",
+    glowColor: "hsla(221, 14%, 48%, 0.35)",
+    strokeColor: "hsl(221 14% 48%)",
   },
   {
     id: "rose-signal",
     label: "Signal",
     accent: "linear-gradient(135deg, hsl(346 63% 58%), hsl(352 58% 43%))",
-    monogram: "SG",
+    svgId: "signal",
+    glowColor: "hsla(346, 63%, 58%, 0.35)",
+    strokeColor: "hsl(346 63% 58%)",
   },
 ] as const;
+
+export const TONE_PREVIEW_PHRASES: Record<AgentToneId, string> = {
+  strategic: "I've identified three high-leverage moves for this quarter. Clear owners, tight timelines.",
+  professional: "Here is your weekly performance summary with actionable recommendations attached.",
+  concise: "Pipeline up 12%. Two actions needed. Details below.",
+  warm: "Great progress this week! Here's what I'd suggest we focus on next.",
+  analytical: "Conversion rate shifted +2.3pp week-over-week — here's the causal breakdown.",
+  bold: "Drop channel B. Double down on what's working. Here's exactly why.",
+};
 
 export type AgentAvatarId = (typeof AGENT_AVATAR_OPTIONS)[number]["id"];
 

@@ -155,3 +155,33 @@ body::after {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+
+/* ── Onboarding Step 1 animations ── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes avatar-appear {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes section-slide-in {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes ambient-pulse {
+    0%, 100% { opacity: 0.25; transform: scale(0.92); }
+    50% { opacity: 1; transform: scale(1.12); }
+  }
+
+  .animate-avatar-appear {
+    animation: avatar-appear 0.4s ease-out both;
+  }
+
+  .animate-section-in {
+    animation: section-slide-in 0.35s ease-out both;
+  }
+
+  .animate-ambient-pulse {
+    animation: ambient-pulse 4s ease-in-out infinite;
+  }
+}
