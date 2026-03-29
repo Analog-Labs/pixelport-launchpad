@@ -121,5 +121,56 @@ describe("GET /api/tenants/me", () => {
     expect((res.body as Record<string, unknown>).agent_api_key).toBeUndefined();
     expect((res.body as Record<string, unknown>).paperclip_api_key).toBeUndefined();
   });
-});
 
+  it("skips bootstrap reconciliation in lightweight mode", async () => {
+    const { default: handler } = await import("../../api/tenants/me");
+
+    authenticateRequest.mockResolvedValue({
+      tenant: {
+        id: "tenant-2",
+        supabase_user_id: "user-2",
+        name: "Beta",
+        slug: "beta",
+        plan: "trial",
+        status: "draft",
+        droplet_id: null,
+        droplet_ip: null,
+        gateway_token: "gw-secret",
+        litellm_team_id: null,
+        agentmail_inbox: null,
+        agent_api_key: "agent-secret",
+        paperclip_company_id: null,
+        paperclip_api_key: "paperclip-secret",
+        onboarding_data: {
+          company_name: "Beta",
+          bootstrap: {
+            status: "accepted",
+          },
+        },
+        settings: {},
+        trial_ends_at: null,
+        created_at: "2026-03-20T10:00:00.000Z",
+        updated_at: "2026-03-24T10:00:00.000Z",
+      },
+    });
+
+    const req = { method: "GET", query: { view: "lightweight" } };
+    const res = createMockResponse();
+
+    await handler(req as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(reconcileBootstrapState).not.toHaveBeenCalled();
+    expect(getBootstrapState).not.toHaveBeenCalled();
+    expect(res.body).toMatchObject({
+      id: "tenant-2",
+      onboarding_data: {
+        company_name: "Beta",
+        bootstrap: {
+          status: "accepted",
+        },
+      },
+      updated_at: "2026-03-24T10:00:00.000Z",
+    });
+  });
+});
