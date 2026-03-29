@@ -444,6 +444,8 @@ const Onboarding = () => {
     tenant,
     loading: authLoading,
     tenantLoading,
+    tenantSyncState,
+    tenantSyncError,
     refreshTenant,
     signOut,
   } = useAuth();
@@ -535,8 +537,8 @@ const Onboarding = () => {
           setLastSavedAt(new Date().toISOString());
         }
 
-        if (options?.refreshTenantAfter !== false) {
-          await refreshTenant();
+        if (options?.refreshTenantAfter === true) {
+          await refreshTenant({ lightweight: true });
         }
 
         return true;
@@ -764,7 +766,7 @@ const Onboarding = () => {
         })
       );
 
-      await refreshTenant();
+      await refreshTenant({ lightweight: true });
       changeStep(2);
 
       if (companyUrl) {
@@ -842,7 +844,7 @@ const Onboarding = () => {
       setProvisionStatus(typeof launchPayload.status === "string" ? launchPayload.status : TENANT_STATUS.PROVISIONING);
       setLastCheckedAt(new Date().toISOString());
 
-      await refreshTenant();
+      await refreshTenant({ lightweight: true });
       void pollProvisionStatus();
     } catch (error) {
       setLaunchError(error instanceof Error ? error.message : "Failed to start launch provisioning.");
@@ -910,8 +912,32 @@ const Onboarding = () => {
     setStep(4);
   }, [tenant]);
 
-  if (authLoading || tenantLoading) return null;
+  const onboardingSyncing = tenantLoading || tenantSyncState === "syncing";
+  const hasTenantSyncError = tenantSyncState === "error";
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <PixelPortLogo className="h-10 w-10 animate-pulse" />
+          <p className="text-muted-foreground text-sm">Loading onboarding...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) return <Navigate to="/login" replace />;
+
+  if (!tenant && tenantLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <PixelPortLogo className="h-10 w-10 animate-pulse" />
+          <p className="text-muted-foreground text-sm">Syncing your workspace...</p>
+        </div>
+      </div>
+    );
+  }
 
   const launchCompletedAt = readLaunchCompleted(tenantOnboardingData);
   if (tenant && isTenantProvisioningComplete(tenant.status) && launchCompletedAt) {
@@ -926,6 +952,34 @@ const Onboarding = () => {
       : saveState === "error"
       ? "Needs retry"
       : "Draft";
+
+  const syncStatusBanner =
+    onboardingSyncing || hasTenantSyncError ? (
+      <div
+        className={`rounded-lg border px-3 py-2 text-xs flex items-center justify-between gap-3 ${
+          hasTenantSyncError
+            ? "border-destructive/30 text-destructive"
+            : "border-border text-muted-foreground"
+        }`}
+      >
+        <span>
+          {hasTenantSyncError
+            ? tenantSyncError || "Could not sync workspace state. You can keep editing and retry."
+            : "Syncing workspace state in the background..."}
+        </span>
+        {(hasTenantSyncError || !onboardingSyncing) && (
+          <button
+            type="button"
+            onClick={() => {
+              void refreshTenant({ lightweight: true, force: true });
+            }}
+            className="underline underline-offset-2 hover:text-foreground transition-colors"
+          >
+            Retry sync
+          </button>
+        )}
+      </div>
+    ) : null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
@@ -951,6 +1005,8 @@ const Onboarding = () => {
           )}
         </div>
       </header>
+
+      {syncStatusBanner && <div className="px-4 sm:px-8 z-20">{syncStatusBanner}</div>}
 
       {/* ── Main Content ── */}
       <div className="flex-1 flex items-center justify-center px-4 pb-8">

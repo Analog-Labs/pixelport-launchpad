@@ -255,4 +255,126 @@ describe("Onboarding flow", () => {
 
     expect(screen.getByText(/You can select up to 3 goals/i)).toBeInTheDocument();
   });
+
+  it("keeps onboarding content visible while tenant refresh is in progress", async () => {
+    useAuthMock.mockReturnValue({
+      user: { id: "user-1" },
+      session: { access_token: "token-123" },
+      tenant: {
+        id: "tenant-3",
+        name: "Acme Labs",
+        status: "draft",
+        onboarding_data: {
+          company_name: "Acme Labs",
+        },
+      },
+      loading: false,
+      tenantLoading: true,
+      tenantSyncState: "syncing",
+      tenantSyncError: null,
+      refreshTenant: vi.fn(async () => {}),
+      signOut: vi.fn(),
+    });
+
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ onboarding_data: {} }),
+    })) as unknown as typeof fetch;
+
+    renderOnboarding();
+
+    expect(screen.getByText("Strategy setup")).toBeInTheDocument();
+    expect(screen.getByText("Syncing workspace state in the background...")).toBeInTheDocument();
+  });
+
+  it("shows retry sync banner on tenant sync error", async () => {
+    const refreshTenant = vi.fn(async () => {});
+
+    useAuthMock.mockReturnValue({
+      user: { id: "user-1" },
+      session: { access_token: "token-123" },
+      tenant: {
+        id: "tenant-4",
+        name: "Acme Labs",
+        status: "draft",
+        onboarding_data: {
+          company_name: "Acme Labs",
+        },
+      },
+      loading: false,
+      tenantLoading: false,
+      tenantSyncState: "error",
+      tenantSyncError: "Workspace sync timed out.",
+      refreshTenant,
+      signOut: vi.fn(),
+    });
+
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ onboarding_data: {} }),
+    })) as unknown as typeof fetch;
+
+    renderOnboarding();
+
+    expect(screen.getByText("Workspace sync timed out.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Retry sync/i }));
+
+    expect(refreshTenant).toHaveBeenCalledWith({ lightweight: true, force: true });
+  });
+
+  it("does not force tenant refresh on strategy step save", async () => {
+    const refreshTenant = vi.fn(async () => {});
+
+    useAuthMock.mockReturnValue({
+      user: { id: "user-1" },
+      session: { access_token: "token-123" },
+      tenant: {
+        id: "tenant-5",
+        name: "Acme Labs",
+        status: "draft",
+        onboarding_data: {
+          company_name: "Acme Labs",
+        },
+      },
+      loading: false,
+      tenantLoading: false,
+      tenantSyncState: "idle",
+      tenantSyncError: null,
+      refreshTenant,
+      signOut: vi.fn(),
+    });
+
+    const fetchMock = vi.fn(async (input: string): Promise<FetchResponseLike> => {
+      if (input === "/api/tenants/onboarding") {
+        return {
+          ok: true,
+          json: async () => ({ onboarding_data: {} }),
+        };
+      }
+
+      return {
+        ok: false,
+        status: 404,
+        json: async () => ({ error: "not found" }),
+      };
+    });
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    renderOnboarding();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Continue to Task/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Increase qualified pipeline/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Continue to Task/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Task setup")).toBeInTheDocument();
+    });
+
+    expect(refreshTenant).not.toHaveBeenCalled();
+  });
 });

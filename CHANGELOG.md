@@ -2,6 +2,20 @@
 
 All notable changes to PixelPort are documented here.
 
+## [0.19.6.1] - 2026-03-29
+
+### Added
+- Tenant refresh resilience tests covering timeout fallback, refresh dedupe, and lightweight `/api/tenants/me` mode
+- Onboarding tests that verify strategy-step editing stays visible during tenant sync and supports explicit sync retry
+
+### Changed
+- Onboarding now keeps the UI visible during tenant sync and shows a non-blocking sync status banner instead of rendering a blank screen
+- Tenant refresh now supports lightweight mode with in-flight request dedupe and a 10-second timeout guard
+- `/api/tenants/me` now supports `?view=lightweight` to skip heavyweight bootstrap reconciliation during frequent onboarding refreshes
+
+### Fixed
+- Frequent onboarding blank-screen incidents during step transitions, scan autosave bursts, and idle-tab return flows
+
 ## [0.19.6.0] - 2026-03-28
 
 ### Added
