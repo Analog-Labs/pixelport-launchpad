@@ -212,7 +212,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    void refreshTenant();
+    // Keep session bootstrap refresh lightweight so onboarding UI doesn't sit in long-running sync state.
+    void refreshTenant({ lightweight: true });
   }, [authInitialized, session?.access_token, session?.user?.id]);
 
   const signOut = async () => {
