@@ -941,7 +941,7 @@ const Onboarding = () => {
           <span className="text-sm font-bold text-foreground tracking-tight">PixelPort</span>
         </Link>
         <div className="flex justify-center">
-          <StepIndicator currentStep={step} onStepClick={(target) => { if (target < step) changeStep(target); }} />
+          <StepIndicator currentStep={step} onStepClick={launchStarted ? undefined : (target) => { if (target < step) changeStep(target); }} />
         </div>
         <div className="flex justify-end">
           {saveStatusText && (
@@ -1107,12 +1107,10 @@ const Onboarding = () => {
         <div className="relative border-t lg:border-t-0 lg:border-l border-border/30 bg-[hsl(240_6%_7%)] p-6 sm:p-8 overflow-y-auto min-h-0">
           {/* Mobile agent bar */}
           <MobileAgentBar
-            step={step}
             agentName={data.agent_name}
             agentTone={(data.agent_tone || "strategic") as import("@/lib/onboarding-presets").AgentToneId}
             agentAvatarId={data.agent_avatar_id}
             companyName={data.company_name}
-            goals={data.goals}
           />
 
           {saveError && <p className="text-sm text-destructive mb-4">{saveError}</p>}
@@ -1278,7 +1276,7 @@ const Onboarding = () => {
       <div className="shrink-0 flex items-center px-5 sm:px-8 py-2">
         <button
           type="button"
-          onClick={async () => { await signOut(); navigate("/login"); }}
+          onClick={async () => { try { await signOut(); } finally { navigate("/login"); } }}
           className="flex items-center gap-1.5 text-[11px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
         >
           <LogOut className="h-3 w-3" />

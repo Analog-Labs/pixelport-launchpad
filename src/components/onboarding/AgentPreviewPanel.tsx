@@ -117,12 +117,10 @@ const AgentPreviewPanel = ({
 
 /* ── Mobile: compact agent bar shown on small screens ── */
 interface MobileAgentBarProps {
-  step: number;
   agentName: string;
   agentTone: AgentToneId;
   agentAvatarId: string;
   companyName: string;
-  goals: string[];
 }
 
 export function MobileAgentBar({ agentName, agentTone, agentAvatarId, companyName }: MobileAgentBarProps) {
